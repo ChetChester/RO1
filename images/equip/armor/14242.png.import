@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://b5x3w6kow08q"
-path="res://.godot/imported/14242.png-6f0a6fa3e904aaad306999a4f51b2d8c.ctex"
+path="res://.godot/imported/14242.png-3dc182fdc7ba2c9447d749a3607eaca4.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://新增資料夾/不需要/equip/armor/14242.png"
-dest_files=["res://.godot/imported/14242.png-6f0a6fa3e904aaad306999a4f51b2d8c.ctex"]
+source_file="res://ro-idle/images/equip/armor/14242.png"
+dest_files=["res://.godot/imported/14242.png-3dc182fdc7ba2c9447d749a3607eaca4.ctex"]
 
 [params]
 

@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://c0awph26qorgw"
-path="res://.godot/imported/_placeholder_weapon.png-45bf52a5003c30f1ebc0751c602290be.ctex"
+path="res://.godot/imported/_placeholder_weapon.png-6100fda151a3269b8c9c3b4afa204541.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://新增資料夾/images/_placeholder_weapon.png"
-dest_files=["res://.godot/imported/_placeholder_weapon.png-45bf52a5003c30f1ebc0751c602290be.ctex"]
+source_file="res://ro-idle/images/_placeholder_weapon.png"
+dest_files=["res://.godot/imported/_placeholder_weapon.png-6100fda151a3269b8c9c3b4afa204541.ctex"]
 
 [params]
 

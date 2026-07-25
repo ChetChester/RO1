@@ -3,12 +3,12 @@
 importer="wav"
 type="AudioStreamWAV"
 uid="uid://fmw6stef6m5f"
-path="res://.godot/imported/_swordman_hit.wav-377fa989d68d225f55fc4e8ec55253bc.sample"
+path="res://.godot/imported/_swordman_hit.wav-0153d7afc696074b502a2a375a19ad6c.sample"
 
 [deps]
 
-source_file="res://新增資料夾/WAV/_swordman_hit.wav"
-dest_files=["res://.godot/imported/_swordman_hit.wav-377fa989d68d225f55fc4e8ec55253bc.sample"]
+source_file="res://ro-idle/WAV/_swordman_hit.wav"
+dest_files=["res://.godot/imported/_swordman_hit.wav-0153d7afc696074b502a2a375a19ad6c.sample"]
 
 [params]
 

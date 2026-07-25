@@ -3,12 +3,12 @@
 importer="mp3"
 type="AudioStreamMP3"
 uid="uid://c620awdjlkfqu"
-path="res://.godot/imported/5004.mp3-4c27b6907f01b1b744bcae2d332f7057.mp3str"
+path="res://.godot/imported/5004.mp3-53e6fdae1b35bfe0dfbcac86dc2f6061.mp3str"
 
 [deps]
 
-source_file="res://新增資料夾/不需要/5004.mp3"
-dest_files=["res://.godot/imported/5004.mp3-4c27b6907f01b1b744bcae2d332f7057.mp3str"]
+source_file="res://ro-idle/music/maps/5004.mp3"
+dest_files=["res://.godot/imported/5004.mp3-53e6fdae1b35bfe0dfbcac86dc2f6061.mp3str"]
 
 [params]
 
