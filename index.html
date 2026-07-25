@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>諸神放置錄 — RO 風放置冒險</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;700;900&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ===================== 標題畫面 ===================== -->
+<div id="screen-title" class="screen active">
+  <div class="title-stage">
+    <div class="title-glow"></div>
+    <h1 class="game-title">諸神放置錄</h1>
+    <p class="game-subtitle">RAGNAROK-STYLE IDLE ADVENTURE</p>
+    <div class="title-menu">
+      <div id="title-buttons">
+        <button class="btn btn-primary" onclick="showSlotSelect()">開始冒險</button>
+      </div>
+      <div id="slot-select" class="hidden">
+        <h3 class="slot-title">選擇存檔欄位</h3>
+        <div id="slot-list" class="slot-list"></div>
+        <div id="slot-pagination" class="slot-pagination"></div>
+      </div>
+    </div>
+    <p class="title-disclaimer">本作為非商業同人放置遊戲，職業與世界觀設定致敬《仙境傳說 Ragnarok Online》，內容為原創文字與程式實作，與 Gravity Co., Ltd. 無關。</p>
+  </div>
+</div>
+
+<!-- ===================== 創角畫面 ===================== -->
+<div id="screen-create" class="screen">
+  <div class="create-stage">
+    <h2 class="section-title">創造你的冒險者</h2>
+    <input id="char-name-input" class="name-input" type="text" maxlength="12" placeholder="輸入角色名稱">
+
+    <div class="create-gender-select">
+      <span class="cs-name">性別</span>
+      <button class="btn-gender active" id="btn-gender-male" onclick="selectGender('male')">♂ 男</button>
+      <button class="btn-gender" id="btn-gender-female" onclick="selectGender('female')">♀ 女</button>
+    </div>
+
+    <div class="create-stats-panel">
+      <div class="create-budget">剩餘屬性點：<span id="creation-budget">15</span>　<span class="create-cap-hint">（單項屬性上限 9 點）</span></div>
+      <div class="create-stat-list">
+        <!-- str -->
+        <div class="create-stat-row">
+          <div class="cs-name">力量 <span class="cs-desc">物理攻擊 / 負重</span></div>
+          <button class="btn-tiny" id="create-minus-str" onclick="creationAdjust('str',-1)">-</button>
+          <div class="cs-val" id="create-val-str">1</div>
+          <button class="btn-tiny" id="create-plus-str" onclick="creationAdjust('str',1)">+</button>
+        </div>
+        <div class="create-stat-row">
+          <div class="cs-name">敏捷 <span class="cs-desc">迴避 / 攻速</span></div>
+          <button class="btn-tiny" id="create-minus-agi" onclick="creationAdjust('agi',-1)">-</button>
+          <div class="cs-val" id="create-val-agi">1</div>
+          <button class="btn-tiny" id="create-plus-agi" onclick="creationAdjust('agi',1)">+</button>
+        </div>
+        <div class="create-stat-row">
+          <div class="cs-name">體力 <span class="cs-desc">最大HP / 防禦</span></div>
+          <button class="btn-tiny" id="create-minus-vit" onclick="creationAdjust('vit',-1)">-</button>
+          <div class="cs-val" id="create-val-vit">1</div>
+          <button class="btn-tiny" id="create-plus-vit" onclick="creationAdjust('vit',1)">+</button>
+        </div>
+        <div class="create-stat-row">
+          <div class="cs-name">智力 <span class="cs-desc">魔法攻擊 / 最大SP</span></div>
+          <button class="btn-tiny" id="create-minus-int" onclick="creationAdjust('int',-1)">-</button>
+          <div class="cs-val" id="create-val-int">1</div>
+          <button class="btn-tiny" id="create-plus-int" onclick="creationAdjust('int',1)">+</button>
+        </div>
+        <div class="create-stat-row">
+          <div class="cs-name">靈巧 <span class="cs-desc">命中 / 物理攻擊</span></div>
+          <button class="btn-tiny" id="create-minus-dex" onclick="creationAdjust('dex',-1)">-</button>
+          <div class="cs-val" id="create-val-dex">1</div>
+          <button class="btn-tiny" id="create-plus-dex" onclick="creationAdjust('dex',1)">+</button>
+        </div>
+        <div class="create-stat-row">
+          <div class="cs-name">幸運 <span class="cs-desc">暴擊率</span></div>
+          <button class="btn-tiny" id="create-minus-luk" onclick="creationAdjust('luk',-1)">-</button>
+          <div class="cs-val" id="create-val-luk">1</div>
+          <button class="btn-tiny" id="create-plus-luk" onclick="creationAdjust('luk',1)">+</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="create-actions">
+      <button class="btn btn-secondary" onclick="showScreen('screen-title')">返回</button>
+      <button class="btn btn-primary" onclick="confirmCreate()">啟程！</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== 主遊戲畫面 ===================== -->
+<div id="screen-game" class="screen">
+  <div class="game-shell">
+
+    <!-- 頂部狀態列 -->
+    <header class="hud-bar">
+      <div class="hud-left">
+        <div class="hud-name-row">
+          <span id="hud-name">—</span>
+          <span id="hud-job" class="hud-job-tag">—</span>
+        </div>
+        <div class="hud-lv" id="hud-lv">—</div>
+      </div>
+      <div class="hud-bars">
+        <div class="bar-track hp-track"><div id="hud-hp-bar" class="bar-fill hp-fill" style="width:100%"></div><span id="hud-hp-text" class="bar-text">HP</span></div>
+        <div class="bar-track sp-track"><div id="hud-sp-bar" class="bar-fill sp-fill" style="width:100%"></div><span id="hud-sp-text" class="bar-text">SP</span></div>
+        <div class="bar-track exp-track"><div id="hud-bexp-bar" class="bar-fill bexp-fill" style="width:0%"></div><span id="hud-bexp-text" class="bar-text">EXP</span></div>
+        <div class="bar-track exp-track small"><div id="hud-jexp-bar" class="bar-fill jexp-fill" style="width:0%"></div><span id="hud-jexp-text" class="bar-text">JOB</span></div>
+      </div>
+      <div class="hud-right">
+        <div id="hud-gold" class="hud-gold">0 鋅幣</div>
+        <button class="btn-save" onclick="manualSave()">💾 儲存</button>
+        <button class="btn-save" onclick="backToTitle()" title="返回標題">🚪</button>
+        <div class="volume-controls">
+          <label class="volume-label">🎵 <input type="range" id="vol-bgm" min="0" max="100" value="50" oninput="setBgmVolume(this.value)"><span id="vol-bgm-text">50%</span></label>
+          <label class="volume-label">🔊 <input type="range" id="vol-sfx" min="0" max="100" value="50" oninput="setSfxVolume(this.value)"><span id="vol-sfx-text">50%</span></label>
+        </div>
+        <button id="btn-jobchange-alert" class="btn-jobchange hidden" onclick="switchTab('jobtree')">🔔 可以轉職了！</button>
+      </div>
+    </header>
+
+    <!-- 主體：戰鬥區 + 分頁面板 -->
+    <div class="game-body">
+      <section class="battle-panel">
+        <div class="map-bg-layer"><img id="map-bg-img" alt="" onerror="this.onerror=null;this.src='images/_placeholder_map.png';"></div>
+        <button id="btn-mute" class="btn-mute" onclick="toggleMute()" title="靜音/取消靜音">🔊</button>
+        <div class="battle-scene" id="battle-scene">
+          <div class="player-area">
+            <div class="player-sprite" id="player-sprite">
+              <img id="player-img" src="images/player_swordsman.svg" alt="玩家" onerror="this.onerror=null;this.src='images/_placeholder_item.png';">
+            </div>
+          </div>
+          <div class="monster-area-right" id="monster-area"></div>
+          <div id="damage-container" class="damage-container"></div>
+        </div>
+        <div id="skill-bar" class="skill-bar"></div>
+        <div id="combat-log" class="combat-log"></div>
+      </section>
+
+      <section class="side-panel">
+        <nav class="tab-nav">
+          <button class="tab-btn active" data-tab="map" onclick="switchTab('map')">🗺️ 地圖</button>
+          <button class="tab-btn" data-tab="autobattle" onclick="switchTab('autobattle')">⚔️ 自動戰鬥</button>
+          <button class="tab-btn" data-tab="character" onclick="switchTab('character')">🧍 角色</button>
+          <button class="tab-btn" data-tab="skills" onclick="switchTab('skills')">📖 技能</button>
+          <button class="tab-btn" data-tab="inventory" onclick="switchTab('inventory')">🎒 背包</button>
+          <button class="tab-btn" data-tab="jobtree" onclick="switchTab('jobtree')">🌳 轉職樹</button>
+          <button class="tab-btn" data-tab="npc" onclick="switchTab('npc')">🏪 NPC</button>
+        </nav>
+        <div class="tab-content">
+          <div id="tab-map" class="tab-panel active"></div>
+          <div id="tab-autobattle" class="tab-panel"></div>
+          <div id="tab-character" class="tab-panel"></div>
+          <div id="tab-skills" class="tab-panel"></div>
+          <div id="tab-inventory" class="tab-panel"></div>
+          <div id="tab-jobtree" class="tab-panel"></div>
+          <div id="tab-npc" class="tab-panel"></div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== 離線掛機結算彈窗 ===================== -->
+<div id="offline-modal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <h3 class="modal-title">🌙 冒險回顧</h3>
+    <div id="offline-modal-body"></div>
+    <button class="btn btn-primary modal-confirm" onclick="closeOfflineModal()">太好了，繼續冒險！</button>
+  </div>
+</div>
+
+<!-- ===================== 提示訊息 ===================== -->
+<div id="toast" class="toast"></div>
+
+<script src="js/hp_sp_tables.js"></script>
+<script src="js/data.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/ui.js"></script>
+<script>
+  window.addEventListener('load', initApp);
+  window.addEventListener('beforeunload', () => { if (typeof state !== 'undefined' && state) saveGame(); });
+</script>
+</body>
+</html>

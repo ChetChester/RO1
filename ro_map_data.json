@@ -1,0 +1,795 @@
+{
+  "metadata": {
+    "title": "Ragnarok Online World Map Database",
+    "description": "Complete RO map data organized by geopolitical regions and sub-areas",
+    "version": "1.0",
+    "source": "Compiled from iRO Wiki, RO321, FTH, RateMyServer and other community sources"
+  },
+  "regions": {
+    "米德加爾特王國": {
+      "id": "rune_midgarts",
+      "name_en": "Rune-Midgarts Kingdom",
+      "description": "The main kingdom in the world of Ragnarok, located in the southern part of the Midgard continent",
+      "areas": {
+        "普隆德拉": {
+          "id": "prontera",
+          "name_en": "Prontera",
+          "description": "Capital of Rune-Midgarts Kingdom",
+          "maps": [
+            { "id": "prontera", "name": "普隆德拉", "type": "city" },
+            { "id": "prt_fild01", "name": "普隆德拉原野01", "type": "field" },
+            { "id": "prt_fild02", "name": "普隆德拉原野02", "type": "field" },
+            { "id": "prt_fild03", "name": "普隆德拉原野03", "type": "field" },
+            { "id": "prt_fild04", "name": "普隆德拉原野04", "type": "field" },
+            { "id": "prt_fild05", "name": "普隆德拉原野05", "type": "field" },
+            { "id": "prt_fild06", "name": "普隆德拉原野06", "type": "field" },
+            { "id": "prt_fild07", "name": "普隆德拉原野07", "type": "field" },
+            { "id": "prt_fild08", "name": "普隆德拉原野08", "type": "field" },
+            { "id": "prt_fild09", "name": "普隆德拉原野09", "type": "field" },
+            { "id": "prt_fild10", "name": "普隆德拉原野10", "type": "field" },
+            { "id": "prt_fild11", "name": "普隆德拉原野11", "type": "field" },
+            { "id": "prt_maze01", "name": "迷藏森林01", "type": "dungeon" },
+            { "id": "prt_maze02", "name": "迷藏森林02", "type": "dungeon" },
+            { "id": "prt_maze03", "name": "迷藏森林03", "type": "dungeon" },
+            { "id": "prt_sewb1", "name": "地下水道01", "type": "dungeon" },
+            { "id": "prt_sewb2", "name": "地下水道02", "type": "dungeon" },
+            { "id": "prt_sewb3", "name": "地下水道03", "type": "dungeon" },
+            { "id": "prt_sewb4", "name": "地下水道04", "type": "dungeon" },
+            { "id": "prt_sewb5", "name": "地下水道05", "type": "dungeon" },
+            { "id": "prt_monk", "name": "武僧學院", "type": "indoor" },
+            { "id": "prt_castle", "name": "普隆德拉城堡", "type": "indoor" },
+            { "id": "prt_church", "name": "普隆德拉教堂", "type": "indoor" },
+            { "id": "prt_chiyu", "name": "普隆德拉水池", "type": "indoor" },
+            { "id": "prt_gld", "name": "普隆德拉公會", "type": "guild" }
+          ]
+        },
+        "吉芬": {
+          "id": "geffen",
+          "name_en": "Geffen",
+          "description": "The magic city, home to Mage and Wizard guilds",
+          "maps": [
+            { "id": "geffen", "name": "吉芬", "type": "city" },
+            { "id": "gef_fild01", "name": "吉芬原野01", "type": "field" },
+            { "id": "gef_fild02", "name": "吉芬原野02", "type": "field" },
+            { "id": "gef_fild03", "name": "吉芬原野03", "type": "field" },
+            { "id": "gef_fild04", "name": "吉芬原野04", "type": "field" },
+            { "id": "gef_fild05", "name": "吉芬原野05", "type": "field" },
+            { "id": "gef_fild06", "name": "吉芬原野06", "type": "field" },
+            { "id": "gef_fild07", "name": "吉芬原野07", "type": "field" },
+            { "id": "gef_fild08", "name": "吉芬原野08", "type": "field" },
+            { "id": "gef_fild09", "name": "吉芬原野09", "type": "field" },
+            { "id": "gef_fild10", "name": "獸人村落", "type": "field" },
+            { "id": "gef_fild11", "name": "吉芬原野11", "type": "field" },
+            { "id": "gef_fild12", "name": "吉芬原野12", "type": "field" },
+            { "id": "gef_fild13", "name": "吉芬原野13", "type": "field" },
+            { "id": "gef_fild14", "name": "吉芬原野14", "type": "field" },
+            { "id": "gef_tower", "name": "吉芬塔", "type": "dungeon" },
+            { "id": "gef_dun00", "name": "吉芬洞穴入口", "type": "dungeon" },
+            { "id": "gef_dun01", "name": "吉芬洞穴01", "type": "dungeon" },
+            { "id": "gef_dun02", "name": "吉芬洞穴02", "type": "dungeon" },
+            { "id": "gef_dun03", "name": "吉芬洞穴03", "type": "dungeon" },
+            { "id": "gefenia01", "name": "葛帔尼亞01", "type": "dungeon" },
+            { "id": "gefenia02", "name": "葛帔尼亞02", "type": "dungeon" },
+            { "id": "gefenia03", "name": "葛帔尼亞03", "type": "dungeon" },
+            { "id": "gefenia04", "name": "葛帔尼亞04", "type": "dungeon" },
+            { "id": "gef_gld", "name": "吉芬公會", "type": "guild" }
+          ]
+        },
+        "夢羅克": {
+          "id": "morroc",
+          "name_en": "Morroc",
+          "description": "Desert city, home to Thief and Assassin guilds",
+          "maps": [
+            { "id": "morroc", "name": "夢羅克", "type": "city" },
+            { "id": "moc_fild01", "name": "蘇克拉特沙漠01", "type": "field" },
+            { "id": "moc_fild02", "name": "蘇克拉特沙漠02", "type": "field" },
+            { "id": "moc_fild03", "name": "蘇克拉特沙漠03", "type": "field" },
+            { "id": "moc_fild04", "name": "蘇克拉特沙漠04", "type": "field" },
+            { "id": "moc_fild05", "name": "蘇克拉特沙漠05", "type": "field" },
+            { "id": "moc_fild06", "name": "蘇克拉特沙漠06", "type": "field" },
+            { "id": "moc_fild07", "name": "蘇克拉特沙漠07", "type": "field" },
+            { "id": "moc_fild08", "name": "蘇克拉特沙漠08", "type": "field" },
+            { "id": "moc_fild09", "name": "蘇克拉特沙漠09", "type": "field" },
+            { "id": "moc_fild10", "name": "蘇克拉特沙漠10", "type": "field" },
+            { "id": "moc_fild11", "name": "蘇克拉特沙漠11", "type": "field" },
+            { "id": "moc_fild12", "name": "蘇克拉特沙漠12", "type": "field" },
+            { "id": "moc_fild13", "name": "蘇克拉特沙漠13", "type": "field" },
+            { "id": "moc_fild14", "name": "蘇克拉特沙漠14", "type": "field" },
+            { "id": "moc_fild15", "name": "蘇克拉特沙漠15", "type": "field" },
+            { "id": "moc_fild16", "name": "蘇克拉特沙漠16", "type": "field" },
+            { "id": "moc_fild17", "name": "蘇克拉特沙漠17", "type": "field" },
+            { "id": "moc_fild18", "name": "蘇克拉特沙漠18", "type": "field" },
+            { "id": "moc_fild19", "name": "蘇克拉特沙漠19", "type": "field" },
+            { "id": "moc_fild20", "name": "次元裂縫", "type": "field" },
+            { "id": "moc_fild21", "name": "蘇克拉特沙漠21", "type": "field" },
+            { "id": "moc_fild22", "name": "蘇克拉特沙漠次元裂縫", "type": "field" },
+            { "id": "moc_pryd01", "name": "金字塔洞穴01", "type": "dungeon" },
+            { "id": "moc_pryd02", "name": "金字塔洞穴02", "type": "dungeon" },
+            { "id": "moc_pryd03", "name": "金字塔洞穴03", "type": "dungeon" },
+            { "id": "moc_pryd04", "name": "金字塔洞穴04", "type": "dungeon" },
+            { "id": "moc_pryd05", "name": "金字塔洞穴05", "type": "dungeon" },
+            { "id": "moc_pryd06", "name": "金字塔洞穴06", "type": "dungeon" },
+            { "id": "moc_prydb1", "name": "金字塔洞穴B1", "type": "dungeon" },
+            { "id": "moc_prydn2", "name": "金字塔洞穴N2", "type": "dungeon" },
+            { "id": "in_sphinx1", "name": "史芬克斯洞穴01", "type": "dungeon" },
+            { "id": "in_sphinx2", "name": "史芬克斯洞穴02", "type": "dungeon" },
+            { "id": "in_sphinx3", "name": "史芬克斯洞穴03", "type": "dungeon" },
+            { "id": "in_sphinx4", "name": "史芬克斯洞穴04", "type": "dungeon" },
+            { "id": "in_sphinx5", "name": "史芬克斯洞穴05", "type": "dungeon" },
+            { "id": "moc_gld", "name": "夢羅克公會", "type": "guild" }
+          ]
+        },
+        "斐揚": {
+          "id": "payon",
+          "name_en": "Payon",
+          "description": "Korean-style forest city, home to Archer and TaeKwon classes",
+          "maps": [
+            { "id": "payon", "name": "斐揚", "type": "city" },
+            { "id": "pay_fild01", "name": "斐揚原野01", "type": "field" },
+            { "id": "pay_fild02", "name": "斐揚原野02", "type": "field" },
+            { "id": "pay_fild03", "name": "斐揚原野03", "type": "field" },
+            { "id": "pay_fild04", "name": "斐揚原野04", "type": "field" },
+            { "id": "pay_fild05", "name": "斐揚原野05", "type": "field" },
+            { "id": "pay_fild06", "name": "斐揚原野06", "type": "field" },
+            { "id": "pay_fild07", "name": "斐揚原野07", "type": "field" },
+            { "id": "pay_fild08", "name": "斐揚原野08", "type": "field" },
+            { "id": "pay_fild09", "name": "斐揚原野09", "type": "field" },
+            { "id": "pay_fild10", "name": "斐揚原野10", "type": "field" },
+            { "id": "pay_fild11", "name": "斐揚原野11", "type": "field" },
+            { "id": "pay_arche", "name": "斐揚弓箭手村落", "type": "city" },
+            { "id": "pay_dun00", "name": "斐揚洞穴入口", "type": "dungeon" },
+            { "id": "pay_dun01", "name": "斐揚洞穴01", "type": "dungeon" },
+            { "id": "pay_dun02", "name": "斐揚洞穴02", "type": "dungeon" },
+            { "id": "pay_dun03", "name": "斐揚洞穴03", "type": "dungeon" },
+            { "id": "pay_dun04", "name": "斐揚洞穴04", "type": "dungeon" },
+            { "id": "pay_gld", "name": "斐揚公會", "type": "guild" }
+          ]
+        },
+        "艾爾貝塔": {
+          "id": "alberta",
+          "name_en": "Alberta",
+          "description": "Port city, gateway to foreign lands by ship",
+          "maps": [
+            { "id": "alberta", "name": "艾爾貝塔", "type": "city" },
+            { "id": "alb_ship", "name": "艾爾貝塔港口", "type": "indoor" },
+            { "id": "alb_gld", "name": "艾爾貝塔公會", "type": "guild" }
+          ]
+        },
+        "依斯魯得": {
+          "id": "izlude",
+          "name_en": "Izlude",
+          "description": "Island city, airship hub connecting major regions",
+          "maps": [
+            { "id": "izlude", "name": "依斯魯得", "type": "city" },
+            { "id": "izlu2dun", "name": "海洞入口", "type": "dungeon" },
+            { "id": "iz_dun00", "name": "依斯魯得洞穴00", "type": "dungeon" },
+            { "id": "iz_dun01", "name": "依斯魯得洞穴01", "type": "dungeon" },
+            { "id": "iz_dun02", "name": "依斯魯得洞穴02", "type": "dungeon" },
+            { "id": "iz_dun03", "name": "依斯魯得洞穴03", "type": "dungeon" },
+            { "id": "iz_dun04", "name": "依斯魯得洞穴04", "type": "dungeon" },
+            { "id": "iz_gld", "name": "依斯魯得公會", "type": "guild" }
+          ]
+        },
+        "艾爾帕蘭": {
+          "id": "aldebaran",
+          "name_en": "Al De Baran",
+          "description": "Northernmost city of Rune-Midgarts, home to Alchemist guild",
+          "maps": [
+            { "id": "aldebaran", "name": "艾爾帕蘭", "type": "city" },
+            { "id": "al_de01", "name": "艾爾帕蘭原野01", "type": "field" },
+            { "id": "al_de02", "name": "艾爾帕蘭原野02", "type": "field" },
+            { "id": "al_de03", "name": "艾爾帕蘭原野03", "type": "field" },
+            { "id": "al_de04", "name": "艾爾帕蘭原野04", "type": "field" },
+            { "id": "al_de05", "name": "艾爾帕蘭原野05", "type": "field" },
+            { "id": "alde_dun01", "name": "鐘塔洞穴01", "type": "dungeon" },
+            { "id": "alde_dun02", "name": "鐘塔洞穴02", "type": "dungeon" },
+            { "id": "alde_dun03", "name": "鐘塔洞穴03", "type": "dungeon" },
+            { "id": "alde_dun04", "name": "鐘塔洞穴04", "type": "dungeon" },
+            { "id": "c_tower1", "name": "鐘塔01", "type": "dungeon" },
+            { "id": "c_tower2", "name": "鐘塔02", "type": "dungeon" },
+            { "id": "c_tower3", "name": "鐘塔03", "type": "dungeon" },
+            { "id": "c_tower4", "name": "鐘塔04", "type": "dungeon" },
+            { "id": "alde_gld", "name": "艾爾帕蘭公會", "type": "guild" }
+          ]
+        },
+        "克魔島": {
+          "id": "comodo",
+          "name_en": "Comodo",
+          "description": "Beach resort island city",
+          "maps": [
+            { "id": "comodo", "name": "克魔島", "type": "city" },
+            { "id": "cmd_fild01", "name": "克魔島原野01", "type": "field" },
+            { "id": "cmd_fild02", "name": "克魔島原野02", "type": "field" },
+            { "id": "cmd_fild03", "name": "克魔島原野03", "type": "field" },
+            { "id": "cmd_fild04", "name": "克魔島原野04", "type": "field" },
+            { "id": "cmd_fild05", "name": "克魔島原野05", "type": "field" },
+            { "id": "cmd_fild06", "name": "克魔島原野06", "type": "field" },
+            { "id": "cmd_fild07", "name": "發樂斯燈塔島", "type": "field" },
+            { "id": "cmd_fild08", "name": "克魔島原野08", "type": "field" },
+            { "id": "beach_dun", "name": "克魔島洞穴00", "type": "dungeon" },
+            { "id": "beach_dun2", "name": "克魔島洞穴01", "type": "dungeon" },
+            { "id": "beach_dun3", "name": "克魔島洞穴02", "type": "dungeon" },
+            { "id": "cmd_gld", "name": "克魔島公會", "type": "guild" }
+          ]
+        },
+        "恩芭拉": {
+          "id": "umbala",
+          "name_en": "Umbala",
+          "description": "Jungle treetop city, gateway to Nifflheim",
+          "maps": [
+            { "id": "umbala", "name": "恩芭拉", "type": "city" },
+            { "id": "um_fild01", "name": "恩芭拉原野01", "type": "field" },
+            { "id": "um_fild02", "name": "恩芭拉原野02", "type": "field" },
+            { "id": "um_fild03", "name": "恩芭拉原野03", "type": "field" },
+            { "id": "um_fild04", "name": "恩芭拉原野04", "type": "field" },
+            { "id": "um_dun01", "name": "恩芭拉洞穴01", "type": "dungeon" },
+            { "id": "um_dun02", "name": "恩芭拉洞穴02", "type": "dungeon" },
+            { "id": "um_gld", "name": "恩芭拉公會", "type": "guild" }
+          ]
+        },
+        "尼芙菲姆": {
+          "id": "nifflheim",
+          "name_en": "Nifflheim",
+          "description": "Town of the dead, accessible from Umbala",
+          "maps": [
+            { "id": "niflheim", "name": "尼芙菲姆", "type": "city" },
+            { "id": "nif_fild01", "name": "尼芙菲姆原野", "type": "field" },
+            { "id": "yggdrasil01", "name": "天地樹幹", "type": "dungeon" },
+            { "id": "abbey01", "name": "無名島修道院01", "type": "dungeon" },
+            { "id": "abbey02", "name": "無名島修道院02", "type": "dungeon" },
+            { "id": "abbey03", "name": "無名島修道院03", "type": "dungeon" }
+          ]
+        },
+        "薑餅城": {
+          "id": "lutie",
+          "name_en": "Lutie",
+          "description": "Christmas-themed town, always covered in snow",
+          "maps": [
+            { "id": "xmas", "name": "薑餅城", "type": "city" },
+            { "id": "xmas_fild01", "name": "薑餅城原野01", "type": "field" },
+            { "id": "xmas_dun01", "name": "玩具工廠01", "type": "dungeon" },
+            { "id": "xmas_dun02", "name": "玩具工廠02", "type": "dungeon" },
+            { "id": "ice_dun01", "name": "冰洞穴01", "type": "dungeon" },
+            { "id": "ice_dun02", "name": "冰洞穴02", "type": "dungeon" },
+            { "id": "ice_dun03", "name": "冰洞穴03", "type": "dungeon" },
+            { "id": "ice_dun04", "name": "冰洞穴04", "type": "dungeon" }
+          ]
+        },
+        "古城": {
+          "id": "glast_heim",
+          "name_en": "Glast Heim",
+          "description": "Ruined castle town overrun by undead",
+          "maps": [
+            { "id": "glast_01", "name": "古城街道", "type": "field" },
+            { "id": "gl_church", "name": "古城教堂", "type": "dungeon" },
+            { "id": "gl_prison", "name": "古城監獄", "type": "dungeon" },
+            { "id": "gl_knt01", "name": "古城騎士團01", "type": "dungeon" },
+            { "id": "gl_knt02", "name": "古城騎士團02", "type": "dungeon" },
+            { "id": "gl_dun01", "name": "古城地下洞穴01", "type": "dungeon" },
+            { "id": "gl_dun02", "name": "古城地下洞穴02", "type": "dungeon" },
+            { "id": "gl_sew01", "name": "古城地下水道01", "type": "dungeon" },
+            { "id": "gl_sew02", "name": "古城地下水道02", "type": "dungeon" },
+            { "id": "gl_step", "name": "古城階梯", "type": "dungeon" },
+            { "id": "gl_chyard", "name": "古城墓地", "type": "dungeon" },
+            { "id": "gl_cas01", "name": "古城城堡01", "type": "dungeon" },
+            { "id": "gl_cas02", "name": "古城城堡02", "type": "dungeon" },
+            { "id": "tha_scene01", "name": "達納托斯塔台入口", "type": "dungeon" },
+            { "id": "tha_t01", "name": "達納托斯塔台01", "type": "dungeon" },
+            { "id": "tha_t02", "name": "達納托斯塔台02", "type": "dungeon" },
+            { "id": "tha_t03", "name": "達納托斯塔台03", "type": "dungeon" },
+            { "id": "tha_t04", "name": "達納托斯塔台04", "type": "dungeon" },
+            { "id": "tha_t05", "name": "達納托斯塔台05", "type": "dungeon" },
+            { "id": "tha_t06", "name": "達納托斯塔台06", "type": "dungeon" },
+            { "id": "tha_t07", "name": "達納托斯塔台07", "type": "dungeon" },
+            { "id": "tha_t08", "name": "達納托斯塔台08", "type": "dungeon" },
+            { "id": "tha_t09", "name": "達納托斯塔台09", "type": "dungeon" },
+            { "id": "tha_t10", "name": "達納托斯塔台10", "type": "dungeon" },
+            { "id": "tha_t11", "name": "達納托斯塔台11", "type": "dungeon" },
+            { "id": "tha_t12", "name": "達納托斯塔台12", "type": "dungeon" },
+            { "id": "thana_step", "name": "達納托斯之階", "type": "dungeon" },
+            { "id": "thana_boss", "name": "達納托斯之王", "type": "dungeon" }
+          ]
+        },
+        "妙勒尼": {
+          "id": "mjolnir",
+          "name_en": "Mt. Mjolnir",
+          "description": "Mountain range between Prontera and Geffen",
+          "maps": [
+            { "id": "mjo_dun01", "name": "妙勒尼廢礦01", "type": "dungeon" },
+            { "id": "mjo_dun02", "name": "妙勒尼廢礦02", "type": "dungeon" },
+            { "id": "mjo_dun03", "name": "妙勒尼廢礦03", "type": "dungeon" },
+            { "id": "mjo_wst01", "name": "妙勒尼地下密穴", "type": "dungeon" },
+            { "id": "anthell01", "name": "螞蟻地獄01", "type": "dungeon" },
+            { "id": "anthell02", "name": "螞蟻地獄02", "type": "dungeon" }
+          ]
+        },
+        "烏龜島": {
+          "id": "turtle_island",
+          "name_en": "Turtle Island",
+          "description": "Island accessible from Alberta, high-level training area",
+          "maps": [
+            { "id": "tur_dun01", "name": "烏龜島洞穴入口", "type": "dungeon" },
+            { "id": "tur_dun02", "name": "烏龜島洞穴01", "type": "dungeon" },
+            { "id": "tur_dun03", "name": "烏龜島洞穴02", "type": "dungeon" },
+            { "id": "tur_dun04", "name": "烏龜島洞穴03", "type": "dungeon" },
+            { "id": "tur_dun05", "name": "烏龜島洞穴04", "type": "dungeon" },
+            { "id": "tur_dun06", "name": "烏龜島洞穴05", "type": "dungeon" },
+            { "id": "treasure01", "name": "失事船01", "type": "dungeon" },
+            { "id": "treasure02", "name": "失事船02", "type": "dungeon" }
+          ]
+        }
+      }
+    },
+    "修發茲共和國": {
+      "id": "schwartzvald",
+      "name_en": "Republic of Schwartzvald",
+      "description": "Northeastern region of the Midgard continent, governed by a President",
+      "areas": {
+        "朱諾": {
+          "id": "juno",
+          "name_en": "Juno (Yuno)",
+          "description": "Capital of Schwartzvald, floating city of knowledge",
+          "maps": [
+            { "id": "yuno", "name": "朱諾", "type": "city" },
+            { "id": "yuno_fild01", "name": "朱諾原野01", "type": "field" },
+            { "id": "yuno_fild02", "name": "朱諾原野02", "type": "field" },
+            { "id": "yuno_fild03", "name": "朱諾原野03", "type": "field" },
+            { "id": "yuno_fild04", "name": "朱諾原野04", "type": "field" },
+            { "id": "yuno_fild05", "name": "朱諾原野05", "type": "field" },
+            { "id": "yuno_fild06", "name": "朱諾原野06", "type": "field" },
+            { "id": "yuno_fild07", "name": "朱諾原野07", "type": "field" },
+            { "id": "yuno_fild08", "name": "朱諾原野08", "type": "field" },
+            { "id": "yuno_fild09", "name": "朱諾原野09", "type": "field" },
+            { "id": "yuno_fild10", "name": "朱諾原野10", "type": "field" },
+            { "id": "yuno_fild11", "name": "朱諾原野11", "type": "field" },
+            { "id": "yuno_fild12", "name": "朱諾原野12", "type": "field" },
+            { "id": "jupe_cave", "name": "優配擂斯洞穴", "type": "dungeon" },
+            { "id": "juperos_01", "name": "優配擂斯01", "type": "dungeon" },
+            { "id": "juperos_02", "name": "優配擂斯02", "type": "dungeon" },
+            { "id": "jupe_gate", "name": "優配擂斯大門", "type": "dungeon" },
+            { "id": "jupe_area1", "name": "優配擂斯區域1", "type": "dungeon" },
+            { "id": "jupe_area2", "name": "優配擂斯區域2", "type": "dungeon" },
+            { "id": "jupe_ele", "name": "優配擂斯元素區", "type": "dungeon" },
+            { "id": "jupe_ele_r", "name": "優配擂斯元素區反", "type": "dungeon" },
+            { "id": "jupe_core", "name": "優配擂斯核心", "type": "dungeon" },
+            { "id": "yuno_gld", "name": "朱諾公會", "type": "guild" }
+          ]
+        },
+        "艾音布羅克": {
+          "id": "einbroch",
+          "name_en": "Einbroch",
+          "description": "Industrial city, center of mining and metalworks",
+          "maps": [
+            { "id": "einbroch", "name": "艾音布羅克", "type": "city" },
+            { "id": "ein_fild01", "name": "艾音布羅克原野01", "type": "field" },
+            { "id": "ein_fild02", "name": "艾音布羅克原野02", "type": "field" },
+            { "id": "ein_fild03", "name": "艾音布羅克原野03", "type": "field" },
+            { "id": "ein_fild04", "name": "艾音布羅克原野04", "type": "field" },
+            { "id": "ein_fild05", "name": "艾音布羅克原野05", "type": "field" },
+            { "id": "ein_fild06", "name": "艾音布羅克原野06", "type": "field" },
+            { "id": "ein_fild07", "name": "艾音布羅克原野07", "type": "field" },
+            { "id": "ein_fild08", "name": "艾音布羅克原野08", "type": "field" },
+            { "id": "ein_fild09", "name": "艾音布羅克原野09", "type": "field" },
+            { "id": "ein_fild10", "name": "艾音布羅克原野10", "type": "field" },
+            { "id": "ein_dun01", "name": "礦山洞穴01", "type": "dungeon" },
+            { "id": "ein_dun02", "name": "礦山洞穴02", "type": "dungeon" },
+            { "id": "ein_dun03", "name": "礦山洞穴03", "type": "dungeon" },
+            { "id": "ein_gld", "name": "艾音布羅克公會", "type": "guild" }
+          ]
+        },
+        "艾音貝赫": {
+          "id": "einbech",
+          "name_en": "Einbech",
+          "description": "Mining town, accessible by train from Einbroch",
+          "maps": [
+            { "id": "einbech", "name": "艾音貝赫", "type": "city" }
+          ]
+        },
+        "艾爾斯蘭": {
+          "id": "hugel",
+          "name_en": "Hugel",
+          "description": "Peaceful countryside town known for its windmills",
+          "maps": [
+            { "id": "hugel", "name": "艾爾斯蘭", "type": "city" },
+            { "id": "hu_fild01", "name": "艾爾斯蘭原野01", "type": "field" },
+            { "id": "hu_fild02", "name": "艾爾斯蘭原野02", "type": "field" },
+            { "id": "hu_fild03", "name": "艾爾斯蘭原野03", "type": "field" },
+            { "id": "hu_fild04", "name": "艾爾斯蘭原野04", "type": "field" },
+            { "id": "hu_fild05", "name": "艾爾斯蘭原野05", "type": "field" },
+            { "id": "hu_fild06", "name": "艾爾斯蘭原野06", "type": "field" },
+            { "id": "hu_fild07", "name": "艾爾斯蘭原野07", "type": "field" },
+            { "id": "hu_gld", "name": "艾爾斯蘭公會", "type": "guild" }
+          ]
+        },
+        "里希塔樂鎮": {
+          "id": "lighthalzen",
+          "name_en": "Lighthalzen",
+          "description": "High-tech city, base of Rekenber Corporation",
+          "maps": [
+            { "id": "lighthalzen", "name": "里希塔樂鎮", "type": "city" },
+            { "id": "lhz_fild01", "name": "里希塔樂原野01", "type": "field" },
+            { "id": "lhz_fild02", "name": "里希塔樂原野02", "type": "field" },
+            { "id": "lhz_fild03", "name": "里希塔樂原野03", "type": "field" },
+            { "id": "lhz_dun01", "name": "生體實驗洞穴01", "type": "dungeon" },
+            { "id": "lhz_dun02", "name": "生體實驗洞穴02", "type": "dungeon" },
+            { "id": "lhz_dun03", "name": "生體實驗洞穴03", "type": "dungeon" },
+            { "id": "lhz_dun04", "name": "生體實驗洞穴04", "type": "dungeon" },
+            { "id": "lhz_dun_n", "name": "生體實驗洞穴N", "type": "dungeon" },
+            { "id": "lhz_d_n2", "name": "生體實驗洞穴N2", "type": "dungeon" },
+            { "id": "lhz_gld", "name": "里希塔樂公會", "type": "guild" }
+          ]
+        }
+      }
+    },
+    "阿盧納貝茲教國": {
+      "id": "arunafeltz",
+      "name_en": "Arunafeltz States",
+      "description": "Northwestern region of the Midgard continent, a theocratic state",
+      "areas": {
+        "拉赫": {
+          "id": "rachel",
+          "name_en": "Rachel",
+          "description": "Holy city, capital of Arunafeltz States",
+          "maps": [
+            { "id": "rachel", "name": "拉赫", "type": "city" },
+            { "id": "ra_fild01", "name": "拉赫原野01", "type": "field" },
+            { "id": "ra_fild02", "name": "拉赫原野02", "type": "field" },
+            { "id": "ra_fild03", "name": "拉赫原野03", "type": "field" },
+            { "id": "ra_fild04", "name": "拉赫原野04", "type": "field" },
+            { "id": "ra_fild05", "name": "拉赫原野05", "type": "field" },
+            { "id": "ra_fild06", "name": "拉赫原野06", "type": "field" },
+            { "id": "ra_fild07", "name": "拉赫原野07", "type": "field" },
+            { "id": "ra_fild08", "name": "拉赫原野08", "type": "field" },
+            { "id": "ra_fild09", "name": "拉赫原野09", "type": "field" },
+            { "id": "ra_fild10", "name": "拉赫原野10", "type": "field" },
+            { "id": "ra_fild11", "name": "拉赫原野11", "type": "field" },
+            { "id": "ra_fild12", "name": "拉赫原野12", "type": "field" },
+            { "id": "ra_san01", "name": "神殿聖域01", "type": "dungeon" },
+            { "id": "ra_san02", "name": "神殿聖域02", "type": "dungeon" },
+            { "id": "ra_san03", "name": "神殿聖域03", "type": "dungeon" },
+            { "id": "ra_san04", "name": "神殿聖域04", "type": "dungeon" },
+            { "id": "ra_san05", "name": "神殿聖域05", "type": "dungeon" },
+            { "id": "ra_gld", "name": "拉赫公會", "type": "guild" }
+          ]
+        },
+        "維恩斯": {
+          "id": "veins",
+          "name_en": "Veins",
+          "description": "Desert town south of Rachel",
+          "maps": [
+            { "id": "veins", "name": "維恩斯", "type": "city" },
+            { "id": "ve_fild01", "name": "維恩斯原野01", "type": "field" },
+            { "id": "ve_fild02", "name": "維恩斯原野02", "type": "field" },
+            { "id": "ve_fild03", "name": "維恩斯原野03", "type": "field" },
+            { "id": "ve_fild04", "name": "維恩斯原野04", "type": "field" },
+            { "id": "ve_fild05", "name": "維恩斯原野05", "type": "field" },
+            { "id": "ve_dun01", "name": "維恩斯洞穴01", "type": "dungeon" },
+            { "id": "ve_dun02", "name": "維恩斯洞穴02", "type": "dungeon" },
+            { "id": "ve_gld", "name": "維恩斯公會", "type": "guild" }
+          ]
+        }
+      }
+    },
+    "異世界": {
+      "id": "new_world",
+      "name_en": "New World (Other World)",
+      "description": "A new continent discovered beyond the desert of Morroc",
+      "areas": {
+        "馬努克": {
+          "id": "manuk",
+          "name_en": "Manuk",
+          "description": "Elven settlement in the New World",
+          "maps": [
+            { "id": "manuk", "name": "馬努克", "type": "city" },
+            { "id": "man_fild01", "name": "馬努克原野01", "type": "field" },
+            { "id": "man_fild02", "name": "馬努克原野02", "type": "field" },
+            { "id": "man_dun01", "name": "馬努克洞穴", "type": "dungeon" }
+          ]
+        },
+        "史波浪迪": {
+          "id": "splendide",
+          "name_en": "Splendide",
+          "description": "Dwarf settlement in the New World",
+          "maps": [
+            { "id": "splendide", "name": "史波浪迪", "type": "city" },
+            { "id": "spl_fild01", "name": "史波浪迪原野01", "type": "field" },
+            { "id": "spl_fild02", "name": "史波浪迪原野02", "type": "field" },
+            { "id": "spl_dun01", "name": "史波浪迪洞穴", "type": "dungeon" }
+          ]
+        },
+        "米德加爾特聯盟營區": {
+          "id": "midgard_camp",
+          "name_en": "Rune-Midgard Allied Forces Post",
+          "description": "Forward operating base in the New World",
+          "maps": [
+            { "id": "mid_camp", "name": "米德加爾特聯盟營區", "type": "city" }
+          ]
+        }
+      }
+    },
+    "海外地區": {
+      "id": "foreign_lands",
+      "name_en": "Foreign Lands",
+      "description": "Various foreign towns and regions modeled after real-world locations",
+      "areas": {
+        "天津町": {
+          "id": "amatsu",
+          "name_en": "Amatsu",
+          "description": "Japanese-style city",
+          "maps": [
+            { "id": "amatsu", "name": "天津町", "type": "city" },
+            { "id": "ama_fild01", "name": "天津町原野", "type": "field" },
+            { "id": "ama_dun01", "name": "天津町洞穴", "type": "dungeon" },
+            { "id": "ama_dun02", "name": "天津町地下神殿", "type": "dungeon" },
+            { "id": "ama_gld", "name": "天津町公會", "type": "guild" }
+          ]
+        },
+        "崑崙": {
+          "id": "kunlun",
+          "name_en": "Kunlun (Gonryun)",
+          "description": "Chinese/Taiwanese-style mountain city",
+          "maps": [
+            { "id": "gonryun", "name": "崑崙", "type": "city" },
+            { "id": "gon_fild01", "name": "崑崙原野", "type": "field" },
+            { "id": "gon_dun01", "name": "崑崙洞穴", "type": "dungeon" },
+            { "id": "gon_gld", "name": "崑崙公會", "type": "guild" }
+          ]
+        },
+        "洛陽": {
+          "id": "louyang",
+          "name_en": "Louyang",
+          "description": "Chinese-style city",
+          "maps": [
+            { "id": "louyang", "name": "洛陽", "type": "city" },
+            { "id": "lou_fild01", "name": "洛陽原野", "type": "field" },
+            { "id": "lou_dun01", "name": "洛陽洞穴", "type": "dungeon" },
+            { "id": "lou_gld", "name": "洛陽公會", "type": "guild" }
+          ]
+        },
+        "阿尤塔雅": {
+          "id": "ayothaya",
+          "name_en": "Ayothaya",
+          "description": "Thai-style city",
+          "maps": [
+            { "id": "ayothaya", "name": "阿尤塔雅", "type": "city" },
+            { "id": "ayo_fild01", "name": "阿尤塔雅原野", "type": "field" },
+            { "id": "ayo_dun01", "name": "阿尤塔雅洞穴", "type": "dungeon" },
+            { "id": "ayo_gld", "name": "阿尤塔雅公會", "type": "guild" }
+          ]
+        },
+        "爪哇咿": {
+          "id": "jawaii",
+          "name_en": "Jawaii",
+          "description": "Hawaiian-style island resort",
+          "maps": [
+            { "id": "jawaii", "name": "爪哇咿", "type": "city" },
+            { "id": "jaw_fild01", "name": "爪哇咿原野", "type": "field" },
+            { "id": "jaw_dun01", "name": "爪哇咿洞穴", "type": "dungeon" }
+          ]
+        },
+        "莫斯科維亞": {
+          "id": "moscovia",
+          "name_en": "Moscovia",
+          "description": "Russian-style city",
+          "maps": [
+            { "id": "moscovia", "name": "莫斯科維亞", "type": "city" },
+            { "id": "mos_fild01", "name": "莫斯科維亞原野", "type": "field" },
+            { "id": "mos_dun01", "name": "莫斯科維亞洞穴", "type": "dungeon" }
+          ]
+        },
+        "巴西里": {
+          "id": "brasis",
+          "name_en": "Brasilis",
+          "description": "Brazilian-style city",
+          "maps": [
+            { "id": "brasilis", "name": "巴西里", "type": "city" },
+            { "id": "bra_fild01", "name": "巴西里原野01", "type": "field" },
+            { "id": "bra_fild02", "name": "巴西里原野02", "type": "field" },
+            { "id": "bra_dun01", "name": "巴西里洞穴01", "type": "dungeon" },
+            { "id": "bra_dun02", "name": "巴西里洞穴02", "type": "dungeon" }
+          ]
+        },
+        "馬來港": {
+          "id": "port_malaya",
+          "name_en": "Port Malaya",
+          "description": "Philippine-style port city",
+          "maps": [
+            { "id": "malaya", "name": "馬來港", "type": "city" },
+            { "id": "mal_dun01", "name": "星光珊瑚地區", "type": "dungeon" }
+          ]
+        },
+        "拉薩那": {
+          "id": "lasagna",
+          "name_en": "Lasagna",
+          "description": "Italian-style city",
+          "maps": [
+            { "id": "lasagna", "name": "拉薩那", "type": "city" },
+            { "id": "las_fild01", "name": "拉薩那原野", "type": "field" },
+            { "id": "las_dun01", "name": "拉薩那洞穴", "type": "dungeon" }
+          ]
+        },
+        "岩石高地": {
+          "id": "rock_ridge",
+          "name_en": "Rock Ridge",
+          "description": "Western-style frontier town",
+          "maps": [
+            { "id": "rockridge", "name": "岩石高地", "type": "city" },
+            { "id": "roc_fild01", "name": "岩石高地上", "type": "field" },
+            { "id": "roc_fild02", "name": "岩石高地下", "type": "field" },
+            { "id": "roc_dun01", "name": "岩石高地洞穴", "type": "dungeon" }
+          ]
+        },
+        "貓咪島": {
+          "id": "malangdo",
+          "name_en": "Malangdo (Cat Island)",
+          "description": "Island populated by cats",
+          "maps": [
+            { "id": "malangdo", "name": "貓咪島", "type": "city" },
+            { "id": "mal_dun01", "name": "貓咪島洞穴", "type": "dungeon" },
+            { "id": "mal_gld", "name": "貓咪島公會", "type": "guild" }
+          ]
+        },
+        "蜜月島": {
+          "id": "dewata",
+          "name_en": "Dewata (Honeymoon Island)",
+          "description": "Indonesian-style island",
+          "maps": [
+            { "id": "dewata", "name": "蜜月島", "type": "city" },
+            { "id": "dew_fild01", "name": "蜜月島原野", "type": "field" },
+            { "id": "dew_dun01", "name": "蜜月島洞穴", "type": "dungeon" }
+          ]
+        }
+      }
+    },
+    "托爾火山": {
+      "id": "thor",
+      "name_en": "Thor Volcano",
+      "description": "High-level volcanic dungeon area",
+      "areas": {
+        "托爾火山": {
+          "id": "thor_volcano",
+          "name_en": "Thor Volcano",
+          "maps": [
+            { "id": "thor_v01", "name": "托爾火山01", "type": "dungeon" },
+            { "id": "thor_v02", "name": "托爾火山02", "type": "dungeon" },
+            { "id": "thor_v03", "name": "托爾火山03", "type": "dungeon" }
+          ]
+        },
+        "歐茲迷宮": {
+          "id": "oz_maze",
+          "name_en": "Oz Maze",
+          "maps": [
+            { "id": "oz_dun01", "name": "歐茲迷宮01", "type": "dungeon" },
+            { "id": "oz_dun02", "name": "歐茲迷宮02", "type": "dungeon" }
+          ]
+        },
+        "古代奧丁神殿": {
+          "id": "odin_temple",
+          "name_en": "Ancient Odin's Temple",
+          "maps": [
+            { "id": "odin_past", "name": "古代奧丁神殿", "type": "dungeon" }
+          ]
+        },
+        "深淵湖水": {
+          "id": "abyss_lake",
+          "name_en": "Abyss Lake",
+          "maps": [
+            { "id": "abyss_01", "name": "深淵湖水01", "type": "dungeon" },
+            { "id": "abyss_02", "name": "深淵湖水02", "type": "dungeon" },
+            { "id": "abyss_03", "name": "深淵湖水03", "type": "dungeon" },
+            { "id": "abyss_04", "name": "深淵湖水04", "type": "dungeon" }
+          ]
+        },
+        "熔岩洞穴": {
+          "id": "magma_dungeon",
+          "name_en": "Magma Dungeon",
+          "maps": [
+            { "id": "mag_dun01", "name": "熔岩洞穴01", "type": "dungeon" },
+            { "id": "mag_dun02", "name": "熔岩洞穴02", "type": "dungeon" },
+            { "id": "mag_dun03", "name": "熔岩洞穴03", "type": "dungeon" }
+          ]
+        },
+        "彩虹橋": {
+          "id": "bifrost",
+          "name_en": "Bifrost",
+          "maps": [
+            { "id": "bif_fild01", "name": "彩虹橋南部", "type": "field" },
+            { "id": "dic_fild02", "name": "卡米達山麓", "type": "field" }
+          ]
+        }
+      }
+    },
+    "事件與副本": {
+      "id": "instances",
+      "name_en": "Instances & Events",
+      "description": "Single-player and party instances",
+      "areas": {
+        "莎拉的記憶": {
+          "id": "sara_memory",
+          "name_en": "Sara's Memory",
+          "maps": [
+            { "id": "1@sara", "name": "莎拉的記憶", "type": "instance" }
+          ]
+        },
+        "驚駭森靈巢穴": {
+          "id": "faceworm",
+          "name_en": "Faceworm Nest",
+          "maps": [
+            { "id": "1@face", "name": "驚駭森靈巢穴", "type": "instance" }
+          ]
+        },
+        "幽靈皇宮": {
+          "id": "ghost_palace",
+          "name_en": "Ghost Palace",
+          "maps": [
+            { "id": "1@spa", "name": "幽靈皇宮", "type": "instance" }
+          ]
+        },
+        "潘利爾與莎拉": {
+          "id": "panlir_sara",
+          "name_en": "Panlir & Sara",
+          "maps": [
+            { "id": "1@glast", "name": "潘利爾與莎拉", "type": "instance" }
+          ]
+        },
+        "魔神之塔": {
+          "id": "demon_tower",
+          "name_en": "Demon Tower",
+          "maps": [
+            { "id": "1@tnm1", "name": "魔神之塔01", "type": "instance" },
+            { "id": "1@tnm2", "name": "魔神之塔02", "type": "instance" },
+            { "id": "1@tnm3", "name": "魔神之塔03", "type": "instance" }
+          ]
+        },
+        "飛空艇襲擊": {
+          "id": "airship_attack",
+          "name_en": "Airship Attack",
+          "maps": [
+            { "id": "1@air1", "name": "飛空艇襲擊01", "type": "instance" },
+            { "id": "1@air2", "name": "飛空艇襲擊02", "type": "instance" }
+          ]
+        },
+        "空中要塞侵入": {
+          "id": "sky_fortress",
+          "name_en": "Sky Fortress Invasion",
+          "maps": [
+            { "id": "1@sthb", "name": "空中要塞B", "type": "instance" },
+            { "id": "1@sthc", "name": "空中要塞C", "type": "instance" },
+            { "id": "1@sthd", "name": "空中要塞D", "type": "instance" }
+          ]
+        },
+        "吉芬魔法大賽": {
+          "id": "geffen_magic",
+          "name_en": "Geffen Magic Tournament",
+          "maps": [
+            { "id": "1@gef", "name": "吉芬魔法大賽", "type": "instance" },
+            { "id": "1@gef_in", "name": "吉芬魔法大賽內部", "type": "instance" },
+            { "id": "1@ge_st", "name": "吉芬魔法大賽舞台", "type": "instance" }
+          ]
+        },
+        "噩夢吉特巴": {
+          "id": "nightmare_jitterbug",
+          "name_en": "Nightmare Jitterbug",
+          "maps": [
+            { "id": "1@jtb", "name": "噩夢吉特巴", "type": "instance" }
+          ]
+        },
+        "吉芬夜間鬥技場": {
+          "id": "geffen_night_arena",
+          "name_en": "Geffen Night Arena",
+          "maps": [
+            { "id": "1@ge_sn", "name": "吉芬夜間鬥技場", "type": "instance" }
+          ]
+        }
+      }
+    }
+  },
+  "map_type_index": {
+    "city": "城鎮 - Safe zones with NPC services",
+    "field": "原野 - Open-world maps with monsters",
+    "dungeon": "洞穴/地下城 - Instanced or non-instanced dungeon maps",
+    "indoor": "室內 - Indoor building maps",
+    "guild": "公會 - Guild halls for War of Emperium",
+    "instance": "副本 - Single/party instance maps"
+  }
+}

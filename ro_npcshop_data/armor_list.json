@@ -1,0 +1,834 @@
+{
+  "pre_re": [
+    {
+      "id": 2218,
+      "name": "Flu Mask",
+      "slots": 0,
+      "price": 300
+    },
+    {
+      "id": 2241,
+      "name": "Grampa Beard",
+      "slots": 0,
+      "price": 5000
+    },
+    {
+      "id": 2501,
+      "name": "Hood",
+      "slots": 0,
+      "price": 1000
+    },
+    {
+      "id": 2503,
+      "name": "Muffler",
+      "slots": 0,
+      "price": 5000
+    },
+    {
+      "id": 2505,
+      "name": "Manteau",
+      "slots": 0,
+      "price": 32000
+    },
+    {
+      "id": 2512,
+      "name": "Novice Manteau [1]",
+      "slots": 0,
+      "price": 50000
+    },
+    {
+      "id": 2301,
+      "name": "Cotton Shirt",
+      "slots": 0,
+      "price": 10
+    },
+    {
+      "id": 2303,
+      "name": "Jacket",
+      "slots": 0,
+      "price": 200
+    },
+    {
+      "id": 2305,
+      "name": "Adventurer's Suit",
+      "slots": 0,
+      "price": 1000
+    },
+    {
+      "id": 2307,
+      "name": "Mantle",
+      "slots": 0,
+      "price": 10000
+    },
+    {
+      "id": 2309,
+      "name": "Coat",
+      "slots": 0,
+      "price": 22000
+    },
+    {
+      "id": 2312,
+      "name": "Padded Armor",
+      "slots": 0,
+      "price": 48000
+    },
+    {
+      "id": 2314,
+      "name": "Chain Mail",
+      "slots": 0,
+      "price": 65000
+    },
+    {
+      "id": 2316,
+      "name": "Full Plate",
+      "slots": 0,
+      "price": 80000
+    },
+    {
+      "id": 2321,
+      "name": "Silk Robe",
+      "slots": 0,
+      "price": 8000
+    },
+    {
+      "id": 2323,
+      "name": "Scapulare",
+      "slots": 0,
+      "price": 6500
+    },
+    {
+      "id": 2325,
+      "name": "Saint's Robe",
+      "slots": 0,
+      "price": 54000
+    },
+    {
+      "id": 2328,
+      "name": "Wooden Mail",
+      "slots": 0,
+      "price": 5500
+    },
+    {
+      "id": 2330,
+      "name": "Tights",
+      "slots": 0,
+      "price": 71000
+    },
+    {
+      "id": 2332,
+      "name": "Silver Robe",
+      "slots": 0,
+      "price": 7000
+    },
+    {
+      "id": 2335,
+      "name": "Thief Clothes",
+      "slots": 0,
+      "price": 74000
+    },
+    {
+      "id": 2338,
+      "name": "Wedding Dress",
+      "slots": 0,
+      "price": 43000
+    },
+    {
+      "id": 2340,
+      "name": "Novice Breastplate [1]",
+      "slots": 0,
+      "price": 89000
+    },
+    {
+      "id": 2341,
+      "name": "Legion Plate Armor",
+      "slots": 0,
+      "price": 94000
+    },
+    {
+      "id": 2101,
+      "name": "Guard",
+      "slots": 0,
+      "price": 500
+    },
+    {
+      "id": 2103,
+      "name": "Buckler",
+      "slots": 0,
+      "price": 14000
+    },
+    {
+      "id": 2105,
+      "name": "Shield",
+      "slots": 0,
+      "price": 56000
+    },
+    {
+      "id": 2107,
+      "name": "Mirror Shield",
+      "slots": 0,
+      "price": 60000
+    },
+    {
+      "id": 2113,
+      "name": "Novice Shield [1]",
+      "slots": 0,
+      "price": 5000
+    },
+    {
+      "id": 2117,
+      "name": "Arm Guard",
+      "slots": 0,
+      "price": 10000
+    },
+    {
+      "id": 2401,
+      "name": "Sandals",
+      "slots": 0,
+      "price": 400
+    },
+    {
+      "id": 2403,
+      "name": "Shoes",
+      "slots": 0,
+      "price": 3500
+    },
+    {
+      "id": 2405,
+      "name": "Boots",
+      "slots": 0,
+      "price": 18000
+    },
+    {
+      "id": 2411,
+      "name": "Greaves",
+      "slots": 0,
+      "price": 48000
+    },
+    {
+      "id": 2416,
+      "name": "Novice Shoes [1]",
+      "slots": 0,
+      "price": 35000
+    },
+    {
+      "id": 2608,
+      "name": "Rosary",
+      "slots": 0,
+      "price": 15000
+    },
+    {
+      "id": 2609,
+      "name": "Skull Ring",
+      "slots": 0,
+      "price": 10000
+    },
+    {
+      "id": 2612,
+      "name": "Flower Ring",
+      "slots": 0,
+      "price": 1500
+    },
+    {
+      "id": 2613,
+      "name": "Diamond Ring",
+      "slots": 0,
+      "price": 45000
+    },
+    {
+      "id": 2627,
+      "name": "Belt [1]",
+      "slots": 0,
+      "price": 20000
+    },
+    {
+      "id": 2628,
+      "name": "Novice Armlet [1]",
+      "slots": 0,
+      "price": 400
+    },
+    {
+      "id": 2206,
+      "name": "Wedding Veil",
+      "slots": 0,
+      "price": 23000
+    },
+    {
+      "id": 2208,
+      "name": "Ribbon",
+      "slots": 0,
+      "price": 800
+    },
+    {
+      "id": 2211,
+      "name": "Bandana",
+      "slots": 0,
+      "price": 400
+    },
+    {
+      "id": 2216,
+      "name": "Biretta",
+      "slots": 0,
+      "price": 9000
+    },
+    {
+      "id": 2220,
+      "name": "Hat",
+      "slots": 0,
+      "price": 1000
+    },
+    {
+      "id": 2222,
+      "name": "Turban",
+      "slots": 0,
+      "price": 4500
+    },
+    {
+      "id": 2226,
+      "name": "Cap",
+      "slots": 0,
+      "price": 12000
+    },
+    {
+      "id": 2228,
+      "name": "Helm",
+      "slots": 0,
+      "price": 44000
+    },
+    {
+      "id": 2230,
+      "name": "Gemmed Sallet",
+      "slots": 0,
+      "price": 50000
+    },
+    {
+      "id": 2232,
+      "name": "Circlet",
+      "slots": 0,
+      "price": 7500
+    },
+    {
+      "id": 5112,
+      "name": "Super Novice Hat",
+      "slots": 0,
+      "price": 8500
+    },
+    {
+      "id": 5114,
+      "name": "Bucket Hat",
+      "slots": 0,
+      "price": 6000
+    },
+    {
+      "id": 2201,
+      "name": "Sunglasses",
+      "slots": 0,
+      "price": 5000
+    },
+    {
+      "id": 2203,
+      "name": "Glasses",
+      "slots": 0,
+      "price": 4000
+    },
+    {
+      "id": 2205,
+      "name": "Diver Goggles",
+      "slots": 0,
+      "price": 3500
+    },
+    {
+      "id": 2212,
+      "name": "Eye Patch",
+      "slots": 0,
+      "price": 1000
+    },
+    {
+      "id": 2239,
+      "name": "Monocle",
+      "slots": 0,
+      "price": 10000
+    },
+    {
+      "id": 2242,
+      "name": "Purple Glasses",
+      "slots": 0,
+      "price": 24000
+    },
+    {
+      "id": 2243,
+      "name": "Geek Glasses",
+      "slots": 0,
+      "price": 20000
+    },
+    {
+      "id": 2224,
+      "name": "Goggles",
+      "slots": 0,
+      "price": 20
+    },
+    {
+      "id": 5092,
+      "name": "Coif",
+      "slots": 0,
+      "price": 150000
+    }
+  ],
+  "renewal": [
+    {
+      "id": 2218,
+      "name": "Flu Mask",
+      "slots": 0,
+      "price": 300
+    },
+    {
+      "id": 2241,
+      "name": "Grampa Beard",
+      "slots": 0,
+      "price": 5000
+    },
+    {
+      "id": 2501,
+      "name": "Hood",
+      "slots": 0,
+      "price": 1000
+    },
+    {
+      "id": 2503,
+      "name": "Muffler",
+      "slots": 0,
+      "price": 5000
+    },
+    {
+      "id": 2505,
+      "name": "Manteau",
+      "slots": 0,
+      "price": 32000
+    },
+    {
+      "id": 2512,
+      "name": "Novice Manteau [1]",
+      "slots": 0,
+      "price": 50000
+    },
+    {
+      "id": 2301,
+      "name": "Cotton Shirt",
+      "slots": 0,
+      "price": 10
+    },
+    {
+      "id": 2303,
+      "name": "Jacket",
+      "slots": 0,
+      "price": 200
+    },
+    {
+      "id": 2305,
+      "name": "Adventurer's Suit",
+      "slots": 0,
+      "price": 1000
+    },
+    {
+      "id": 2307,
+      "name": "Mantle",
+      "slots": 0,
+      "price": 10000
+    },
+    {
+      "id": 2309,
+      "name": "Coat",
+      "slots": 0,
+      "price": 22000
+    },
+    {
+      "id": 2312,
+      "name": "Padded Armor",
+      "slots": 0,
+      "price": 48000
+    },
+    {
+      "id": 2314,
+      "name": "Chain Mail",
+      "slots": 0,
+      "price": 65000
+    },
+    {
+      "id": 2316,
+      "name": "Full Plate",
+      "slots": 0,
+      "price": 80000
+    },
+    {
+      "id": 2321,
+      "name": "Silk Robe",
+      "slots": 0,
+      "price": 8000
+    },
+    {
+      "id": 2323,
+      "name": "Scapulare",
+      "slots": 0,
+      "price": 6500
+    },
+    {
+      "id": 2325,
+      "name": "Saint's Robe",
+      "slots": 0,
+      "price": 54000
+    },
+    {
+      "id": 2328,
+      "name": "Wooden Mail",
+      "slots": 0,
+      "price": 5500
+    },
+    {
+      "id": 2330,
+      "name": "Tights",
+      "slots": 0,
+      "price": 71000
+    },
+    {
+      "id": 2332,
+      "name": "Silver Robe",
+      "slots": 0,
+      "price": 7000
+    },
+    {
+      "id": 2335,
+      "name": "Thief Clothes",
+      "slots": 0,
+      "price": 74000
+    },
+    {
+      "id": 2338,
+      "name": "Wedding Dress",
+      "slots": 0,
+      "price": 43000
+    },
+    {
+      "id": 2340,
+      "name": "Novice Breastplate [1]",
+      "slots": 0,
+      "price": 89000
+    },
+    {
+      "id": 2341,
+      "name": "Legion Plate Armor",
+      "slots": 0,
+      "price": 94000
+    },
+    {
+      "id": 15053,
+      "name": "Special Ninja Suit",
+      "slots": 0,
+      "price": 10000
+    },
+    {
+      "id": 2101,
+      "name": "Guard",
+      "slots": 0,
+      "price": 500
+    },
+    {
+      "id": 2103,
+      "name": "Buckler",
+      "slots": 0,
+      "price": 14000
+    },
+    {
+      "id": 2105,
+      "name": "Shield",
+      "slots": 0,
+      "price": 56000
+    },
+    {
+      "id": 2107,
+      "name": "Mirror Shield",
+      "slots": 0,
+      "price": 60000
+    },
+    {
+      "id": 2113,
+      "name": "Novice Shield [1]",
+      "slots": 0,
+      "price": 5000
+    },
+    {
+      "id": 2117,
+      "name": "Arm Guard",
+      "slots": 0,
+      "price": 10000
+    },
+    {
+      "id": 2139,
+      "name": "Flame Thrower",
+      "slots": 0,
+      "price": 20000
+    },
+    {
+      "id": 2171,
+      "name": "Fox Wrist Guard [1]",
+      "slots": 0,
+      "price": 40000
+    },
+    {
+      "id": 2401,
+      "name": "Sandals",
+      "slots": 0,
+      "price": 400
+    },
+    {
+      "id": 2403,
+      "name": "Shoes",
+      "slots": 0,
+      "price": 3500
+    },
+    {
+      "id": 2405,
+      "name": "Boots",
+      "slots": 0,
+      "price": 18000
+    },
+    {
+      "id": 2411,
+      "name": "Greaves",
+      "slots": 0,
+      "price": 48000
+    },
+    {
+      "id": 2416,
+      "name": "Novice Shoes [1]",
+      "slots": 0,
+      "price": 35000
+    },
+    {
+      "id": 2608,
+      "name": "Rosary",
+      "slots": 0,
+      "price": 15000
+    },
+    {
+      "id": 2609,
+      "name": "Skull Ring",
+      "slots": 0,
+      "price": 10000
+    },
+    {
+      "id": 2612,
+      "name": "Flower Ring",
+      "slots": 0,
+      "price": 1500
+    },
+    {
+      "id": 2613,
+      "name": "Diamond Ring",
+      "slots": 0,
+      "price": 45000
+    },
+    {
+      "id": 2627,
+      "name": "Belt [1]",
+      "slots": 0,
+      "price": 20000
+    },
+    {
+      "id": 2628,
+      "name": "Novice Armlet [1]",
+      "slots": 0,
+      "price": 400
+    },
+    {
+      "id": 2800,
+      "name": "Accelerator [1]",
+      "slots": 0,
+      "price": 100000
+    },
+    {
+      "id": 2801,
+      "name": "Hovering Booster [1]",
+      "slots": 0,
+      "price": 100000
+    },
+    {
+      "id": 2802,
+      "name": "Suicidal Device [1]",
+      "slots": 0,
+      "price": 500000
+    },
+    {
+      "id": 2803,
+      "name": "Shape Shifter [1]",
+      "slots": 0,
+      "price": 100000
+    },
+    {
+      "id": 2804,
+      "name": "Cooling Device [1]",
+      "slots": 0,
+      "price": 100000
+    },
+    {
+      "id": 2805,
+      "name": "Magnetic Field Generator [1]",
+      "slots": 0,
+      "price": 100000
+    },
+    {
+      "id": 2806,
+      "name": "Barrier Builder [1]",
+      "slots": 0,
+      "price": 150000
+    },
+    {
+      "id": 2807,
+      "name": "Repair Kit [1]",
+      "slots": 0,
+      "price": 200000
+    },
+    {
+      "id": 2808,
+      "name": "Camouflague Generator [1]",
+      "slots": 0,
+      "price": 250000
+    },
+    {
+      "id": 2809,
+      "name": "High Quality Cooler [1]",
+      "slots": 0,
+      "price": 2000000
+    },
+    {
+      "id": 2810,
+      "name": "Special Cooler [1]",
+      "slots": 0,
+      "price": 5000000
+    },
+    {
+      "id": 2206,
+      "name": "Wedding Veil",
+      "slots": 0,
+      "price": 23000
+    },
+    {
+      "id": 2208,
+      "name": "Ribbon",
+      "slots": 0,
+      "price": 800
+    },
+    {
+      "id": 2211,
+      "name": "Bandana",
+      "slots": 0,
+      "price": 400
+    },
+    {
+      "id": 2216,
+      "name": "Biretta",
+      "slots": 0,
+      "price": 9000
+    },
+    {
+      "id": 2220,
+      "name": "Hat",
+      "slots": 0,
+      "price": 1000
+    },
+    {
+      "id": 2222,
+      "name": "Turban",
+      "slots": 0,
+      "price": 4500
+    },
+    {
+      "id": 2226,
+      "name": "Cap",
+      "slots": 0,
+      "price": 12000
+    },
+    {
+      "id": 2228,
+      "name": "Helm",
+      "slots": 0,
+      "price": 44000
+    },
+    {
+      "id": 2230,
+      "name": "Gemmed Sallet",
+      "slots": 0,
+      "price": 50000
+    },
+    {
+      "id": 2232,
+      "name": "Circlet",
+      "slots": 0,
+      "price": 7500
+    },
+    {
+      "id": 5112,
+      "name": "Super Novice Hat",
+      "slots": 0,
+      "price": 8500
+    },
+    {
+      "id": 5114,
+      "name": "Bucket Hat",
+      "slots": 0,
+      "price": 6000
+    },
+    {
+      "id": 2201,
+      "name": "Sunglasses",
+      "slots": 0,
+      "price": 5000
+    },
+    {
+      "id": 2203,
+      "name": "Glasses",
+      "slots": 0,
+      "price": 4000
+    },
+    {
+      "id": 2205,
+      "name": "Diver Goggles",
+      "slots": 0,
+      "price": 3500
+    },
+    {
+      "id": 2212,
+      "name": "Eye Patch",
+      "slots": 0,
+      "price": 1000
+    },
+    {
+      "id": 2239,
+      "name": "Monocle",
+      "slots": 0,
+      "price": 10000
+    },
+    {
+      "id": 2242,
+      "name": "Purple Glasses",
+      "slots": 0,
+      "price": 24000
+    },
+    {
+      "id": 2243,
+      "name": "Geek Glasses",
+      "slots": 0,
+      "price": 20000
+    },
+    {
+      "id": 2224,
+      "name": "Goggles",
+      "slots": 0,
+      "price": 20
+    },
+    {
+      "id": 5092,
+      "name": "Coif",
+      "slots": 0,
+      "price": 150000
+    }
+  ]
+}

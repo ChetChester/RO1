@@ -1,0 +1,6 @@
+{
+  "devDependencies": {
+    "gifwrap": "^0.10.1",
+    "jimp": "^1.6.1"
+  }
+}

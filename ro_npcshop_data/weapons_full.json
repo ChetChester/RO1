@@ -1,0 +1,8154 @@
+{
+  "pre_re": [
+    {
+      "id": 1201,
+      "name": "Knife",
+      "slots": 3,
+      "price": 50,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "aldeba_in",
+          "x": 28,
+          "y": 54
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "alberta_in",
+          "x": 188,
+          "y": 21
+        },
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "geffen_in",
+          "x": 30,
+          "y": 178
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "hu_in01",
+          "x": 94,
+          "y": 390
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "izlude_in",
+          "x": 60,
+          "y": 127
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "lhz_in02",
+          "x": 276,
+          "y": 99
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "xmas_in",
+          "x": 174,
+          "y": 98
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "morocc_in",
+          "x": 141,
+          "y": 67
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "payon_in01",
+          "x": 15,
+          "y": 119
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 172,
+          "y": 130
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ra_in01",
+          "x": 176,
+          "y": 389
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ve_in",
+          "x": 386,
+          "y": 245
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "yuno_in01",
+          "x": 103,
+          "y": 35
+        }
+      ]
+    },
+    {
+      "id": 1204,
+      "name": "Cutter",
+      "slots": 3,
+      "price": 1250,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "aldeba_in",
+          "x": 28,
+          "y": 54
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "alberta_in",
+          "x": 188,
+          "y": 21
+        },
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "geffen_in",
+          "x": 30,
+          "y": 178
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "izlude_in",
+          "x": 60,
+          "y": 127
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "xmas_in",
+          "x": 174,
+          "y": 98
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "morocc_in",
+          "x": 141,
+          "y": 67
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "payon_in01",
+          "x": 15,
+          "y": 119
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 172,
+          "y": 130
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "yuno_in01",
+          "x": 103,
+          "y": 35
+        }
+      ]
+    },
+    {
+      "id": 1207,
+      "name": "Main Gauche",
+      "slots": 3,
+      "price": 2400,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "gonryun",
+          "x": 174,
+          "y": 101
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "aldeba_in",
+          "x": 28,
+          "y": 54
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "alberta_in",
+          "x": 188,
+          "y": 21
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ama_in01",
+          "x": 102,
+          "y": 28
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ayo_in01",
+          "x": 90,
+          "y": 192
+        },
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "geffen_in",
+          "x": 30,
+          "y": 178
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "izlude_in",
+          "x": 60,
+          "y": 127
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "lhz_in02",
+          "x": 276,
+          "y": 99
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "lou_in02",
+          "x": 130,
+          "y": 182
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "xmas_in",
+          "x": 174,
+          "y": 98
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "morocc_in",
+          "x": 141,
+          "y": 67
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "mosk_in",
+          "x": 31,
+          "y": 180
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "payon_in01",
+          "x": 15,
+          "y": 119
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 172,
+          "y": 130
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ra_in01",
+          "x": 176,
+          "y": 389
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ve_in",
+          "x": 386,
+          "y": 245
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "yuno_in01",
+          "x": 103,
+          "y": 35
+        }
+      ]
+    },
+    {
+      "id": 1210,
+      "name": "Dirk",
+      "slots": 2,
+      "price": 8500,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "aldeba_in",
+          "x": 28,
+          "y": 54
+        },
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "geffen_in",
+          "x": 30,
+          "y": 178
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "xmas_in",
+          "x": 174,
+          "y": 98
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "morocc_in",
+          "x": 141,
+          "y": 67
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "yuno_in01",
+          "x": 103,
+          "y": 35
+        }
+      ]
+    },
+    {
+      "id": 1213,
+      "name": "Dagger",
+      "slots": 2,
+      "price": 14000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "aldeba_in",
+          "x": 28,
+          "y": 54
+        },
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "geffen_in",
+          "x": 30,
+          "y": 178
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "xmas_in",
+          "x": 174,
+          "y": 98
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "morocc_in",
+          "x": 141,
+          "y": 67
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "yuno_in01",
+          "x": 103,
+          "y": 35
+        }
+      ]
+    },
+    {
+      "id": 1216,
+      "name": "Stiletto",
+      "slots": 2,
+      "price": 19500,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "gonryun",
+          "x": 174,
+          "y": 101
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "aldeba_in",
+          "x": 28,
+          "y": 54
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ama_in01",
+          "x": 102,
+          "y": 28
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ayo_in01",
+          "x": 90,
+          "y": 192
+        },
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "geffen_in",
+          "x": 30,
+          "y": 178
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "lhz_in02",
+          "x": 276,
+          "y": 99
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "lou_in02",
+          "x": 130,
+          "y": 182
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "xmas_in",
+          "x": 174,
+          "y": 98
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "morocc_in",
+          "x": 141,
+          "y": 67
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "mosk_in",
+          "x": 31,
+          "y": 180
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ra_in01",
+          "x": 176,
+          "y": 389
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ve_in",
+          "x": 386,
+          "y": 245
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "yuno_in01",
+          "x": 103,
+          "y": 35
+        }
+      ]
+    },
+    {
+      "id": 1219,
+      "name": "Gladius",
+      "slots": 2,
+      "price": 43000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "aldeba_in",
+          "x": 28,
+          "y": 54
+        },
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "xmas_in",
+          "x": 174,
+          "y": 98
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "morocc_in",
+          "x": 141,
+          "y": 67
+        }
+      ]
+    },
+    {
+      "id": 1222,
+      "name": "Damascus",
+      "slots": 1,
+      "price": 49000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "aldeba_in",
+          "x": 28,
+          "y": 54
+        },
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "xmas_in",
+          "x": 174,
+          "y": 98
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "morocc_in",
+          "x": 141,
+          "y": 67
+        }
+      ]
+    },
+    {
+      "id": 1245,
+      "name": "Cinquedea",
+      "slots": 1,
+      "price": 40000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "aldeba_in",
+          "x": 22,
+          "y": 47
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "alberta_in",
+          "x": 175,
+          "y": 97
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "geffen_in",
+          "x": 22,
+          "y": 171
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "morocc_in",
+          "x": 132,
+          "y": 57
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "payon_in01",
+          "x": 5,
+          "y": 129
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 165,
+          "y": 140
+        }
+      ]
+    },
+    {
+      "id": 1247,
+      "name": "Kindle Dagger",
+      "slots": 0,
+      "price": 10000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "ein_in01",
+          "x": 119,
+          "y": 26
+        }
+      ]
+    },
+    {
+      "id": 1248,
+      "name": "Obsidian Dagger",
+      "slots": 0,
+      "price": 10000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "ein_in01",
+          "x": 119,
+          "y": 26
+        }
+      ]
+    },
+    {
+      "id": 1249,
+      "name": "Fisherman's Dagger",
+      "slots": 0,
+      "price": 10000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "ein_in01",
+          "x": 119,
+          "y": 26
+        }
+      ]
+    },
+    {
+      "id": 13000,
+      "name": "Jujube Dagger",
+      "slots": 0,
+      "price": 10000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "ein_in01",
+          "x": 119,
+          "y": 26
+        }
+      ]
+    },
+    {
+      "id": 13003,
+      "name": "Cowardice Blade",
+      "slots": 1,
+      "price": 52000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "brasilis",
+          "x": 244,
+          "y": 243
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "lhz_in02",
+          "x": 276,
+          "y": 99
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ra_in01",
+          "x": 176,
+          "y": 389
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ve_in",
+          "x": 336,
+          "y": 243
+        }
+      ]
+    },
+    {
+      "id": 1101,
+      "name": "Sword",
+      "slots": 3,
+      "price": 100,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "alberta_in",
+          "x": 188,
+          "y": 21
+        },
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "geffen_in",
+          "x": 30,
+          "y": 178
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "izlude_in",
+          "x": 60,
+          "y": 127
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "payon_in01",
+          "x": 15,
+          "y": 119
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 172,
+          "y": 130
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "yuno_in01",
+          "x": 103,
+          "y": 35
+        }
+      ]
+    },
+    {
+      "id": 1104,
+      "name": "Falchion",
+      "slots": 3,
+      "price": 1500,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "alberta_in",
+          "x": 188,
+          "y": 21
+        },
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "izlude_in",
+          "x": 60,
+          "y": 127
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "payon_in01",
+          "x": 15,
+          "y": 119
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 172,
+          "y": 130
+        }
+      ]
+    },
+    {
+      "id": 1107,
+      "name": "Blade",
+      "slots": 3,
+      "price": 2900,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "gonryun",
+          "x": 174,
+          "y": 101
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "alberta_in",
+          "x": 188,
+          "y": 21
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ama_in01",
+          "x": 102,
+          "y": 28
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ayo_in01",
+          "x": 90,
+          "y": 192
+        },
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "izlude_in",
+          "x": 60,
+          "y": 127
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "lhz_in02",
+          "x": 276,
+          "y": 99
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "lou_in02",
+          "x": 130,
+          "y": 182
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "mosk_in",
+          "x": 31,
+          "y": 180
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "payon_in01",
+          "x": 15,
+          "y": 119
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 172,
+          "y": 130
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ra_in01",
+          "x": 176,
+          "y": 389
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ve_in",
+          "x": 386,
+          "y": 245
+        }
+      ]
+    },
+    {
+      "id": 1110,
+      "name": "Rapier",
+      "slots": 2,
+      "price": 10000,
+      "vendors": [
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 172,
+          "y": 130
+        }
+      ]
+    },
+    {
+      "id": 1113,
+      "name": "Scimitar",
+      "slots": 2,
+      "price": 17000,
+      "vendors": [
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 172,
+          "y": 130
+        }
+      ]
+    },
+    {
+      "id": 1119,
+      "name": "Tsurugi",
+      "slots": 1,
+      "price": 51000,
+      "vendors": [
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 172,
+          "y": 130
+        }
+      ]
+    },
+    {
+      "id": 1122,
+      "name": "Ring Pommel Saber",
+      "slots": 2,
+      "price": 24000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "gonryun",
+          "x": 174,
+          "y": 101
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ama_in01",
+          "x": 102,
+          "y": 28
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ayo_in01",
+          "x": 90,
+          "y": 192
+        },
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "lhz_in02",
+          "x": 276,
+          "y": 99
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "lou_in02",
+          "x": 130,
+          "y": 182
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "mosk_in",
+          "x": 31,
+          "y": 180
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 172,
+          "y": 130
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ra_in01",
+          "x": 176,
+          "y": 389
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ve_in",
+          "x": 386,
+          "y": 245
+        }
+      ]
+    },
+    {
+      "id": 1123,
+      "name": "Haedonggum",
+      "slots": 1,
+      "price": 50000,
+      "vendors": [
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 172,
+          "y": 130
+        }
+      ]
+    },
+    {
+      "id": 1126,
+      "name": "Saber",
+      "slots": 2,
+      "price": 49000,
+      "vendors": [
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 172,
+          "y": 130
+        }
+      ]
+    },
+    {
+      "id": 1129,
+      "name": "Flamberge",
+      "slots": 0,
+      "price": 60000,
+      "vendors": [
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 172,
+          "y": 130
+        }
+      ]
+    },
+    {
+      "id": 1146,
+      "name": "Town Sword",
+      "slots": 1,
+      "price": 42000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "aldeba_in",
+          "x": 22,
+          "y": 47
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "alberta_in",
+          "x": 175,
+          "y": 97
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "geffen_in",
+          "x": 22,
+          "y": 171
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "morocc_in",
+          "x": 132,
+          "y": 57
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "payon_in01",
+          "x": 5,
+          "y": 129
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 165,
+          "y": 140
+        }
+      ]
+    },
+    {
+      "id": 1116,
+      "name": "Katana",
+      "slots": 3,
+      "price": 2000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "gonryun",
+          "x": 174,
+          "y": 101
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ama_in01",
+          "x": 102,
+          "y": 28
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ayo_in01",
+          "x": 90,
+          "y": 192
+        },
+        {
+          "name": "Two Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 109,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "hu_in01",
+          "x": 94,
+          "y": 390
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "izlude_in",
+          "x": 60,
+          "y": 127
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "lhz_in02",
+          "x": 276,
+          "y": 99
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "lou_in02",
+          "x": 130,
+          "y": 182
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "mosk_in",
+          "x": 31,
+          "y": 180
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 172,
+          "y": 130
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ra_in01",
+          "x": 176,
+          "y": 389
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ve_in",
+          "x": 386,
+          "y": 245
+        }
+      ]
+    },
+    {
+      "id": 1151,
+      "name": "Slayer",
+      "slots": 2,
+      "price": 15000,
+      "vendors": [
+        {
+          "name": "Two Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 109,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "izlude_in",
+          "x": 60,
+          "y": 127
+        }
+      ]
+    },
+    {
+      "id": 1154,
+      "name": "Bastard Sword",
+      "slots": 2,
+      "price": 22500,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "gonryun",
+          "x": 174,
+          "y": 101
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ama_in01",
+          "x": 102,
+          "y": 28
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ayo_in01",
+          "x": 90,
+          "y": 192
+        },
+        {
+          "name": "Two Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 109,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "hu_in01",
+          "x": 94,
+          "y": 390
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "izlude_in",
+          "x": 60,
+          "y": 127
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "lhz_in02",
+          "x": 276,
+          "y": 99
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "lou_in02",
+          "x": 130,
+          "y": 182
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "mosk_in",
+          "x": 31,
+          "y": 180
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ra_in01",
+          "x": 176,
+          "y": 389
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ve_in",
+          "x": 386,
+          "y": 245
+        }
+      ]
+    },
+    {
+      "id": 1157,
+      "name": "Two-Handed Sword",
+      "slots": 1,
+      "price": 60000,
+      "vendors": [
+        {
+          "name": "Two Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 109,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "izlude_in",
+          "x": 60,
+          "y": 127
+        }
+      ]
+    },
+    {
+      "id": 1160,
+      "name": "Broad Sword",
+      "slots": 1,
+      "price": 65000,
+      "vendors": [
+        {
+          "name": "Two Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 109,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "izlude_in",
+          "x": 60,
+          "y": 127
+        }
+      ]
+    },
+    {
+      "id": 1401,
+      "name": "Javelin",
+      "slots": 3,
+      "price": 150,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "cmd_fild07",
+          "x": 250,
+          "y": 98
+        },
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 171,
+          "y": 140
+        }
+      ]
+    },
+    {
+      "id": 1404,
+      "name": "Spear",
+      "slots": 3,
+      "price": 1700,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "cmd_fild07",
+          "x": 250,
+          "y": 98
+        },
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 171,
+          "y": 140
+        }
+      ]
+    },
+    {
+      "id": 1407,
+      "name": "Pike",
+      "slots": 3,
+      "price": 3450,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "cmd_fild07",
+          "x": 250,
+          "y": 98
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "brasilis",
+          "x": 244,
+          "y": 243
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "gonryun",
+          "x": 174,
+          "y": 101
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ama_in01",
+          "x": 102,
+          "y": 28
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ayo_in01",
+          "x": 90,
+          "y": 192
+        },
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "lhz_in02",
+          "x": 276,
+          "y": 99
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "lou_in02",
+          "x": 130,
+          "y": 182
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "mosk_in",
+          "x": 31,
+          "y": 180
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 171,
+          "y": 140
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ra_in01",
+          "x": 176,
+          "y": 389
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ve_in",
+          "x": 336,
+          "y": 243
+        }
+      ]
+    },
+    {
+      "id": 1410,
+      "name": "Lance",
+      "slots": 0,
+      "price": 60000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "cmd_fild07",
+          "x": 250,
+          "y": 98
+        },
+        {
+          "name": "Two Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 109,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 171,
+          "y": 140
+        }
+      ]
+    },
+    {
+      "id": 1451,
+      "name": "Guisarme",
+      "slots": 2,
+      "price": 13000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "cmd_fild07",
+          "x": 250,
+          "y": 98
+        },
+        {
+          "name": "Two Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 109,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 171,
+          "y": 140
+        }
+      ]
+    },
+    {
+      "id": 1454,
+      "name": "Glaive",
+      "slots": 2,
+      "price": 20000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "cmd_fild07",
+          "x": 250,
+          "y": 98
+        },
+        {
+          "name": "Two Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 109,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 171,
+          "y": 140
+        }
+      ]
+    },
+    {
+      "id": 1457,
+      "name": "Partizan",
+      "slots": 1,
+      "price": 27000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "cmd_fild07",
+          "x": 250,
+          "y": 98
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "brasilis",
+          "x": 244,
+          "y": 243
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "gonryun",
+          "x": 174,
+          "y": 101
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ama_in01",
+          "x": 102,
+          "y": 28
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ayo_in01",
+          "x": 90,
+          "y": 192
+        },
+        {
+          "name": "Two Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 109,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "lhz_in02",
+          "x": 276,
+          "y": 99
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "lou_in02",
+          "x": 130,
+          "y": 182
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "mosk_in",
+          "x": 31,
+          "y": 180
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 171,
+          "y": 140
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ra_in01",
+          "x": 176,
+          "y": 389
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ve_in",
+          "x": 336,
+          "y": 243
+        }
+      ]
+    },
+    {
+      "id": 1460,
+      "name": "Trident",
+      "slots": 2,
+      "price": 51000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "cmd_fild07",
+          "x": 250,
+          "y": 98
+        },
+        {
+          "name": "Two Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 109,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 171,
+          "y": 140
+        }
+      ]
+    },
+    {
+      "id": 1463,
+      "name": "Halberd",
+      "slots": 1,
+      "price": 54000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "cmd_fild07",
+          "x": 250,
+          "y": 98
+        },
+        {
+          "name": "Two Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 109,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 171,
+          "y": 140
+        }
+      ]
+    },
+    {
+      "id": 1301,
+      "name": "Axe",
+      "slots": 3,
+      "price": 500,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "alberta_in",
+          "x": 188,
+          "y": 21
+        },
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "izlude_in",
+          "x": 60,
+          "y": 127
+        },
+        {
+          "name": "Axe Dealer",
+          "map": "nif_in",
+          "x": 37,
+          "y": 93
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 172,
+          "y": 130
+        }
+      ]
+    },
+    {
+      "id": 1351,
+      "name": "Battle Axe",
+      "slots": 3,
+      "price": 5400,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "alberta_in",
+          "x": 188,
+          "y": 21
+        },
+        {
+          "name": "Two Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 109,
+          "y": 27
+        },
+        {
+          "name": "Axe Dealer",
+          "map": "nif_in",
+          "x": 37,
+          "y": 93
+        }
+      ]
+    },
+    {
+      "id": 1354,
+      "name": "Hammer",
+      "slots": 2,
+      "price": 15500,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "brasilis",
+          "x": 244,
+          "y": 243
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "gonryun",
+          "x": 174,
+          "y": 101
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "alberta_in",
+          "x": 188,
+          "y": 21
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ama_in01",
+          "x": 102,
+          "y": 28
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ayo_in01",
+          "x": 90,
+          "y": 192
+        },
+        {
+          "name": "Two Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 109,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "hu_in01",
+          "x": 94,
+          "y": 390
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "lhz_in02",
+          "x": 276,
+          "y": 99
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "lou_in02",
+          "x": 130,
+          "y": 182
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "mosk_in",
+          "x": 31,
+          "y": 180
+        },
+        {
+          "name": "Axe Dealer",
+          "map": "nif_in",
+          "x": 37,
+          "y": 93
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ra_in01",
+          "x": 176,
+          "y": 389
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ve_in",
+          "x": 336,
+          "y": 243
+        }
+      ]
+    },
+    {
+      "id": 1357,
+      "name": "Buster",
+      "slots": 1,
+      "price": 34000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "alberta_in",
+          "x": 188,
+          "y": 21
+        },
+        {
+          "name": "Two Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 109,
+          "y": 27
+        },
+        {
+          "name": "Axe Dealer",
+          "map": "nif_in",
+          "x": 37,
+          "y": 93
+        }
+      ]
+    },
+    {
+      "id": 1360,
+      "name": "Two-Handed Axe",
+      "slots": 1,
+      "price": 55000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "alberta_in",
+          "x": 188,
+          "y": 21
+        },
+        {
+          "name": "Two Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 109,
+          "y": 27
+        },
+        {
+          "name": "Axe Dealer",
+          "map": "nif_in",
+          "x": 37,
+          "y": 93
+        }
+      ]
+    },
+    {
+      "id": 1501,
+      "name": "Club",
+      "slots": 3,
+      "price": 120,
+      "vendors": [
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "um_in",
+          "x": 160,
+          "y": 125
+        },
+        {
+          "name": "Nun",
+          "map": "prt_church",
+          "x": 108,
+          "y": 124
+        }
+      ]
+    },
+    {
+      "id": 1504,
+      "name": "Mace",
+      "slots": 3,
+      "price": 1600,
+      "vendors": [
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "um_in",
+          "x": 160,
+          "y": 125
+        },
+        {
+          "name": "Nun",
+          "map": "prt_church",
+          "x": 108,
+          "y": 124
+        }
+      ]
+    },
+    {
+      "id": 1507,
+      "name": "Smasher",
+      "slots": 2,
+      "price": 9000,
+      "vendors": [
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "um_in",
+          "x": 160,
+          "y": 125
+        },
+        {
+          "name": "Nun",
+          "map": "prt_church",
+          "x": 108,
+          "y": 124
+        }
+      ]
+    },
+    {
+      "id": 1510,
+      "name": "Flail",
+      "slots": 2,
+      "price": 16000,
+      "vendors": [
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "um_in",
+          "x": 160,
+          "y": 125
+        },
+        {
+          "name": "Nun",
+          "map": "prt_church",
+          "x": 108,
+          "y": 124
+        }
+      ]
+    },
+    {
+      "id": 1513,
+      "name": "Morning Star",
+      "slots": 1,
+      "price": 41000,
+      "vendors": [
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "um_in",
+          "x": 160,
+          "y": 125
+        },
+        {
+          "name": "Nun",
+          "map": "prt_church",
+          "x": 108,
+          "y": 124
+        }
+      ]
+    },
+    {
+      "id": 1516,
+      "name": "Sword Mace",
+      "slots": 0,
+      "price": 50000,
+      "vendors": [
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Trader",
+          "map": "moc_ruins",
+          "x": 125,
+          "y": 135
+        }
+      ]
+    },
+    {
+      "id": 1519,
+      "name": "Chain",
+      "slots": 2,
+      "price": 23000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "brasilis",
+          "x": 244,
+          "y": 243
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "gonryun",
+          "x": 174,
+          "y": 101
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ama_in01",
+          "x": 102,
+          "y": 28
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ayo_in01",
+          "x": 90,
+          "y": 192
+        },
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "lhz_in02",
+          "x": 276,
+          "y": 99
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "lou_in02",
+          "x": 130,
+          "y": 182
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "mosk_in",
+          "x": 31,
+          "y": 180
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ra_in01",
+          "x": 176,
+          "y": 389
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "um_in",
+          "x": 160,
+          "y": 125
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ve_in",
+          "x": 336,
+          "y": 243
+        },
+        {
+          "name": "Nun",
+          "map": "prt_church",
+          "x": 108,
+          "y": 124
+        }
+      ]
+    },
+    {
+      "id": 1522,
+      "name": "Stunner",
+      "slots": 0,
+      "price": 60000,
+      "vendors": [
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Trader",
+          "map": "moc_ruins",
+          "x": 125,
+          "y": 135
+        }
+      ]
+    },
+    {
+      "id": 1601,
+      "name": "Rod",
+      "slots": 3,
+      "price": 50,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "alberta_in",
+          "x": 188,
+          "y": 21
+        },
+        {
+          "name": "Magical Item Seller",
+          "map": "geffen_in",
+          "x": 77,
+          "y": 173
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "geffen_in",
+          "x": 30,
+          "y": 178
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "izlude_in",
+          "x": 60,
+          "y": 127
+        },
+        {
+          "name": "Wand Dealer",
+          "map": "lhz_in02",
+          "x": 273,
+          "y": 35
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "morocc_in",
+          "x": 141,
+          "y": 67
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "payon_in01",
+          "x": 15,
+          "y": 119
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 172,
+          "y": 130
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ra_in01",
+          "x": 176,
+          "y": 389
+        },
+        {
+          "name": "Magical Item Seller",
+          "map": "ve_in",
+          "x": 252,
+          "y": 313
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "yuno_in01",
+          "x": 103,
+          "y": 35
+        },
+        {
+          "name": "Magical Item Seller",
+          "map": "yuno",
+          "x": 163,
+          "y": 187
+        }
+      ]
+    },
+    {
+      "id": 1604,
+      "name": "Wand",
+      "slots": 2,
+      "price": 2500,
+      "vendors": [
+        {
+          "name": "Magical Item Seller",
+          "map": "geffen_in",
+          "x": 77,
+          "y": 173
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "geffen_in",
+          "x": 30,
+          "y": 178
+        },
+        {
+          "name": "Wand Dealer",
+          "map": "lhz_in02",
+          "x": 273,
+          "y": 35
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ra_in01",
+          "x": 176,
+          "y": 389
+        },
+        {
+          "name": "Magical Item Seller",
+          "map": "ve_in",
+          "x": 252,
+          "y": 313
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "yuno_in01",
+          "x": 103,
+          "y": 35
+        },
+        {
+          "name": "Magical Item Seller",
+          "map": "yuno",
+          "x": 163,
+          "y": 187
+        }
+      ]
+    },
+    {
+      "id": 1607,
+      "name": "Staff",
+      "slots": 2,
+      "price": 9500,
+      "vendors": [
+        {
+          "name": "Magical Item Seller",
+          "map": "geffen_in",
+          "x": 77,
+          "y": 173
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "geffen_in",
+          "x": 30,
+          "y": 178
+        },
+        {
+          "name": "Wand Dealer",
+          "map": "lhz_in02",
+          "x": 273,
+          "y": 35
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ra_in01",
+          "x": 176,
+          "y": 389
+        },
+        {
+          "name": "Magical Item Seller",
+          "map": "ve_in",
+          "x": 252,
+          "y": 313
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "yuno_in01",
+          "x": 103,
+          "y": 35
+        },
+        {
+          "name": "Magical Item Seller",
+          "map": "yuno",
+          "x": 163,
+          "y": 187
+        }
+      ]
+    },
+    {
+      "id": 1610,
+      "name": "Arc Wand",
+      "slots": 1,
+      "price": 45000,
+      "vendors": [
+        {
+          "name": "Magical Item Seller",
+          "map": "geffen_in",
+          "x": 77,
+          "y": 173
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "geffen_in",
+          "x": 30,
+          "y": 178
+        },
+        {
+          "name": "Magical Item Seller",
+          "map": "ve_in",
+          "x": 252,
+          "y": 313
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "yuno_in01",
+          "x": 103,
+          "y": 35
+        },
+        {
+          "name": "Magical Item Seller",
+          "map": "yuno",
+          "x": 163,
+          "y": 187
+        }
+      ]
+    },
+    {
+      "id": 1617,
+      "name": "Survivor's Rod",
+      "slots": 0,
+      "price": 85000,
+      "vendors": [
+        {
+          "name": "Wand Dealer",
+          "map": "lhz_in02",
+          "x": 273,
+          "y": 35
+        }
+      ]
+    },
+    {
+      "id": 1619,
+      "name": "Survivor's Rod",
+      "slots": 0,
+      "price": 85000,
+      "vendors": [
+        {
+          "name": "Wand Dealer",
+          "map": "lhz_in02",
+          "x": 273,
+          "y": 35
+        }
+      ]
+    },
+    {
+      "id": 1701,
+      "name": "Bow",
+      "slots": 3,
+      "price": 1000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "alberta_in",
+          "x": 188,
+          "y": 21
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "geffen_in",
+          "x": 30,
+          "y": 178
+        },
+        {
+          "name": "Bow Dealer",
+          "map": "hu_in01",
+          "x": 100,
+          "y": 390
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "izlude_in",
+          "x": 60,
+          "y": 127
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "morocc_in",
+          "x": 141,
+          "y": 67
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "payon_in01",
+          "x": 15,
+          "y": 119
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 172,
+          "y": 130
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "yuno_in01",
+          "x": 103,
+          "y": 35
+        }
+      ]
+    },
+    {
+      "id": 1704,
+      "name": "Composite Bow",
+      "slots": 3,
+      "price": 2500,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "payon_in01",
+          "x": 15,
+          "y": 119
+        }
+      ]
+    },
+    {
+      "id": 1707,
+      "name": "Great Bow",
+      "slots": 2,
+      "price": 10000,
+      "vendors": [
+        {
+          "name": "Bow Dealer",
+          "map": "hu_in01",
+          "x": 100,
+          "y": 390
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "payon_in01",
+          "x": 15,
+          "y": 119
+        }
+      ]
+    },
+    {
+      "id": 1710,
+      "name": "Crossbow",
+      "slots": 2,
+      "price": 17000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "payon_in01",
+          "x": 15,
+          "y": 119
+        }
+      ]
+    },
+    {
+      "id": 1713,
+      "name": "Arbalest",
+      "slots": 1,
+      "price": 48000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "payon_in01",
+          "x": 15,
+          "y": 119
+        }
+      ]
+    },
+    {
+      "id": 1714,
+      "name": "Gakkung Bow",
+      "slots": 1,
+      "price": 42000,
+      "vendors": [
+        {
+          "name": "Bow Dealer",
+          "map": "hu_in01",
+          "x": 100,
+          "y": 390
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "payon_in01",
+          "x": 15,
+          "y": 119
+        }
+      ]
+    },
+    {
+      "id": 1718,
+      "name": "Hunter Bow",
+      "slots": 0,
+      "price": 64000,
+      "vendors": [
+        {
+          "name": "Bow Dealer",
+          "map": "hu_in01",
+          "x": 100,
+          "y": 390
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "payon_in01",
+          "x": 15,
+          "y": 119
+        }
+      ]
+    },
+    {
+      "id": 1721,
+      "name": "Repeating Crossbow",
+      "slots": 1,
+      "price": 89000,
+      "vendors": [
+        {
+          "name": "Mr. King's Shop",
+          "map": "yuno",
+          "x": 205,
+          "y": 103
+        }
+      ]
+    },
+    {
+      "id": 1801,
+      "name": "Waghnak",
+      "slots": 3,
+      "price": 8000,
+      "vendors": [
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_monk",
+          "x": 135,
+          "y": 263
+        }
+      ]
+    },
+    {
+      "id": 1803,
+      "name": "Knuckle Dusters",
+      "slots": 2,
+      "price": 25000,
+      "vendors": [
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_monk",
+          "x": 135,
+          "y": 263
+        }
+      ]
+    },
+    {
+      "id": 1805,
+      "name": "Studded Knuckles",
+      "slots": 2,
+      "price": 32000,
+      "vendors": [
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_monk",
+          "x": 135,
+          "y": 263
+        }
+      ]
+    },
+    {
+      "id": 1807,
+      "name": "Fist",
+      "slots": 0,
+      "price": 53000,
+      "vendors": [
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "um_in",
+          "x": 160,
+          "y": 125
+        }
+      ]
+    },
+    {
+      "id": 1809,
+      "name": "Claw",
+      "slots": 1,
+      "price": 67000,
+      "vendors": [
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "um_in",
+          "x": 160,
+          "y": 125
+        }
+      ]
+    },
+    {
+      "id": 1811,
+      "name": "Finger",
+      "slots": 1,
+      "price": 58000,
+      "vendors": [
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "um_in",
+          "x": 160,
+          "y": 125
+        }
+      ]
+    },
+    {
+      "id": 1901,
+      "name": "Violin",
+      "slots": 3,
+      "price": 4000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "cmd_in01",
+          "x": 128,
+          "y": 165
+        }
+      ]
+    },
+    {
+      "id": 1903,
+      "name": "Mandolin",
+      "slots": 2,
+      "price": 18000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "cmd_in01",
+          "x": 128,
+          "y": 165
+        }
+      ]
+    },
+    {
+      "id": 1905,
+      "name": "Lute",
+      "slots": 2,
+      "price": 24500,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "cmd_in01",
+          "x": 128,
+          "y": 165
+        }
+      ]
+    },
+    {
+      "id": 1907,
+      "name": "Guitar",
+      "slots": 0,
+      "price": 47000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "cmd_in01",
+          "x": 128,
+          "y": 165
+        }
+      ]
+    },
+    {
+      "id": 1909,
+      "name": "Harp",
+      "slots": 1,
+      "price": 62000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "cmd_in01",
+          "x": 128,
+          "y": 165
+        }
+      ]
+    },
+    {
+      "id": 1911,
+      "name": "Gumoongoh",
+      "slots": 1,
+      "price": 54000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "cmd_in01",
+          "x": 128,
+          "y": 165
+        }
+      ]
+    },
+    {
+      "id": 1950,
+      "name": "Rope",
+      "slots": 3,
+      "price": 2500,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "cmd_in01",
+          "x": 128,
+          "y": 165
+        }
+      ]
+    },
+    {
+      "id": 1952,
+      "name": "Whip",
+      "slots": 2,
+      "price": 12000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "cmd_in01",
+          "x": 128,
+          "y": 165
+        }
+      ]
+    },
+    {
+      "id": 1954,
+      "name": "Wire Whip",
+      "slots": 2,
+      "price": 17500,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "cmd_in01",
+          "x": 128,
+          "y": 165
+        }
+      ]
+    },
+    {
+      "id": 1956,
+      "name": "Rante Whip",
+      "slots": 0,
+      "price": 32000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "cmd_in01",
+          "x": 128,
+          "y": 165
+        }
+      ]
+    },
+    {
+      "id": 1958,
+      "name": "Tail Whip",
+      "slots": 1,
+      "price": 41000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "cmd_in01",
+          "x": 128,
+          "y": 165
+        }
+      ]
+    },
+    {
+      "id": 1960,
+      "name": "Whip",
+      "slots": 1,
+      "price": 38000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "cmd_in01",
+          "x": 128,
+          "y": 165
+        }
+      ]
+    },
+    {
+      "id": 1250,
+      "name": "Jur",
+      "slots": 2,
+      "price": 19500,
+      "vendors": [
+        {
+          "name": "Two Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 109,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "morocc_in",
+          "x": 141,
+          "y": 67
+        }
+      ]
+    },
+    {
+      "id": 1252,
+      "name": "Katar",
+      "slots": 1,
+      "price": 41000,
+      "vendors": [
+        {
+          "name": "Two Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 109,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "morocc_in",
+          "x": 141,
+          "y": 67
+        }
+      ]
+    },
+    {
+      "id": 1254,
+      "name": "Jamadhar",
+      "slots": 0,
+      "price": 37200,
+      "vendors": [
+        {
+          "name": "Two Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 109,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "morocc_in",
+          "x": 141,
+          "y": 67
+        }
+      ]
+    },
+    {
+      "id": 13102,
+      "name": "Crimson Bolt",
+      "slots": 1,
+      "price": 20000,
+      "vendors": [
+        {
+          "name": "Trading Merchant",
+          "map": "alberta_in",
+          "x": 176,
+          "y": 81
+        },
+        {
+          "name": "Trading Merchant",
+          "map": "izlude_in",
+          "x": 121,
+          "y": 64
+        },
+        {
+          "name": "Chivas Lugal",
+          "map": "que_ng",
+          "x": 179,
+          "y": 91
+        }
+      ]
+    },
+    {
+      "id": 13150,
+      "name": "Branch",
+      "slots": 3,
+      "price": 3000,
+      "vendors": [
+        {
+          "name": "Trading Merchant",
+          "map": "alberta_in",
+          "x": 176,
+          "y": 81
+        },
+        {
+          "name": "Trading Merchant",
+          "map": "izlude_in",
+          "x": 121,
+          "y": 64
+        },
+        {
+          "name": "Chivas Lugal",
+          "map": "que_ng",
+          "x": 179,
+          "y": 91
+        }
+      ]
+    },
+    {
+      "id": 13151,
+      "name": "Cyclone",
+      "slots": 1,
+      "price": 17500,
+      "vendors": [
+        {
+          "name": "Trading Merchant",
+          "map": "alberta_in",
+          "x": 176,
+          "y": 81
+        },
+        {
+          "name": "Trading Merchant",
+          "map": "izlude_in",
+          "x": 121,
+          "y": 64
+        },
+        {
+          "name": "Chivas Lugal",
+          "map": "que_ng",
+          "x": 179,
+          "y": 91
+        }
+      ]
+    },
+    {
+      "id": 13163,
+      "name": "Long Barrel",
+      "slots": 0,
+      "price": 40000,
+      "vendors": [
+        {
+          "name": "Trading Merchant",
+          "map": "alberta_in",
+          "x": 176,
+          "y": 81
+        },
+        {
+          "name": "Trading Merchant",
+          "map": "izlude_in",
+          "x": 121,
+          "y": 64
+        },
+        {
+          "name": "Chivas Lugal",
+          "map": "que_ng",
+          "x": 179,
+          "y": 91
+        }
+      ]
+    },
+    {
+      "id": 13165,
+      "name": "Jungle Carbine",
+      "slots": 0,
+      "price": 56000,
+      "vendors": [
+        {
+          "name": "Trading Merchant",
+          "map": "alberta_in",
+          "x": 176,
+          "y": 81
+        },
+        {
+          "name": "Trading Merchant",
+          "map": "izlude_in",
+          "x": 121,
+          "y": 64
+        },
+        {
+          "name": "Chivas Lugal",
+          "map": "que_ng",
+          "x": 179,
+          "y": 91
+        }
+      ]
+    },
+    {
+      "id": 13154,
+      "name": "Rolling Stone",
+      "slots": 1,
+      "price": 12000,
+      "vendors": [
+        {
+          "name": "Trading Merchant",
+          "map": "alberta_in",
+          "x": 176,
+          "y": 81
+        },
+        {
+          "name": "Trading Merchant",
+          "map": "izlude_in",
+          "x": 121,
+          "y": 64
+        },
+        {
+          "name": "Chivas Lugal",
+          "map": "que_ng",
+          "x": 179,
+          "y": 91
+        }
+      ]
+    },
+    {
+      "id": 13155,
+      "name": "Black Rose",
+      "slots": 1,
+      "price": 32000,
+      "vendors": [
+        {
+          "name": "Trading Merchant",
+          "map": "alberta_in",
+          "x": 176,
+          "y": 81
+        },
+        {
+          "name": "Trading Merchant",
+          "map": "izlude_in",
+          "x": 121,
+          "y": 64
+        },
+        {
+          "name": "Chivas Lugal",
+          "map": "que_ng",
+          "x": 179,
+          "y": 91
+        }
+      ]
+    },
+    {
+      "id": 13168,
+      "name": "Thunder P",
+      "slots": 1,
+      "price": 76000,
+      "vendors": [
+        {
+          "name": "Trading Merchant",
+          "map": "alberta_in",
+          "x": 176,
+          "y": 81
+        },
+        {
+          "name": "Trading Merchant",
+          "map": "izlude_in",
+          "x": 121,
+          "y": 64
+        },
+        {
+          "name": "Chivas Lugal",
+          "map": "que_ng",
+          "x": 179,
+          "y": 91
+        }
+      ]
+    }
+  ],
+  "renewal": [
+    {
+      "id": 1201,
+      "name": "Knife",
+      "slots": 3,
+      "price": 50,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "aldeba_in",
+          "x": 28,
+          "y": 54
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "alberta_in",
+          "x": 188,
+          "y": 21
+        },
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "geffen_in",
+          "x": 30,
+          "y": 178
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "hu_in01",
+          "x": 94,
+          "y": 390
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "izlude_in",
+          "x": 60,
+          "y": 127
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "lhz_in02",
+          "x": 276,
+          "y": 99
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "xmas_in",
+          "x": 174,
+          "y": 98
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "morocc_in",
+          "x": 141,
+          "y": 67
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "payon_in01",
+          "x": 15,
+          "y": 119
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 172,
+          "y": 130
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ra_in01",
+          "x": 176,
+          "y": 389
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ve_in",
+          "x": 386,
+          "y": 245
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "yuno_in01",
+          "x": 103,
+          "y": 35
+        }
+      ]
+    },
+    {
+      "id": 1204,
+      "name": "Cutter",
+      "slots": 3,
+      "price": 1250,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "aldeba_in",
+          "x": 28,
+          "y": 54
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "alberta_in",
+          "x": 188,
+          "y": 21
+        },
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "geffen_in",
+          "x": 30,
+          "y": 178
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "izlude_in",
+          "x": 60,
+          "y": 127
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "xmas_in",
+          "x": 174,
+          "y": 98
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "morocc_in",
+          "x": 141,
+          "y": 67
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "payon_in01",
+          "x": 15,
+          "y": 119
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 172,
+          "y": 130
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "yuno_in01",
+          "x": 103,
+          "y": 35
+        }
+      ]
+    },
+    {
+      "id": 1207,
+      "name": "Main Gauche",
+      "slots": 3,
+      "price": 2400,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "dewata",
+          "x": 218,
+          "y": 164
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "gonryun",
+          "x": 174,
+          "y": 101
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "aldeba_in",
+          "x": 28,
+          "y": 54
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "alberta_in",
+          "x": 188,
+          "y": 21
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ama_in01",
+          "x": 102,
+          "y": 28
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ayo_in01",
+          "x": 90,
+          "y": 192
+        },
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "geffen_in",
+          "x": 30,
+          "y": 178
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "izlude_in",
+          "x": 60,
+          "y": 127
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "lhz_in02",
+          "x": 276,
+          "y": 99
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "lou_in02",
+          "x": 130,
+          "y": 182
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "xmas_in",
+          "x": 174,
+          "y": 98
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "morocc_in",
+          "x": 141,
+          "y": 67
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "mosk_in",
+          "x": 31,
+          "y": 180
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ma_in01",
+          "x": 73,
+          "y": 22
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "payon_in01",
+          "x": 15,
+          "y": 119
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 172,
+          "y": 130
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ra_in01",
+          "x": 176,
+          "y": 389
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ve_in",
+          "x": 386,
+          "y": 245
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "yuno_in01",
+          "x": 103,
+          "y": 35
+        }
+      ]
+    },
+    {
+      "id": 1210,
+      "name": "Dirk",
+      "slots": 2,
+      "price": 8500,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "aldeba_in",
+          "x": 28,
+          "y": 54
+        },
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "geffen_in",
+          "x": 30,
+          "y": 178
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "xmas_in",
+          "x": 174,
+          "y": 98
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "morocc_in",
+          "x": 141,
+          "y": 67
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "yuno_in01",
+          "x": 103,
+          "y": 35
+        }
+      ]
+    },
+    {
+      "id": 1213,
+      "name": "Dagger",
+      "slots": 2,
+      "price": 14000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "aldeba_in",
+          "x": 28,
+          "y": 54
+        },
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "geffen_in",
+          "x": 30,
+          "y": 178
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "xmas_in",
+          "x": 174,
+          "y": 98
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "morocc_in",
+          "x": 141,
+          "y": 67
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "yuno_in01",
+          "x": 103,
+          "y": 35
+        }
+      ]
+    },
+    {
+      "id": 1216,
+      "name": "Stiletto",
+      "slots": 2,
+      "price": 19500,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "dewata",
+          "x": 218,
+          "y": 164
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "gonryun",
+          "x": 174,
+          "y": 101
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "aldeba_in",
+          "x": 28,
+          "y": 54
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ama_in01",
+          "x": 102,
+          "y": 28
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ayo_in01",
+          "x": 90,
+          "y": 192
+        },
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "geffen_in",
+          "x": 30,
+          "y": 178
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "lhz_in02",
+          "x": 276,
+          "y": 99
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "lou_in02",
+          "x": 130,
+          "y": 182
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "xmas_in",
+          "x": 174,
+          "y": 98
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "morocc_in",
+          "x": 141,
+          "y": 67
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "mosk_in",
+          "x": 31,
+          "y": 180
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ma_in01",
+          "x": 73,
+          "y": 22
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ra_in01",
+          "x": 176,
+          "y": 389
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ve_in",
+          "x": 386,
+          "y": 245
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "yuno_in01",
+          "x": 103,
+          "y": 35
+        }
+      ]
+    },
+    {
+      "id": 1219,
+      "name": "Gladius",
+      "slots": 2,
+      "price": 43000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "aldeba_in",
+          "x": 28,
+          "y": 54
+        },
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "xmas_in",
+          "x": 174,
+          "y": 98
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "morocc_in",
+          "x": 141,
+          "y": 67
+        }
+      ]
+    },
+    {
+      "id": 1222,
+      "name": "Damascus",
+      "slots": 1,
+      "price": 49000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "aldeba_in",
+          "x": 28,
+          "y": 54
+        },
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "xmas_in",
+          "x": 174,
+          "y": 98
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "morocc_in",
+          "x": 141,
+          "y": 67
+        }
+      ]
+    },
+    {
+      "id": 1245,
+      "name": "Cinquedea",
+      "slots": 1,
+      "price": 40000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "aldeba_in",
+          "x": 22,
+          "y": 47
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "alberta_in",
+          "x": 175,
+          "y": 97
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "geffen_in",
+          "x": 22,
+          "y": 171
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "morocc_in",
+          "x": 132,
+          "y": 57
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "payon_in01",
+          "x": 5,
+          "y": 129
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 165,
+          "y": 140
+        }
+      ]
+    },
+    {
+      "id": 1247,
+      "name": "Kindle Dagger",
+      "slots": 0,
+      "price": 10000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "ein_in01",
+          "x": 119,
+          "y": 26
+        }
+      ]
+    },
+    {
+      "id": 1248,
+      "name": "Obsidian Dagger",
+      "slots": 0,
+      "price": 10000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "ein_in01",
+          "x": 119,
+          "y": 26
+        }
+      ]
+    },
+    {
+      "id": 1249,
+      "name": "Fisherman's Dagger",
+      "slots": 0,
+      "price": 10000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "ein_in01",
+          "x": 119,
+          "y": 26
+        }
+      ]
+    },
+    {
+      "id": 13000,
+      "name": "Jujube Dagger",
+      "slots": 0,
+      "price": 10000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "ein_in01",
+          "x": 119,
+          "y": 26
+        }
+      ]
+    },
+    {
+      "id": 13003,
+      "name": "Cowardice Blade",
+      "slots": 1,
+      "price": 52000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "brasilis",
+          "x": 244,
+          "y": 243
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "lhz_in02",
+          "x": 276,
+          "y": 99
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ra_in01",
+          "x": 176,
+          "y": 389
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ve_in",
+          "x": 336,
+          "y": 243
+        }
+      ]
+    },
+    {
+      "id": 1101,
+      "name": "Sword",
+      "slots": 3,
+      "price": 100,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "alberta_in",
+          "x": 188,
+          "y": 21
+        },
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "geffen_in",
+          "x": 30,
+          "y": 178
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "izlude_in",
+          "x": 60,
+          "y": 127
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "payon_in01",
+          "x": 15,
+          "y": 119
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 172,
+          "y": 130
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "yuno_in01",
+          "x": 103,
+          "y": 35
+        }
+      ]
+    },
+    {
+      "id": 1104,
+      "name": "Falchion",
+      "slots": 3,
+      "price": 1500,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "alberta_in",
+          "x": 188,
+          "y": 21
+        },
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "izlude_in",
+          "x": 60,
+          "y": 127
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "payon_in01",
+          "x": 15,
+          "y": 119
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 172,
+          "y": 130
+        }
+      ]
+    },
+    {
+      "id": 1107,
+      "name": "Blade",
+      "slots": 3,
+      "price": 2900,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "dewata",
+          "x": 218,
+          "y": 164
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "gonryun",
+          "x": 174,
+          "y": 101
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "alberta_in",
+          "x": 188,
+          "y": 21
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ama_in01",
+          "x": 102,
+          "y": 28
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ayo_in01",
+          "x": 90,
+          "y": 192
+        },
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "izlude_in",
+          "x": 60,
+          "y": 127
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "lhz_in02",
+          "x": 276,
+          "y": 99
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "lou_in02",
+          "x": 130,
+          "y": 182
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "mosk_in",
+          "x": 31,
+          "y": 180
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ma_in01",
+          "x": 73,
+          "y": 22
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "payon_in01",
+          "x": 15,
+          "y": 119
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 172,
+          "y": 130
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ra_in01",
+          "x": 176,
+          "y": 389
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ve_in",
+          "x": 386,
+          "y": 245
+        }
+      ]
+    },
+    {
+      "id": 1110,
+      "name": "Rapier",
+      "slots": 2,
+      "price": 10000,
+      "vendors": [
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 172,
+          "y": 130
+        }
+      ]
+    },
+    {
+      "id": 1113,
+      "name": "Scimitar",
+      "slots": 2,
+      "price": 17000,
+      "vendors": [
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 172,
+          "y": 130
+        }
+      ]
+    },
+    {
+      "id": 1119,
+      "name": "Tsurugi",
+      "slots": 1,
+      "price": 51000,
+      "vendors": [
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 172,
+          "y": 130
+        }
+      ]
+    },
+    {
+      "id": 1122,
+      "name": "Ring Pommel Saber",
+      "slots": 2,
+      "price": 24000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "dewata",
+          "x": 218,
+          "y": 164
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "gonryun",
+          "x": 174,
+          "y": 101
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ama_in01",
+          "x": 102,
+          "y": 28
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ayo_in01",
+          "x": 90,
+          "y": 192
+        },
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "lhz_in02",
+          "x": 276,
+          "y": 99
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "lou_in02",
+          "x": 130,
+          "y": 182
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "mosk_in",
+          "x": 31,
+          "y": 180
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ma_in01",
+          "x": 73,
+          "y": 22
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 172,
+          "y": 130
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ra_in01",
+          "x": 176,
+          "y": 389
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ve_in",
+          "x": 386,
+          "y": 245
+        }
+      ]
+    },
+    {
+      "id": 1123,
+      "name": "Haedonggum",
+      "slots": 1,
+      "price": 50000,
+      "vendors": [
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 172,
+          "y": 130
+        }
+      ]
+    },
+    {
+      "id": 1126,
+      "name": "Saber",
+      "slots": 2,
+      "price": 49000,
+      "vendors": [
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 172,
+          "y": 130
+        }
+      ]
+    },
+    {
+      "id": 1129,
+      "name": "Flamberge",
+      "slots": 0,
+      "price": 60000,
+      "vendors": [
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 172,
+          "y": 130
+        }
+      ]
+    },
+    {
+      "id": 1146,
+      "name": "Town Sword",
+      "slots": 1,
+      "price": 42000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "aldeba_in",
+          "x": 22,
+          "y": 47
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "alberta_in",
+          "x": 175,
+          "y": 97
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "geffen_in",
+          "x": 22,
+          "y": 171
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "morocc_in",
+          "x": 132,
+          "y": 57
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "payon_in01",
+          "x": 5,
+          "y": 129
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 165,
+          "y": 140
+        }
+      ]
+    },
+    {
+      "id": 1116,
+      "name": "Katana",
+      "slots": 3,
+      "price": 2000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "dewata",
+          "x": 218,
+          "y": 164
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "gonryun",
+          "x": 174,
+          "y": 101
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ama_in01",
+          "x": 102,
+          "y": 28
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ayo_in01",
+          "x": 90,
+          "y": 192
+        },
+        {
+          "name": "Two Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 109,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "hu_in01",
+          "x": 94,
+          "y": 390
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "izlude_in",
+          "x": 60,
+          "y": 127
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "lhz_in02",
+          "x": 276,
+          "y": 99
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "lou_in02",
+          "x": 130,
+          "y": 182
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "mosk_in",
+          "x": 31,
+          "y": 180
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ma_in01",
+          "x": 73,
+          "y": 22
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 172,
+          "y": 130
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ra_in01",
+          "x": 176,
+          "y": 389
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ve_in",
+          "x": 386,
+          "y": 245
+        }
+      ]
+    },
+    {
+      "id": 1151,
+      "name": "Slayer",
+      "slots": 2,
+      "price": 15000,
+      "vendors": [
+        {
+          "name": "Two Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 109,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "izlude_in",
+          "x": 60,
+          "y": 127
+        }
+      ]
+    },
+    {
+      "id": 1154,
+      "name": "Bastard Sword",
+      "slots": 2,
+      "price": 22500,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "dewata",
+          "x": 218,
+          "y": 164
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "gonryun",
+          "x": 174,
+          "y": 101
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ama_in01",
+          "x": 102,
+          "y": 28
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ayo_in01",
+          "x": 90,
+          "y": 192
+        },
+        {
+          "name": "Two Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 109,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "hu_in01",
+          "x": 94,
+          "y": 390
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "izlude_in",
+          "x": 60,
+          "y": 127
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "lhz_in02",
+          "x": 276,
+          "y": 99
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "lou_in02",
+          "x": 130,
+          "y": 182
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "mosk_in",
+          "x": 31,
+          "y": 180
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ma_in01",
+          "x": 73,
+          "y": 22
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ra_in01",
+          "x": 176,
+          "y": 389
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ve_in",
+          "x": 386,
+          "y": 245
+        }
+      ]
+    },
+    {
+      "id": 1157,
+      "name": "Two-Handed Sword",
+      "slots": 1,
+      "price": 60000,
+      "vendors": [
+        {
+          "name": "Two Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 109,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "izlude_in",
+          "x": 60,
+          "y": 127
+        }
+      ]
+    },
+    {
+      "id": 1160,
+      "name": "Broad Sword",
+      "slots": 1,
+      "price": 65000,
+      "vendors": [
+        {
+          "name": "Two Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 109,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "izlude_in",
+          "x": 60,
+          "y": 127
+        }
+      ]
+    },
+    {
+      "id": 1401,
+      "name": "Javelin",
+      "slots": 3,
+      "price": 150,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "cmd_fild07",
+          "x": 250,
+          "y": 98
+        },
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 171,
+          "y": 140
+        }
+      ]
+    },
+    {
+      "id": 1404,
+      "name": "Spear",
+      "slots": 3,
+      "price": 1700,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "cmd_fild07",
+          "x": 250,
+          "y": 98
+        },
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 171,
+          "y": 140
+        }
+      ]
+    },
+    {
+      "id": 1407,
+      "name": "Pike",
+      "slots": 3,
+      "price": 3450,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "cmd_fild07",
+          "x": 250,
+          "y": 98
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "brasilis",
+          "x": 244,
+          "y": 243
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "dewata",
+          "x": 218,
+          "y": 164
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "gonryun",
+          "x": 174,
+          "y": 101
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ama_in01",
+          "x": 102,
+          "y": 28
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ayo_in01",
+          "x": 90,
+          "y": 192
+        },
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "lhz_in02",
+          "x": 276,
+          "y": 99
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "lou_in02",
+          "x": 130,
+          "y": 182
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "mosk_in",
+          "x": 31,
+          "y": 180
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ma_in01",
+          "x": 73,
+          "y": 22
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 171,
+          "y": 140
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ra_in01",
+          "x": 176,
+          "y": 389
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ve_in",
+          "x": 336,
+          "y": 243
+        }
+      ]
+    },
+    {
+      "id": 1410,
+      "name": "Lance",
+      "slots": 0,
+      "price": 60000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "cmd_fild07",
+          "x": 250,
+          "y": 98
+        },
+        {
+          "name": "Two Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 109,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 171,
+          "y": 140
+        }
+      ]
+    },
+    {
+      "id": 1451,
+      "name": "Guisarme",
+      "slots": 2,
+      "price": 13000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "cmd_fild07",
+          "x": 250,
+          "y": 98
+        },
+        {
+          "name": "Two Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 109,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 171,
+          "y": 140
+        }
+      ]
+    },
+    {
+      "id": 1454,
+      "name": "Glaive",
+      "slots": 2,
+      "price": 20000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "cmd_fild07",
+          "x": 250,
+          "y": 98
+        },
+        {
+          "name": "Two Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 109,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 171,
+          "y": 140
+        }
+      ]
+    },
+    {
+      "id": 1457,
+      "name": "Partizan",
+      "slots": 1,
+      "price": 27000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "cmd_fild07",
+          "x": 250,
+          "y": 98
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "brasilis",
+          "x": 244,
+          "y": 243
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "dewata",
+          "x": 218,
+          "y": 164
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "gonryun",
+          "x": 174,
+          "y": 101
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ama_in01",
+          "x": 102,
+          "y": 28
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ayo_in01",
+          "x": 90,
+          "y": 192
+        },
+        {
+          "name": "Two Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 109,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "lhz_in02",
+          "x": 276,
+          "y": 99
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "lou_in02",
+          "x": 130,
+          "y": 182
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "mosk_in",
+          "x": 31,
+          "y": 180
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ma_in01",
+          "x": 73,
+          "y": 22
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 171,
+          "y": 140
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ra_in01",
+          "x": 176,
+          "y": 389
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ve_in",
+          "x": 336,
+          "y": 243
+        }
+      ]
+    },
+    {
+      "id": 1460,
+      "name": "Trident",
+      "slots": 2,
+      "price": 51000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "cmd_fild07",
+          "x": 250,
+          "y": 98
+        },
+        {
+          "name": "Two Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 109,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 171,
+          "y": 140
+        }
+      ]
+    },
+    {
+      "id": 1463,
+      "name": "Halberd",
+      "slots": 1,
+      "price": 54000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "cmd_fild07",
+          "x": 250,
+          "y": 98
+        },
+        {
+          "name": "Two Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 109,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 171,
+          "y": 140
+        }
+      ]
+    },
+    {
+      "id": 1301,
+      "name": "Axe",
+      "slots": 3,
+      "price": 500,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "alberta_in",
+          "x": 188,
+          "y": 21
+        },
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "izlude_in",
+          "x": 60,
+          "y": 127
+        },
+        {
+          "name": "Axe Dealer",
+          "map": "nif_in",
+          "x": 37,
+          "y": 93
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 172,
+          "y": 130
+        }
+      ]
+    },
+    {
+      "id": 1351,
+      "name": "Battle Axe",
+      "slots": 3,
+      "price": 5400,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "alberta_in",
+          "x": 188,
+          "y": 21
+        },
+        {
+          "name": "Two Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 109,
+          "y": 27
+        },
+        {
+          "name": "Axe Dealer",
+          "map": "nif_in",
+          "x": 37,
+          "y": 93
+        }
+      ]
+    },
+    {
+      "id": 1354,
+      "name": "Hammer",
+      "slots": 2,
+      "price": 15500,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "brasilis",
+          "x": 244,
+          "y": 243
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "dewata",
+          "x": 218,
+          "y": 164
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "gonryun",
+          "x": 174,
+          "y": 101
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "alberta_in",
+          "x": 188,
+          "y": 21
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ama_in01",
+          "x": 102,
+          "y": 28
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ayo_in01",
+          "x": 90,
+          "y": 192
+        },
+        {
+          "name": "Two Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 109,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "hu_in01",
+          "x": 94,
+          "y": 390
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "lhz_in02",
+          "x": 276,
+          "y": 99
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "lou_in02",
+          "x": 130,
+          "y": 182
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "mosk_in",
+          "x": 31,
+          "y": 180
+        },
+        {
+          "name": "Axe Dealer",
+          "map": "nif_in",
+          "x": 37,
+          "y": 93
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ma_in01",
+          "x": 73,
+          "y": 22
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ra_in01",
+          "x": 176,
+          "y": 389
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ve_in",
+          "x": 336,
+          "y": 243
+        }
+      ]
+    },
+    {
+      "id": 1357,
+      "name": "Buster",
+      "slots": 1,
+      "price": 34000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "alberta_in",
+          "x": 188,
+          "y": 21
+        },
+        {
+          "name": "Two Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 109,
+          "y": 27
+        },
+        {
+          "name": "Axe Dealer",
+          "map": "nif_in",
+          "x": 37,
+          "y": 93
+        }
+      ]
+    },
+    {
+      "id": 1360,
+      "name": "Two-Handed Axe",
+      "slots": 1,
+      "price": 55000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "alberta_in",
+          "x": 188,
+          "y": 21
+        },
+        {
+          "name": "Two Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 109,
+          "y": 27
+        },
+        {
+          "name": "Axe Dealer",
+          "map": "nif_in",
+          "x": 37,
+          "y": 93
+        }
+      ]
+    },
+    {
+      "id": 1501,
+      "name": "Club",
+      "slots": 3,
+      "price": 120,
+      "vendors": [
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "um_in",
+          "x": 160,
+          "y": 125
+        },
+        {
+          "name": "Nun",
+          "map": "prt_church",
+          "x": 108,
+          "y": 124
+        }
+      ]
+    },
+    {
+      "id": 1504,
+      "name": "Mace",
+      "slots": 3,
+      "price": 1600,
+      "vendors": [
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "um_in",
+          "x": 160,
+          "y": 125
+        },
+        {
+          "name": "Nun",
+          "map": "prt_church",
+          "x": 108,
+          "y": 124
+        }
+      ]
+    },
+    {
+      "id": 1507,
+      "name": "Smasher",
+      "slots": 2,
+      "price": 9000,
+      "vendors": [
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "um_in",
+          "x": 160,
+          "y": 125
+        },
+        {
+          "name": "Nun",
+          "map": "prt_church",
+          "x": 108,
+          "y": 124
+        }
+      ]
+    },
+    {
+      "id": 1510,
+      "name": "Flail",
+      "slots": 2,
+      "price": 16000,
+      "vendors": [
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "um_in",
+          "x": 160,
+          "y": 125
+        },
+        {
+          "name": "Nun",
+          "map": "prt_church",
+          "x": 108,
+          "y": 124
+        }
+      ]
+    },
+    {
+      "id": 1513,
+      "name": "Morning Star",
+      "slots": 1,
+      "price": 41000,
+      "vendors": [
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "um_in",
+          "x": 160,
+          "y": 125
+        },
+        {
+          "name": "Nun",
+          "map": "prt_church",
+          "x": 108,
+          "y": 124
+        }
+      ]
+    },
+    {
+      "id": 1516,
+      "name": "Sword Mace",
+      "slots": 0,
+      "price": 50000,
+      "vendors": [
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Trader",
+          "map": "moc_ruins",
+          "x": 125,
+          "y": 135
+        },
+        {
+          "name": "Trader",
+          "map": "morocc",
+          "x": 269,
+          "y": 193
+        }
+      ]
+    },
+    {
+      "id": 1519,
+      "name": "Chain",
+      "slots": 2,
+      "price": 23000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "brasilis",
+          "x": 244,
+          "y": 243
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "dewata",
+          "x": 218,
+          "y": 164
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "gonryun",
+          "x": 174,
+          "y": 101
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ama_in01",
+          "x": 102,
+          "y": 28
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ayo_in01",
+          "x": 90,
+          "y": 192
+        },
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "lhz_in02",
+          "x": 276,
+          "y": 99
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "lou_in02",
+          "x": 130,
+          "y": 182
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "mosk_in",
+          "x": 31,
+          "y": 180
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ma_in01",
+          "x": 73,
+          "y": 22
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ra_in01",
+          "x": 176,
+          "y": 389
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "um_in",
+          "x": 160,
+          "y": 125
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ve_in",
+          "x": 336,
+          "y": 243
+        },
+        {
+          "name": "Nun",
+          "map": "prt_church",
+          "x": 108,
+          "y": 124
+        }
+      ]
+    },
+    {
+      "id": 1522,
+      "name": "Stunner",
+      "slots": 0,
+      "price": 60000,
+      "vendors": [
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Trader",
+          "map": "moc_ruins",
+          "x": 125,
+          "y": 135
+        },
+        {
+          "name": "Trader",
+          "map": "morocc",
+          "x": 269,
+          "y": 193
+        }
+      ]
+    },
+    {
+      "id": 1601,
+      "name": "Rod",
+      "slots": 3,
+      "price": 50,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "alberta_in",
+          "x": 188,
+          "y": 21
+        },
+        {
+          "name": "Magical Item Seller",
+          "map": "geffen_in",
+          "x": 77,
+          "y": 173
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "geffen_in",
+          "x": 30,
+          "y": 178
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "izlude_in",
+          "x": 60,
+          "y": 127
+        },
+        {
+          "name": "Wand Dealer",
+          "map": "lhz_in02",
+          "x": 273,
+          "y": 35
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "morocc_in",
+          "x": 141,
+          "y": 67
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "payon_in01",
+          "x": 15,
+          "y": 119
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 172,
+          "y": 130
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ra_in01",
+          "x": 176,
+          "y": 389
+        },
+        {
+          "name": "Magical Item Seller",
+          "map": "ve_in",
+          "x": 252,
+          "y": 313
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "yuno_in01",
+          "x": 103,
+          "y": 35
+        },
+        {
+          "name": "Magical Item Seller",
+          "map": "yuno",
+          "x": 163,
+          "y": 187
+        }
+      ]
+    },
+    {
+      "id": 1604,
+      "name": "Wand",
+      "slots": 2,
+      "price": 2500,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "geffen_in",
+          "x": 30,
+          "y": 178
+        },
+        {
+          "name": "Magical Item Seller",
+          "map": "geffen_in",
+          "x": 77,
+          "y": 173
+        },
+        {
+          "name": "Wand Dealer",
+          "map": "lhz_in02",
+          "x": 273,
+          "y": 35
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ra_in01",
+          "x": 176,
+          "y": 389
+        },
+        {
+          "name": "Magical Item Seller",
+          "map": "ve_in",
+          "x": 252,
+          "y": 313
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "yuno_in01",
+          "x": 103,
+          "y": 35
+        },
+        {
+          "name": "Magical Item Seller",
+          "map": "yuno",
+          "x": 163,
+          "y": 187
+        }
+      ]
+    },
+    {
+      "id": 1607,
+      "name": "Staff",
+      "slots": 2,
+      "price": 9500,
+      "vendors": [
+        {
+          "name": "Magical Item Seller",
+          "map": "geffen_in",
+          "x": 77,
+          "y": 173
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "geffen_in",
+          "x": 30,
+          "y": 178
+        },
+        {
+          "name": "Wand Dealer",
+          "map": "lhz_in02",
+          "x": 273,
+          "y": 35
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "ra_in01",
+          "x": 176,
+          "y": 389
+        },
+        {
+          "name": "Magical Item Seller",
+          "map": "ve_in",
+          "x": 252,
+          "y": 313
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "yuno_in01",
+          "x": 103,
+          "y": 35
+        },
+        {
+          "name": "Magical Item Seller",
+          "map": "yuno",
+          "x": 163,
+          "y": 187
+        }
+      ]
+    },
+    {
+      "id": 1610,
+      "name": "Arc Wand",
+      "slots": 1,
+      "price": 45000,
+      "vendors": [
+        {
+          "name": "Magical Item Seller",
+          "map": "geffen_in",
+          "x": 77,
+          "y": 173
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "geffen_in",
+          "x": 30,
+          "y": 178
+        },
+        {
+          "name": "Magical Item Seller",
+          "map": "ve_in",
+          "x": 252,
+          "y": 313
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "yuno_in01",
+          "x": 103,
+          "y": 35
+        },
+        {
+          "name": "Magical Item Seller",
+          "map": "yuno",
+          "x": 163,
+          "y": 187
+        }
+      ]
+    },
+    {
+      "id": 1617,
+      "name": "Survivor's Rod (Dex)",
+      "slots": 0,
+      "price": 85000,
+      "vendors": [
+        {
+          "name": "Wand Dealer",
+          "map": "lhz_in02",
+          "x": 273,
+          "y": 35
+        }
+      ]
+    },
+    {
+      "id": 1619,
+      "name": "Survivor's Rod (Int)",
+      "slots": 0,
+      "price": 85000,
+      "vendors": [
+        {
+          "name": "Wand Dealer",
+          "map": "lhz_in02",
+          "x": 273,
+          "y": 35
+        }
+      ]
+    },
+    {
+      "id": 1701,
+      "name": "Bow",
+      "slots": 3,
+      "price": 1000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "alberta_in",
+          "x": 188,
+          "y": 21
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "geffen_in",
+          "x": 30,
+          "y": 178
+        },
+        {
+          "name": "Bow Dealer",
+          "map": "hu_in01",
+          "x": 100,
+          "y": 390
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "izlude_in",
+          "x": 60,
+          "y": 127
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "morocc_in",
+          "x": 141,
+          "y": 67
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "payon_in01",
+          "x": 15,
+          "y": 119
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_in",
+          "x": 172,
+          "y": 130
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "yuno_in01",
+          "x": 103,
+          "y": 35
+        }
+      ]
+    },
+    {
+      "id": 1704,
+      "name": "Composite Bow",
+      "slots": 3,
+      "price": 2500,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "payon_in01",
+          "x": 15,
+          "y": 119
+        }
+      ]
+    },
+    {
+      "id": 1707,
+      "name": "Great Bow",
+      "slots": 2,
+      "price": 10000,
+      "vendors": [
+        {
+          "name": "Bow Dealer",
+          "map": "hu_in01",
+          "x": 100,
+          "y": 390
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "payon_in01",
+          "x": 15,
+          "y": 119
+        }
+      ]
+    },
+    {
+      "id": 1710,
+      "name": "Crossbow",
+      "slots": 2,
+      "price": 17000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "payon_in01",
+          "x": 15,
+          "y": 119
+        }
+      ]
+    },
+    {
+      "id": 1713,
+      "name": "Arbalest",
+      "slots": 1,
+      "price": 48000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "payon_in01",
+          "x": 15,
+          "y": 119
+        }
+      ]
+    },
+    {
+      "id": 1714,
+      "name": "Gakkung Bow",
+      "slots": 1,
+      "price": 42000,
+      "vendors": [
+        {
+          "name": "Bow Dealer",
+          "map": "hu_in01",
+          "x": 100,
+          "y": 390
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "payon_in01",
+          "x": 15,
+          "y": 119
+        }
+      ]
+    },
+    {
+      "id": 1718,
+      "name": "Hunter Bow",
+      "slots": 0,
+      "price": 64000,
+      "vendors": [
+        {
+          "name": "Bow Dealer",
+          "map": "hu_in01",
+          "x": 100,
+          "y": 390
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "payon_in01",
+          "x": 15,
+          "y": 119
+        }
+      ]
+    },
+    {
+      "id": 1721,
+      "name": "Repeating Crossbow",
+      "slots": 1,
+      "price": 89000,
+      "vendors": [
+        {
+          "name": "Mr. King's Shop",
+          "map": "yuno",
+          "x": 205,
+          "y": 103
+        }
+      ]
+    },
+    {
+      "id": 1801,
+      "name": "Waghnak",
+      "slots": 3,
+      "price": 8000,
+      "vendors": [
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_monk",
+          "x": 135,
+          "y": 263
+        }
+      ]
+    },
+    {
+      "id": 1803,
+      "name": "Knuckle Dusters",
+      "slots": 2,
+      "price": 25000,
+      "vendors": [
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_monk",
+          "x": 135,
+          "y": 263
+        }
+      ]
+    },
+    {
+      "id": 1805,
+      "name": "Studded Knuckles",
+      "slots": 2,
+      "price": 32000,
+      "vendors": [
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "prt_monk",
+          "x": 135,
+          "y": 263
+        }
+      ]
+    },
+    {
+      "id": 1807,
+      "name": "Fist",
+      "slots": 0,
+      "price": 53000,
+      "vendors": [
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "um_in",
+          "x": 160,
+          "y": 125
+        }
+      ]
+    },
+    {
+      "id": 1809,
+      "name": "Claw",
+      "slots": 1,
+      "price": 67000,
+      "vendors": [
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "um_in",
+          "x": 160,
+          "y": 125
+        }
+      ]
+    },
+    {
+      "id": 1811,
+      "name": "Finger",
+      "slots": 1,
+      "price": 58000,
+      "vendors": [
+        {
+          "name": "One Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 106,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "um_in",
+          "x": 160,
+          "y": 125
+        }
+      ]
+    },
+    {
+      "id": 1901,
+      "name": "Violin",
+      "slots": 3,
+      "price": 4000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "cmd_in01",
+          "x": 128,
+          "y": 165
+        }
+      ]
+    },
+    {
+      "id": 1903,
+      "name": "Mandolin",
+      "slots": 2,
+      "price": 18000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "cmd_in01",
+          "x": 128,
+          "y": 165
+        }
+      ]
+    },
+    {
+      "id": 1905,
+      "name": "Lute",
+      "slots": 2,
+      "price": 24500,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "cmd_in01",
+          "x": 128,
+          "y": 165
+        }
+      ]
+    },
+    {
+      "id": 1907,
+      "name": "Guitar",
+      "slots": 0,
+      "price": 47000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "cmd_in01",
+          "x": 128,
+          "y": 165
+        }
+      ]
+    },
+    {
+      "id": 1909,
+      "name": "Harp",
+      "slots": 1,
+      "price": 62000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "cmd_in01",
+          "x": 128,
+          "y": 165
+        }
+      ]
+    },
+    {
+      "id": 1911,
+      "name": "Gumoongoh",
+      "slots": 1,
+      "price": 54000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "cmd_in01",
+          "x": 128,
+          "y": 165
+        }
+      ]
+    },
+    {
+      "id": 1950,
+      "name": "Rope",
+      "slots": 3,
+      "price": 2500,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "cmd_in01",
+          "x": 128,
+          "y": 165
+        }
+      ]
+    },
+    {
+      "id": 1952,
+      "name": "Whip",
+      "slots": 2,
+      "price": 12000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "cmd_in01",
+          "x": 128,
+          "y": 165
+        }
+      ]
+    },
+    {
+      "id": 1954,
+      "name": "Wire Whip",
+      "slots": 2,
+      "price": 17500,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "cmd_in01",
+          "x": 128,
+          "y": 165
+        }
+      ]
+    },
+    {
+      "id": 1956,
+      "name": "Rante Whip",
+      "slots": 0,
+      "price": 32000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "cmd_in01",
+          "x": 128,
+          "y": 165
+        }
+      ]
+    },
+    {
+      "id": 1958,
+      "name": "Tail Whip",
+      "slots": 1,
+      "price": 41000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "cmd_in01",
+          "x": 128,
+          "y": 165
+        }
+      ]
+    },
+    {
+      "id": 1960,
+      "name": "Whip",
+      "slots": 1,
+      "price": 38000,
+      "vendors": [
+        {
+          "name": "Weapon Dealer",
+          "map": "cmd_in01",
+          "x": 128,
+          "y": 165
+        }
+      ]
+    },
+    {
+      "id": 1250,
+      "name": "Jur",
+      "slots": 2,
+      "price": 19500,
+      "vendors": [
+        {
+          "name": "Two Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 109,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "morocc_in",
+          "x": 141,
+          "y": 67
+        }
+      ]
+    },
+    {
+      "id": 1252,
+      "name": "Katar",
+      "slots": 1,
+      "price": 41000,
+      "vendors": [
+        {
+          "name": "Two Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 109,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "morocc_in",
+          "x": 141,
+          "y": 67
+        }
+      ]
+    },
+    {
+      "id": 1254,
+      "name": "Jamadhar",
+      "slots": 0,
+      "price": 37200,
+      "vendors": [
+        {
+          "name": "Two Hand Weapon Dealer",
+          "map": "ein_in01",
+          "x": 109,
+          "y": 27
+        },
+        {
+          "name": "Weapon Dealer",
+          "map": "morocc_in",
+          "x": 141,
+          "y": 67
+        }
+      ]
+    },
+    {
+      "id": 13102,
+      "name": "Crimson Bolt",
+      "slots": 1,
+      "price": 20000,
+      "vendors": [
+        {
+          "name": "Trading Merchant",
+          "map": "alberta_in",
+          "x": 176,
+          "y": 81
+        },
+        {
+          "name": "Trading Merchant",
+          "map": "izlude_in",
+          "x": 72,
+          "y": 102
+        },
+        {
+          "name": "Chivas Lugal",
+          "map": "que_ng",
+          "x": 179,
+          "y": 91
+        }
+      ]
+    },
+    {
+      "id": 13120,
+      "name": "Heaven's Feather & Hell's Fire",
+      "slots": 1,
+      "price": 1200000,
+      "vendors": [
+        {
+          "name": "Ammunition Merchant",
+          "map": "brasilis",
+          "x": 252,
+          "y": 249
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "dewata",
+          "x": 223,
+          "y": 169
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "gonryun",
+          "x": 175,
+          "y": 97
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "aldeba_in",
+          "x": 37,
+          "y": 49
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "alberta_in",
+          "x": 177,
+          "y": 25
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ama_in01",
+          "x": 100,
+          "y": 19
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ayo_in01",
+          "x": 77,
+          "y": 163
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "cmd_in01",
+          "x": 119,
+          "y": 173
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ein_in01",
+          "x": 95,
+          "y": 24
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "geffen_in",
+          "x": 22,
+          "y": 169
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "hu_in01",
+          "x": 95,
+          "y": 383
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "izlude_in",
+          "x": 73,
+          "y": 105
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "lhz_in02",
+          "x": 266,
+          "y": 92
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "lou_in02",
+          "x": 134,
+          "y": 178
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "xmas_in",
+          "x": 171,
+          "y": 93
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "morocc_in",
+          "x": 128,
+          "y": 68
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "mosk_in",
+          "x": 26,
+          "y": 174
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ma_in01",
+          "x": 67,
+          "y": 21
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "payon_in01",
+          "x": 10,
+          "y": 132
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "prt_in",
+          "x": 162,
+          "y": 137
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ra_in01",
+          "x": 169,
+          "y": 365
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "har_in01",
+          "x": 32,
+          "y": 77
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "um_in",
+          "x": 156,
+          "y": 127
+        },
+        {
+          "name": "Arrow Merchant",
+          "map": "ve_in",
+          "x": 351,
+          "y": 243
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "yuno_in01",
+          "x": 99,
+          "y": 24
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "que_ng",
+          "x": 180,
+          "y": 79
+        },
+        {
+          "name": "Rebellion Weapons",
+          "map": "prontera",
+          "x": 92,
+          "y": 209
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "job_gun",
+          "x": 220,
+          "y": 138
+        }
+      ]
+    },
+    {
+      "id": 13122,
+      "name": "Altair & Ares",
+      "slots": 0,
+      "price": 1450000,
+      "vendors": [
+        {
+          "name": "Ammunition Merchant",
+          "map": "brasilis",
+          "x": 252,
+          "y": 249
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "dewata",
+          "x": 223,
+          "y": 169
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "gonryun",
+          "x": 175,
+          "y": 97
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "aldeba_in",
+          "x": 37,
+          "y": 49
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "alberta_in",
+          "x": 177,
+          "y": 25
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ama_in01",
+          "x": 100,
+          "y": 19
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ayo_in01",
+          "x": 77,
+          "y": 163
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "cmd_in01",
+          "x": 119,
+          "y": 173
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ein_in01",
+          "x": 95,
+          "y": 24
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "geffen_in",
+          "x": 22,
+          "y": 169
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "hu_in01",
+          "x": 95,
+          "y": 383
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "izlude_in",
+          "x": 73,
+          "y": 105
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "lhz_in02",
+          "x": 266,
+          "y": 92
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "lou_in02",
+          "x": 134,
+          "y": 178
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "xmas_in",
+          "x": 171,
+          "y": 93
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "morocc_in",
+          "x": 128,
+          "y": 68
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "mosk_in",
+          "x": 26,
+          "y": 174
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ma_in01",
+          "x": 67,
+          "y": 21
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "payon_in01",
+          "x": 10,
+          "y": 132
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "prt_in",
+          "x": 162,
+          "y": 137
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ra_in01",
+          "x": 169,
+          "y": 365
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "har_in01",
+          "x": 32,
+          "y": 77
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "um_in",
+          "x": 156,
+          "y": 127
+        },
+        {
+          "name": "Arrow Merchant",
+          "map": "ve_in",
+          "x": 351,
+          "y": 243
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "yuno_in01",
+          "x": 99,
+          "y": 24
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "que_ng",
+          "x": 180,
+          "y": 79
+        },
+        {
+          "name": "Rebellion Weapons",
+          "map": "prontera",
+          "x": 92,
+          "y": 209
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "job_gun",
+          "x": 220,
+          "y": 138
+        }
+      ]
+    },
+    {
+      "id": 13150,
+      "name": "Branch",
+      "slots": 3,
+      "price": 3000,
+      "vendors": [
+        {
+          "name": "Trading Merchant",
+          "map": "alberta_in",
+          "x": 176,
+          "y": 81
+        },
+        {
+          "name": "Trading Merchant",
+          "map": "izlude_in",
+          "x": 72,
+          "y": 102
+        },
+        {
+          "name": "Chivas Lugal",
+          "map": "que_ng",
+          "x": 179,
+          "y": 91
+        }
+      ]
+    },
+    {
+      "id": 13151,
+      "name": "Cyclone",
+      "slots": 1,
+      "price": 17500,
+      "vendors": [
+        {
+          "name": "Trading Merchant",
+          "map": "alberta_in",
+          "x": 176,
+          "y": 81
+        },
+        {
+          "name": "Trading Merchant",
+          "map": "izlude_in",
+          "x": 72,
+          "y": 102
+        },
+        {
+          "name": "Chivas Lugal",
+          "map": "que_ng",
+          "x": 179,
+          "y": 91
+        }
+      ]
+    },
+    {
+      "id": 13163,
+      "name": "Long Barrel",
+      "slots": 0,
+      "price": 40000,
+      "vendors": [
+        {
+          "name": "Trading Merchant",
+          "map": "alberta_in",
+          "x": 176,
+          "y": 81
+        },
+        {
+          "name": "Trading Merchant",
+          "map": "izlude_in",
+          "x": 72,
+          "y": 102
+        },
+        {
+          "name": "Chivas Lugal",
+          "map": "que_ng",
+          "x": 179,
+          "y": 91
+        }
+      ]
+    },
+    {
+      "id": 13165,
+      "name": "Jungle Carbine",
+      "slots": 0,
+      "price": 56000,
+      "vendors": [
+        {
+          "name": "Trading Merchant",
+          "map": "alberta_in",
+          "x": 176,
+          "y": 81
+        },
+        {
+          "name": "Trading Merchant",
+          "map": "izlude_in",
+          "x": 72,
+          "y": 102
+        },
+        {
+          "name": "Chivas Lugal",
+          "map": "que_ng",
+          "x": 179,
+          "y": 91
+        }
+      ]
+    },
+    {
+      "id": 13189,
+      "name": "Color Scope",
+      "slots": 2,
+      "price": 1350000,
+      "vendors": [
+        {
+          "name": "Ammunition Merchant",
+          "map": "brasilis",
+          "x": 252,
+          "y": 249
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "dewata",
+          "x": 223,
+          "y": 169
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "gonryun",
+          "x": 175,
+          "y": 97
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "aldeba_in",
+          "x": 37,
+          "y": 49
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "alberta_in",
+          "x": 177,
+          "y": 25
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ama_in01",
+          "x": 100,
+          "y": 19
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ayo_in01",
+          "x": 77,
+          "y": 163
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "cmd_in01",
+          "x": 119,
+          "y": 173
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ein_in01",
+          "x": 95,
+          "y": 24
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "geffen_in",
+          "x": 22,
+          "y": 169
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "hu_in01",
+          "x": 95,
+          "y": 383
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "izlude_in",
+          "x": 73,
+          "y": 105
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "lhz_in02",
+          "x": 266,
+          "y": 92
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "lou_in02",
+          "x": 134,
+          "y": 178
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "xmas_in",
+          "x": 171,
+          "y": 93
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "morocc_in",
+          "x": 128,
+          "y": 68
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "mosk_in",
+          "x": 26,
+          "y": 174
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ma_in01",
+          "x": 67,
+          "y": 21
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "payon_in01",
+          "x": 10,
+          "y": 132
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "prt_in",
+          "x": 162,
+          "y": 137
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ra_in01",
+          "x": 169,
+          "y": 365
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "har_in01",
+          "x": 32,
+          "y": 77
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "um_in",
+          "x": 156,
+          "y": 127
+        },
+        {
+          "name": "Arrow Merchant",
+          "map": "ve_in",
+          "x": 351,
+          "y": 243
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "yuno_in01",
+          "x": 99,
+          "y": 24
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "que_ng",
+          "x": 180,
+          "y": 79
+        },
+        {
+          "name": "Rebellion Weapons",
+          "map": "prontera",
+          "x": 92,
+          "y": 209
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "job_gun",
+          "x": 220,
+          "y": 138
+        }
+      ]
+    },
+    {
+      "id": 13195,
+      "name": "RAG203",
+      "slots": 0,
+      "price": 1800000,
+      "vendors": [
+        {
+          "name": "Ammunition Merchant",
+          "map": "brasilis",
+          "x": 252,
+          "y": 249
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "dewata",
+          "x": 223,
+          "y": 169
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "gonryun",
+          "x": 175,
+          "y": 97
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "aldeba_in",
+          "x": 37,
+          "y": 49
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "alberta_in",
+          "x": 177,
+          "y": 25
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ama_in01",
+          "x": 100,
+          "y": 19
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ayo_in01",
+          "x": 77,
+          "y": 163
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "cmd_in01",
+          "x": 119,
+          "y": 173
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ein_in01",
+          "x": 95,
+          "y": 24
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "geffen_in",
+          "x": 22,
+          "y": 169
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "hu_in01",
+          "x": 95,
+          "y": 383
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "izlude_in",
+          "x": 73,
+          "y": 105
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "lhz_in02",
+          "x": 266,
+          "y": 92
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "lou_in02",
+          "x": 134,
+          "y": 178
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "xmas_in",
+          "x": 171,
+          "y": 93
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "morocc_in",
+          "x": 128,
+          "y": 68
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "mosk_in",
+          "x": 26,
+          "y": 174
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ma_in01",
+          "x": 67,
+          "y": 21
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "payon_in01",
+          "x": 10,
+          "y": 132
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "prt_in",
+          "x": 162,
+          "y": 137
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ra_in01",
+          "x": 169,
+          "y": 365
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "har_in01",
+          "x": 32,
+          "y": 77
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "um_in",
+          "x": 156,
+          "y": 127
+        },
+        {
+          "name": "Arrow Merchant",
+          "map": "ve_in",
+          "x": 351,
+          "y": 243
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "yuno_in01",
+          "x": 99,
+          "y": 24
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "que_ng",
+          "x": 180,
+          "y": 79
+        },
+        {
+          "name": "Rebellion Weapons",
+          "map": "prontera",
+          "x": 92,
+          "y": 209
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "job_gun",
+          "x": 220,
+          "y": 138
+        }
+      ]
+    },
+    {
+      "id": 13197,
+      "name": "Mini Mei",
+      "slots": 2,
+      "price": 1600000,
+      "vendors": [
+        {
+          "name": "Ammunition Merchant",
+          "map": "brasilis",
+          "x": 252,
+          "y": 249
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "dewata",
+          "x": 223,
+          "y": 169
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "gonryun",
+          "x": 175,
+          "y": 97
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "aldeba_in",
+          "x": 37,
+          "y": 49
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "alberta_in",
+          "x": 177,
+          "y": 25
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ama_in01",
+          "x": 100,
+          "y": 19
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ayo_in01",
+          "x": 77,
+          "y": 163
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "cmd_in01",
+          "x": 119,
+          "y": 173
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ein_in01",
+          "x": 95,
+          "y": 24
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "geffen_in",
+          "x": 22,
+          "y": 169
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "hu_in01",
+          "x": 95,
+          "y": 383
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "izlude_in",
+          "x": 73,
+          "y": 105
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "lhz_in02",
+          "x": 266,
+          "y": 92
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "lou_in02",
+          "x": 134,
+          "y": 178
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "xmas_in",
+          "x": 171,
+          "y": 93
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "morocc_in",
+          "x": 128,
+          "y": 68
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "mosk_in",
+          "x": 26,
+          "y": 174
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ma_in01",
+          "x": 67,
+          "y": 21
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "payon_in01",
+          "x": 10,
+          "y": 132
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "prt_in",
+          "x": 162,
+          "y": 137
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ra_in01",
+          "x": 169,
+          "y": 365
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "har_in01",
+          "x": 32,
+          "y": 77
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "um_in",
+          "x": 156,
+          "y": 127
+        },
+        {
+          "name": "Arrow Merchant",
+          "map": "ve_in",
+          "x": 351,
+          "y": 243
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "yuno_in01",
+          "x": 99,
+          "y": 24
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "que_ng",
+          "x": 180,
+          "y": 79
+        },
+        {
+          "name": "Rebellion Weapons",
+          "map": "prontera",
+          "x": 92,
+          "y": 209
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "job_gun",
+          "x": 220,
+          "y": 138
+        }
+      ]
+    },
+    {
+      "id": 13198,
+      "name": "Tempest",
+      "slots": 0,
+      "price": 2200000,
+      "vendors": [
+        {
+          "name": "Ammunition Merchant",
+          "map": "brasilis",
+          "x": 252,
+          "y": 249
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "dewata",
+          "x": 223,
+          "y": 169
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "gonryun",
+          "x": 175,
+          "y": 97
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "aldeba_in",
+          "x": 37,
+          "y": 49
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "alberta_in",
+          "x": 177,
+          "y": 25
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ama_in01",
+          "x": 100,
+          "y": 19
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ayo_in01",
+          "x": 77,
+          "y": 163
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "cmd_in01",
+          "x": 119,
+          "y": 173
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ein_in01",
+          "x": 95,
+          "y": 24
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "geffen_in",
+          "x": 22,
+          "y": 169
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "hu_in01",
+          "x": 95,
+          "y": 383
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "izlude_in",
+          "x": 73,
+          "y": 105
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "lhz_in02",
+          "x": 266,
+          "y": 92
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "lou_in02",
+          "x": 134,
+          "y": 178
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "xmas_in",
+          "x": 171,
+          "y": 93
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "morocc_in",
+          "x": 128,
+          "y": 68
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "mosk_in",
+          "x": 26,
+          "y": 174
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ma_in01",
+          "x": 67,
+          "y": 21
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "payon_in01",
+          "x": 10,
+          "y": 132
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "prt_in",
+          "x": 162,
+          "y": 137
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ra_in01",
+          "x": 169,
+          "y": 365
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "har_in01",
+          "x": 32,
+          "y": 77
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "um_in",
+          "x": 156,
+          "y": 127
+        },
+        {
+          "name": "Arrow Merchant",
+          "map": "ve_in",
+          "x": 351,
+          "y": 243
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "yuno_in01",
+          "x": 99,
+          "y": 24
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "que_ng",
+          "x": 180,
+          "y": 79
+        },
+        {
+          "name": "Rebellion Weapons",
+          "map": "prontera",
+          "x": 92,
+          "y": 209
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "job_gun",
+          "x": 220,
+          "y": 138
+        }
+      ]
+    },
+    {
+      "id": 13154,
+      "name": "Rolling Stone",
+      "slots": 1,
+      "price": 12000,
+      "vendors": [
+        {
+          "name": "Trading Merchant",
+          "map": "alberta_in",
+          "x": 176,
+          "y": 81
+        },
+        {
+          "name": "Trading Merchant",
+          "map": "izlude_in",
+          "x": 72,
+          "y": 102
+        },
+        {
+          "name": "Chivas Lugal",
+          "map": "que_ng",
+          "x": 179,
+          "y": 91
+        }
+      ]
+    },
+    {
+      "id": 13155,
+      "name": "Black Rose",
+      "slots": 1,
+      "price": 32000,
+      "vendors": [
+        {
+          "name": "Trading Merchant",
+          "map": "alberta_in",
+          "x": 176,
+          "y": 81
+        },
+        {
+          "name": "Trading Merchant",
+          "map": "izlude_in",
+          "x": 72,
+          "y": 102
+        },
+        {
+          "name": "Chivas Lugal",
+          "map": "que_ng",
+          "x": 179,
+          "y": 91
+        }
+      ]
+    },
+    {
+      "id": 13168,
+      "name": "Thunder P",
+      "slots": 1,
+      "price": 76000,
+      "vendors": [
+        {
+          "name": "Trading Merchant",
+          "map": "alberta_in",
+          "x": 176,
+          "y": 81
+        },
+        {
+          "name": "Trading Merchant",
+          "map": "izlude_in",
+          "x": 72,
+          "y": 102
+        },
+        {
+          "name": "Chivas Lugal",
+          "map": "que_ng",
+          "x": 179,
+          "y": 91
+        }
+      ]
+    },
+    {
+      "id": 13192,
+      "name": "Death Fire",
+      "slots": 1,
+      "price": 1250000,
+      "vendors": [
+        {
+          "name": "Ammunition Merchant",
+          "map": "brasilis",
+          "x": 252,
+          "y": 249
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "dewata",
+          "x": 223,
+          "y": 169
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "gonryun",
+          "x": 175,
+          "y": 97
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "aldeba_in",
+          "x": 37,
+          "y": 49
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "alberta_in",
+          "x": 177,
+          "y": 25
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ama_in01",
+          "x": 100,
+          "y": 19
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ayo_in01",
+          "x": 77,
+          "y": 163
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "cmd_in01",
+          "x": 119,
+          "y": 173
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ein_in01",
+          "x": 95,
+          "y": 24
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "geffen_in",
+          "x": 22,
+          "y": 169
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "hu_in01",
+          "x": 95,
+          "y": 383
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "izlude_in",
+          "x": 73,
+          "y": 105
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "lhz_in02",
+          "x": 266,
+          "y": 92
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "lou_in02",
+          "x": 134,
+          "y": 178
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "xmas_in",
+          "x": 171,
+          "y": 93
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "morocc_in",
+          "x": 128,
+          "y": 68
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "mosk_in",
+          "x": 26,
+          "y": 174
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ma_in01",
+          "x": 67,
+          "y": 21
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "payon_in01",
+          "x": 10,
+          "y": 132
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "prt_in",
+          "x": 162,
+          "y": 137
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ra_in01",
+          "x": 169,
+          "y": 365
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "har_in01",
+          "x": 32,
+          "y": 77
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "um_in",
+          "x": 156,
+          "y": 127
+        },
+        {
+          "name": "Arrow Merchant",
+          "map": "ve_in",
+          "x": 351,
+          "y": 243
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "yuno_in01",
+          "x": 99,
+          "y": 24
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "que_ng",
+          "x": 180,
+          "y": 79
+        },
+        {
+          "name": "Rebellion Weapons",
+          "map": "prontera",
+          "x": 92,
+          "y": 209
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "job_gun",
+          "x": 220,
+          "y": 138
+        }
+      ]
+    },
+    {
+      "id": 13193,
+      "name": "Rolling Thunder",
+      "slots": 1,
+      "price": 1350000,
+      "vendors": [
+        {
+          "name": "Ammunition Merchant",
+          "map": "brasilis",
+          "x": 252,
+          "y": 249
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "dewata",
+          "x": 223,
+          "y": 169
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "gonryun",
+          "x": 175,
+          "y": 97
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "aldeba_in",
+          "x": 37,
+          "y": 49
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "alberta_in",
+          "x": 177,
+          "y": 25
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ama_in01",
+          "x": 100,
+          "y": 19
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ayo_in01",
+          "x": 77,
+          "y": 163
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "cmd_in01",
+          "x": 119,
+          "y": 173
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ein_in01",
+          "x": 95,
+          "y": 24
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "geffen_in",
+          "x": 22,
+          "y": 169
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "hu_in01",
+          "x": 95,
+          "y": 383
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "izlude_in",
+          "x": 73,
+          "y": 105
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "lhz_in02",
+          "x": 266,
+          "y": 92
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "lou_in02",
+          "x": 134,
+          "y": 178
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "xmas_in",
+          "x": 171,
+          "y": 93
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "morocc_in",
+          "x": 128,
+          "y": 68
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "mosk_in",
+          "x": 26,
+          "y": 174
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ma_in01",
+          "x": 67,
+          "y": 21
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "payon_in01",
+          "x": 10,
+          "y": 132
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "prt_in",
+          "x": 162,
+          "y": 137
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ra_in01",
+          "x": 169,
+          "y": 365
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "har_in01",
+          "x": 32,
+          "y": 77
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "um_in",
+          "x": 156,
+          "y": 127
+        },
+        {
+          "name": "Arrow Merchant",
+          "map": "ve_in",
+          "x": 351,
+          "y": 243
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "yuno_in01",
+          "x": 99,
+          "y": 24
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "que_ng",
+          "x": 180,
+          "y": 79
+        },
+        {
+          "name": "Rebellion Weapons",
+          "map": "prontera",
+          "x": 92,
+          "y": 209
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "job_gun",
+          "x": 220,
+          "y": 138
+        }
+      ]
+    },
+    {
+      "id": 13194,
+      "name": "Peace Breaker",
+      "slots": 0,
+      "price": 1950000,
+      "vendors": [
+        {
+          "name": "Ammunition Merchant",
+          "map": "brasilis",
+          "x": 252,
+          "y": 249
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "dewata",
+          "x": 223,
+          "y": 169
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "gonryun",
+          "x": 175,
+          "y": 97
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "aldeba_in",
+          "x": 37,
+          "y": 49
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "alberta_in",
+          "x": 177,
+          "y": 25
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ama_in01",
+          "x": 100,
+          "y": 19
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ayo_in01",
+          "x": 77,
+          "y": 163
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "cmd_in01",
+          "x": 119,
+          "y": 173
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ein_in01",
+          "x": 95,
+          "y": 24
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "geffen_in",
+          "x": 22,
+          "y": 169
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "hu_in01",
+          "x": 95,
+          "y": 383
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "izlude_in",
+          "x": 73,
+          "y": 105
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "lhz_in02",
+          "x": 266,
+          "y": 92
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "lou_in02",
+          "x": 134,
+          "y": 178
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "xmas_in",
+          "x": 171,
+          "y": 93
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "morocc_in",
+          "x": 128,
+          "y": 68
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "mosk_in",
+          "x": 26,
+          "y": 174
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ma_in01",
+          "x": 67,
+          "y": 21
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "payon_in01",
+          "x": 10,
+          "y": 132
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "prt_in",
+          "x": 162,
+          "y": 137
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ra_in01",
+          "x": 169,
+          "y": 365
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "har_in01",
+          "x": 32,
+          "y": 77
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "um_in",
+          "x": 156,
+          "y": 127
+        },
+        {
+          "name": "Arrow Merchant",
+          "map": "ve_in",
+          "x": 351,
+          "y": 243
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "yuno_in01",
+          "x": 99,
+          "y": 24
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "que_ng",
+          "x": 180,
+          "y": 79
+        },
+        {
+          "name": "Rebellion Weapons",
+          "map": "prontera",
+          "x": 92,
+          "y": 209
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "job_gun",
+          "x": 220,
+          "y": 138
+        }
+      ]
+    },
+    {
+      "id": 28200,
+      "name": "End Of The Horizon",
+      "slots": 1,
+      "price": 2700000,
+      "vendors": [
+        {
+          "name": "Ammunition Merchant",
+          "map": "brasilis",
+          "x": 252,
+          "y": 249
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "dewata",
+          "x": 223,
+          "y": 169
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "gonryun",
+          "x": 175,
+          "y": 97
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "aldeba_in",
+          "x": 37,
+          "y": 49
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "alberta_in",
+          "x": 177,
+          "y": 25
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ama_in01",
+          "x": 100,
+          "y": 19
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ayo_in01",
+          "x": 77,
+          "y": 163
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "cmd_in01",
+          "x": 119,
+          "y": 173
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ein_in01",
+          "x": 95,
+          "y": 24
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "geffen_in",
+          "x": 22,
+          "y": 169
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "hu_in01",
+          "x": 95,
+          "y": 383
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "izlude_in",
+          "x": 73,
+          "y": 105
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "lhz_in02",
+          "x": 266,
+          "y": 92
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "lou_in02",
+          "x": 134,
+          "y": 178
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "xmas_in",
+          "x": 171,
+          "y": 93
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "morocc_in",
+          "x": 128,
+          "y": 68
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "mosk_in",
+          "x": 26,
+          "y": 174
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ma_in01",
+          "x": 67,
+          "y": 21
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "payon_in01",
+          "x": 10,
+          "y": 132
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "prt_in",
+          "x": 162,
+          "y": 137
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ra_in01",
+          "x": 169,
+          "y": 365
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "har_in01",
+          "x": 32,
+          "y": 77
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "um_in",
+          "x": 156,
+          "y": 127
+        },
+        {
+          "name": "Arrow Merchant",
+          "map": "ve_in",
+          "x": 351,
+          "y": 243
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "yuno_in01",
+          "x": 99,
+          "y": 24
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "que_ng",
+          "x": 180,
+          "y": 79
+        },
+        {
+          "name": "Rebellion Weapons",
+          "map": "prontera",
+          "x": 92,
+          "y": 209
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "job_gun",
+          "x": 220,
+          "y": 138
+        }
+      ]
+    },
+    {
+      "id": 28201,
+      "name": "Southern Cross",
+      "slots": 0,
+      "price": 2800000,
+      "vendors": [
+        {
+          "name": "Ammunition Merchant",
+          "map": "brasilis",
+          "x": 252,
+          "y": 249
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "dewata",
+          "x": 223,
+          "y": 169
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "gonryun",
+          "x": 175,
+          "y": 97
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "aldeba_in",
+          "x": 37,
+          "y": 49
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "alberta_in",
+          "x": 177,
+          "y": 25
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ama_in01",
+          "x": 100,
+          "y": 19
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ayo_in01",
+          "x": 77,
+          "y": 163
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "cmd_in01",
+          "x": 119,
+          "y": 173
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ein_in01",
+          "x": 95,
+          "y": 24
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "geffen_in",
+          "x": 22,
+          "y": 169
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "hu_in01",
+          "x": 95,
+          "y": 383
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "izlude_in",
+          "x": 73,
+          "y": 105
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "lhz_in02",
+          "x": 266,
+          "y": 92
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "lou_in02",
+          "x": 134,
+          "y": 178
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "xmas_in",
+          "x": 171,
+          "y": 93
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "morocc_in",
+          "x": 128,
+          "y": 68
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "mosk_in",
+          "x": 26,
+          "y": 174
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ma_in01",
+          "x": 67,
+          "y": 21
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "payon_in01",
+          "x": 10,
+          "y": 132
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "prt_in",
+          "x": 162,
+          "y": 137
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "ra_in01",
+          "x": 169,
+          "y": 365
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "har_in01",
+          "x": 32,
+          "y": 77
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "um_in",
+          "x": 156,
+          "y": 127
+        },
+        {
+          "name": "Arrow Merchant",
+          "map": "ve_in",
+          "x": 351,
+          "y": 243
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "yuno_in01",
+          "x": 99,
+          "y": 24
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "que_ng",
+          "x": 180,
+          "y": 79
+        },
+        {
+          "name": "Rebellion Weapons",
+          "map": "prontera",
+          "x": 92,
+          "y": 209
+        },
+        {
+          "name": "Ammunition Merchant",
+          "map": "job_gun",
+          "x": 220,
+          "y": 138
+        }
+      ]
+    }
+  ]
+}

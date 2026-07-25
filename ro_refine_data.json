@@ -1,0 +1,201 @@
+{
+  "system": {
+    "max_refine": 20,
+    "max_refine_normal": 10,
+    "source": "iRO Wiki Refinement System (Renewal)"
+  },
+  "reagents": {
+    "weapon_lv1": { "item": "Phracon", "id": 1010, "fee": 50 },
+    "weapon_lv2": { "item": "Emveretarcon", "id": 1011, "fee": 200 },
+    "weapon_lv3": { "item": "Oridecon", "id": 984, "fee": 5000 },
+    "weapon_lv4": { "item": "Oridecon", "id": 984, "fee": 20000 },
+    "weapon_lv5": { "item": "Etherdeocon", "id": 1000332, "fee": 50000 },
+    "armor_lv1": { "item": "Elunium", "id": 985, "fee": 2000 },
+    "armor_lv2": { "item": "Ethernium", "id": 1000331, "fee": 30000 }
+  },
+  "advanced_ores": {
+    "bradium": { "id": 6224, "fee": 50000, "craft": "3x Oridecon (984)" },
+    "carnium": { "id": 6223, "fee": 50000, "craft": "3x Elunium (985)" },
+    "refined_bradium": { "id": 6090, "can_exchange_to_carnium": true },
+    "ether_bradium": { "id": 1000368, "fee": 50000, "craft": "3x Ether Dust (1000322) + 1x Bradium (6224)" },
+    "ether_carnium": { "id": 1000370, "fee": 50000, "craft": "3x Ether Dust (1000322) + 1x Carnium (6223)" }
+  },
+  "enriched_ores": {
+    "note": "Enriched ores = +10% success rate over normal. Fee = 0z.",
+    "enriched_oridecon": { "id": 6292 },
+    "enriched_elunium": { "id": 6291 },
+    "enriched_etherdeocon": { "id": 1000334, "fee": 20000, "craft": "2x Ether Dust + 1x Enriched Oridecon" },
+    "enriched_ethernium": { "id": 1000333, "fee": 20000, "craft": "2x Ether Dust + 1x Enriched Elunium" }
+  },
+  "hd_ores": {
+    "note": "HD ores = same rate as normal, but failure degrades by 1 instead of breaking. Fee = 0z.",
+    "hd_oridecon": { "id": 6240 },
+    "hd_elunium": { "id": 6241 },
+    "hd_bradium": { "id": 6226 },
+    "hd_carnium": { "id": 6225 },
+    "hd_etherdeocon": { "id": 1000336, "fee": 50000, "craft": "3x Ether Dust + 1x HD Oridecon" },
+    "hd_ethernium": { "id": 1000335, "fee": 50000, "craft": "3x Ether Dust + 1x HD Elunium" },
+    "hd_ether_bradium": { "id": 1000369, "fee": 50000, "craft": "3x Ether Dust + 1x HD Bradium" },
+    "hd_ether_carnium": { "id": 1000371, "fee": 50000, "craft": "3x Ether Dust + 1x HD Carnium" }
+  },
+  "safety_levels": {
+    "weapon_lv1": { "safety": 7, "fail_action": "break" },
+    "weapon_lv2": { "safety": 6, "fail_action": "break" },
+    "weapon_lv3": { "safety": 5, "fail_action": "break" },
+    "weapon_lv4": { "safety": 4, "fail_action": "break" },
+    "weapon_lv5": { "safety": 3, "fail_action": "downgrade 3 (or 1 with enriched), break above +10" },
+    "armor_lv1": { "safety": 4, "fail_action": "break", "include_shadow": true },
+    "armor_lv2": { "safety": 3, "fail_action": "downgrade 3 (or 1 with enriched), break above +10" }
+  },
+  "success_rates_0_to_10": {
+    "note": "Rates for normal metals. Enriched = normal + 10%. HD = same as normal.",
+    "lv1_weapon":     { "4":100,"5":100,"6":100,"7":100,"8":60,"9":40,"10":19 },
+    "lv2_weapon":     { "4":100,"5":100,"6":100,"7":60,"8":40,"9":20,"10":19 },
+    "lv3_weapon":     { "4":100,"5":100,"6":60,"7":40,"8":20,"9":20,"10":19 },
+    "lv4_weapon":     { "4":100,"5":60,"6":40,"7":20,"8":20,"9":20,"10":19 },
+    "lv1_armor":      { "4":100,"5":60,"6":40,"7":20,"8":20,"9":20,"10":19 },
+    "lv5_weapon_lv2_armor": { "4":60,"5":40,"6":20,"7":20,"8":20,"9":20,"10":19 }
+  },
+  "success_rates_above_10": {
+    "note": "Requires item at +10 or higher. Uses Bradium/Carnium for Lv1-4 weapons & Lv1 armor. Uses Ether Bradium/Carnium for Lv5 weapon & Lv2 armor.",
+    "lv1_lv2_lv3_weapon": { "11":20,"12":20,"13":20,"14":20,"15":20,"16":10,"17":10,"18":10,"19":10,"20":10 },
+    "lv4_weapon_lv1_armor": { "11":10,"12":10,"13":10,"14":10,"15":10,"16":5,"17":5,"18":5,"19":5,"20":5 },
+    "fail_above_10": "break or downgrade 3 levels (HD: downgrade 1)",
+    "fee": 100000,
+    "reagent_lv1_armor": "Carnium",
+    "reagent_lv1_4_weapon": "Bradium"
+  },
+  "weapon_refine_atk": {
+    "formula": {
+      "base": "Base_Bonus × N",
+      "over": "Rand[0, Over_Bonus × (N - Safety)] if N > Safety else 0",
+      "high": "High_Jump + High_Bonus × (N - 16) if N >= 16 else 0",
+      "total": "Base + Over + High"
+    },
+    "lv1": {
+      "base_per_level": 2,
+      "safety_level": 7,
+      "over_bonus_per_level": 3,
+      "high_jump_15_to_16": 16,
+      "high_bonus_per_level": 1,
+      "table": {
+        "+10": "20~26",
+        "+15": "30~46",
+        "+16": "48~66",
+        "+20": "60~86"
+      }
+    },
+    "lv2": {
+      "base_per_level": 3,
+      "safety_level": 6,
+      "over_bonus_per_level": 5,
+      "high_jump_15_to_16": 32,
+      "high_bonus_per_level": 2,
+      "table": {
+        "+10": "30~50",
+        "+15": "45~90",
+        "+16": "80~130",
+        "+20": "100~170"
+      }
+    },
+    "lv3": {
+      "base_per_level": 5,
+      "safety_level": 5,
+      "over_bonus_per_level": 8,
+      "high_jump_15_to_16": 32,
+      "high_bonus_per_level": 2,
+      "table": {
+        "+10": "50~90",
+        "+15": "75~155",
+        "+16": "112~200",
+        "+20": "140~260"
+      }
+    },
+    "lv4": {
+      "base_per_level": 7,
+      "safety_level": 4,
+      "over_bonus_per_level": 14,
+      "high_jump_15_to_16": 48,
+      "high_bonus_per_level": 3,
+      "table": {
+        "+7": "49~91",
+        "+10": "70~154",
+        "+15": "105~259",
+        "+16": "160~328",
+        "+20": "200~424"
+      }
+    },
+    "lv5": {
+      "base_atk_per_level": 8,
+      "base_patk_per_level": 2,
+      "safety_level": 3,
+      "over_bonus": 0,
+      "grade_multiplier": {
+        "none": 1.0,
+        "D": 1.1,
+        "C": 1.3,
+        "B": 1.5,
+        "A": 2.0
+      },
+      "note": "Grade multiplier applies to Base ATK only, not P.ATK/S.MATK",
+      "table": {
+        "+10_no_grade": { "ATK": 80, "P_ATK": 20 },
+        "+15_no_grade": { "ATK": 120, "P_ATK": 30 },
+        "+20_no_grade": { "ATK": 160, "P_ATK": 40 },
+        "+20_grade_A": { "ATK": 320, "P_ATK": 40 }
+      }
+    }
+  },
+  "armor_refine_def": {
+    "lv1": {
+      "formula": "Floor[(3 + N) / 4] per level",
+      "stages": {
+        "+1_to_+4": { "per_level": 1, "cumulative": 4 },
+        "+5_to_+8": { "per_level": 2, "cumulative": 12 },
+        "+9_to_+12": { "per_level": 3, "cumulative": 24 },
+        "+13_to_+16": { "per_level": 4, "cumulative": 40 },
+        "+17_to_+20": { "per_level": 5, "cumulative": 60 }
+      },
+      "example": { "+10_round_buckler": "90 base + 18 refine = 108 DEF" }
+    },
+    "lv2": {
+      "formula": "DEF = ceil(Lv1_DEF_bonus × 1.2), RES/MRES = 2 per level",
+      "table": {
+        "+10": { "DEF": 22, "RES_MRES": 20 },
+        "+15": { "DEF": 43, "RES_MRES": 30 },
+        "+20": { "DEF": 72, "RES_MRES": 40 }
+      }
+    }
+  },
+  "blacksmith_blessing": {
+    "effect": "Failure preserves refine level instead of breaking/downgrading",
+    "usable_range": "+7 to +14",
+    "cost_table": {
+      "+7_to_+8": 1,
+      "+8_to_+9": 2,
+      "+9_to_+10": 4,
+      "+10_to_+11": 7,
+      "+11_to_+12": 11,
+      "+12_to_+13": 16,
+      "+13_to_+14": 22
+    }
+  },
+  "break_protection_summary": {
+    "normal_ores": { "fail_result": "equipment permanently destroyed (including cards/enchants)" },
+    "enriched_ores": { "fail_result": "equipment destroyed (unless enrich event: downgrade 1)" },
+    "hd_ores": { "fail_result": "downgrade 1 refine level" },
+    "blacksmith_blessing": { "fail_result": "refine level unchanged (usable +7~+14)" },
+    "refining_certificate": { "fail_result": "100% success, instant refine to stated level" }
+  },
+  "rough_ore_conversion": {
+    "oridecon": { "rough_id": 756, "output_id": 984, "cost": 0, "ratio": "5 rough -> 1 pure" },
+    "elunium": { "rough_id": 757, "output_id": 985, "cost": 0, "ratio": "5 rough -> 1 pure" },
+    "mass_convert_npc": "Locas (izlude 155/132)"
+  },
+  "non_upgradable_items": [
+    "Middle and Lower Headgears (some exceptions for gradable accessories)",
+    "Costumes",
+    "Non-equipment items",
+    "Items marked as 'cannot be upgraded'"
+  ]
+}

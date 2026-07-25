@@ -1,0 +1,1212 @@
+{
+  "pre_re": [
+    {
+      "id": 1201,
+      "name": "Knife [3]",
+      "slots": 0,
+      "price": 50
+    },
+    {
+      "id": 1204,
+      "name": "Cutter [3]",
+      "slots": 0,
+      "price": 1250
+    },
+    {
+      "id": 1207,
+      "name": "Main Gauche [3]",
+      "slots": 0,
+      "price": 2400
+    },
+    {
+      "id": 1210,
+      "name": "Dirk [2]",
+      "slots": 0,
+      "price": 8500
+    },
+    {
+      "id": 1213,
+      "name": "Dagger [2]",
+      "slots": 0,
+      "price": 14000
+    },
+    {
+      "id": 1216,
+      "name": "Stiletto [2]",
+      "slots": 0,
+      "price": 19500
+    },
+    {
+      "id": 1219,
+      "name": "Gladius [2]",
+      "slots": 0,
+      "price": 43000
+    },
+    {
+      "id": 1222,
+      "name": "Damascus [1]",
+      "slots": 0,
+      "price": 49000
+    },
+    {
+      "id": 1245,
+      "name": "Cinquedea [1]",
+      "slots": 0,
+      "price": 40000
+    },
+    {
+      "id": 1247,
+      "name": "Kindle Dagger",
+      "slots": 0,
+      "price": 10000
+    },
+    {
+      "id": 1248,
+      "name": "Obsidian Dagger",
+      "slots": 0,
+      "price": 10000
+    },
+    {
+      "id": 1249,
+      "name": "Fisherman's Dagger",
+      "slots": 0,
+      "price": 10000
+    },
+    {
+      "id": 13000,
+      "name": "Jujube Dagger",
+      "slots": 0,
+      "price": 10000
+    },
+    {
+      "id": 13003,
+      "name": "Cowardice Blade [1]",
+      "slots": 0,
+      "price": 52000
+    },
+    {
+      "id": 1101,
+      "name": "Sword [3]",
+      "slots": 0,
+      "price": 100
+    },
+    {
+      "id": 1104,
+      "name": "Falchion [3]",
+      "slots": 0,
+      "price": 1500
+    },
+    {
+      "id": 1107,
+      "name": "Blade [3]",
+      "slots": 0,
+      "price": 2900
+    },
+    {
+      "id": 1110,
+      "name": "Rapier [2]",
+      "slots": 0,
+      "price": 10000
+    },
+    {
+      "id": 1113,
+      "name": "Scimitar [2]",
+      "slots": 0,
+      "price": 17000
+    },
+    {
+      "id": 1119,
+      "name": "Tsurugi [1]",
+      "slots": 0,
+      "price": 51000
+    },
+    {
+      "id": 1122,
+      "name": "Ring Pommel Saber [2]",
+      "slots": 0,
+      "price": 24000
+    },
+    {
+      "id": 1123,
+      "name": "Haedonggum [1]",
+      "slots": 0,
+      "price": 50000
+    },
+    {
+      "id": 1126,
+      "name": "Saber [2]",
+      "slots": 0,
+      "price": 49000
+    },
+    {
+      "id": 1129,
+      "name": "Flamberge",
+      "slots": 0,
+      "price": 60000
+    },
+    {
+      "id": 1146,
+      "name": "Town Sword [1]",
+      "slots": 0,
+      "price": 42000
+    },
+    {
+      "id": 1116,
+      "name": "Katana [3]",
+      "slots": 0,
+      "price": 2000
+    },
+    {
+      "id": 1151,
+      "name": "Slayer [2]",
+      "slots": 0,
+      "price": 15000
+    },
+    {
+      "id": 1154,
+      "name": "Bastard Sword [2]",
+      "slots": 0,
+      "price": 22500
+    },
+    {
+      "id": 1157,
+      "name": "Two-Handed Sword [1]",
+      "slots": 0,
+      "price": 60000
+    },
+    {
+      "id": 1160,
+      "name": "Broad Sword [1]",
+      "slots": 0,
+      "price": 65000
+    },
+    {
+      "id": 1401,
+      "name": "Javelin [3]",
+      "slots": 0,
+      "price": 150
+    },
+    {
+      "id": 1404,
+      "name": "Spear [3]",
+      "slots": 0,
+      "price": 1700
+    },
+    {
+      "id": 1407,
+      "name": "Pike [3]",
+      "slots": 0,
+      "price": 3450
+    },
+    {
+      "id": 1410,
+      "name": "Lance",
+      "slots": 0,
+      "price": 60000
+    },
+    {
+      "id": 1451,
+      "name": "Guisarme [2]",
+      "slots": 0,
+      "price": 13000
+    },
+    {
+      "id": 1454,
+      "name": "Glaive [2]",
+      "slots": 0,
+      "price": 20000
+    },
+    {
+      "id": 1457,
+      "name": "Partizan [1]",
+      "slots": 0,
+      "price": 27000
+    },
+    {
+      "id": 1460,
+      "name": "Trident [2]",
+      "slots": 0,
+      "price": 51000
+    },
+    {
+      "id": 1463,
+      "name": "Halberd [1]",
+      "slots": 0,
+      "price": 54000
+    },
+    {
+      "id": 1301,
+      "name": "Axe [3]",
+      "slots": 0,
+      "price": 500
+    },
+    {
+      "id": 1351,
+      "name": "Battle Axe [3]",
+      "slots": 0,
+      "price": 5400
+    },
+    {
+      "id": 1354,
+      "name": "Hammer [2]",
+      "slots": 0,
+      "price": 15500
+    },
+    {
+      "id": 1357,
+      "name": "Buster [1]",
+      "slots": 0,
+      "price": 34000
+    },
+    {
+      "id": 1360,
+      "name": "Two-Handed Axe [1]",
+      "slots": 0,
+      "price": 55000
+    },
+    {
+      "id": 1501,
+      "name": "Club [3]",
+      "slots": 0,
+      "price": 120
+    },
+    {
+      "id": 1504,
+      "name": "Mace [3]",
+      "slots": 0,
+      "price": 1600
+    },
+    {
+      "id": 1507,
+      "name": "Smasher [2]",
+      "slots": 0,
+      "price": 9000
+    },
+    {
+      "id": 1510,
+      "name": "Flail [2]",
+      "slots": 0,
+      "price": 16000
+    },
+    {
+      "id": 1513,
+      "name": "Morning Star [1]",
+      "slots": 0,
+      "price": 41000
+    },
+    {
+      "id": 1516,
+      "name": "Sword Mace",
+      "slots": 0,
+      "price": 50000
+    },
+    {
+      "id": 1519,
+      "name": "Chain [2]",
+      "slots": 0,
+      "price": 23000
+    },
+    {
+      "id": 1522,
+      "name": "Stunner",
+      "slots": 0,
+      "price": 60000
+    },
+    {
+      "id": 1601,
+      "name": "Rod [3]",
+      "slots": 0,
+      "price": 50
+    },
+    {
+      "id": 1604,
+      "name": "Wand [2]",
+      "slots": 0,
+      "price": 2500
+    },
+    {
+      "id": 1607,
+      "name": "Staff [2]",
+      "slots": 0,
+      "price": 9500
+    },
+    {
+      "id": 1610,
+      "name": "Arc Wand [1]",
+      "slots": 0,
+      "price": 45000
+    },
+    {
+      "id": 1617,
+      "name": "Survivor's Rod",
+      "slots": 0,
+      "price": 85000
+    },
+    {
+      "id": 1619,
+      "name": "Survivor's Rod",
+      "slots": 0,
+      "price": 85000
+    },
+    {
+      "id": 1701,
+      "name": "Bow [3]",
+      "slots": 0,
+      "price": 1000
+    },
+    {
+      "id": 1704,
+      "name": "Composite Bow [3]",
+      "slots": 0,
+      "price": 2500
+    },
+    {
+      "id": 1707,
+      "name": "Great Bow [2]",
+      "slots": 0,
+      "price": 10000
+    },
+    {
+      "id": 1710,
+      "name": "Crossbow [2]",
+      "slots": 0,
+      "price": 17000
+    },
+    {
+      "id": 1713,
+      "name": "Arbalest [1]",
+      "slots": 0,
+      "price": 48000
+    },
+    {
+      "id": 1714,
+      "name": "Gakkung Bow [1]",
+      "slots": 0,
+      "price": 42000
+    },
+    {
+      "id": 1718,
+      "name": "Hunter Bow",
+      "slots": 0,
+      "price": 64000
+    },
+    {
+      "id": 1721,
+      "name": "Repeating Crossbow [1]",
+      "slots": 0,
+      "price": 89000
+    },
+    {
+      "id": 1801,
+      "name": "Waghnak [3]",
+      "slots": 0,
+      "price": 8000
+    },
+    {
+      "id": 1803,
+      "name": "Knuckle Dusters [2]",
+      "slots": 0,
+      "price": 25000
+    },
+    {
+      "id": 1805,
+      "name": "Studded Knuckles [2]",
+      "slots": 0,
+      "price": 32000
+    },
+    {
+      "id": 1807,
+      "name": "Fist",
+      "slots": 0,
+      "price": 53000
+    },
+    {
+      "id": 1809,
+      "name": "Claw [1]",
+      "slots": 0,
+      "price": 67000
+    },
+    {
+      "id": 1811,
+      "name": "Finger [1]",
+      "slots": 0,
+      "price": 58000
+    },
+    {
+      "id": 1901,
+      "name": "Violin [3]",
+      "slots": 0,
+      "price": 4000
+    },
+    {
+      "id": 1903,
+      "name": "Mandolin [2]",
+      "slots": 0,
+      "price": 18000
+    },
+    {
+      "id": 1905,
+      "name": "Lute [2]",
+      "slots": 0,
+      "price": 24500
+    },
+    {
+      "id": 1907,
+      "name": "Guitar",
+      "slots": 0,
+      "price": 47000
+    },
+    {
+      "id": 1909,
+      "name": "Harp [1]",
+      "slots": 0,
+      "price": 62000
+    },
+    {
+      "id": 1911,
+      "name": "Gumoongoh [1]",
+      "slots": 0,
+      "price": 54000
+    },
+    {
+      "id": 1950,
+      "name": "Rope [3]",
+      "slots": 0,
+      "price": 2500
+    },
+    {
+      "id": 1952,
+      "name": "Whip [2]",
+      "slots": 0,
+      "price": 12000
+    },
+    {
+      "id": 1954,
+      "name": "Wire Whip [2]",
+      "slots": 0,
+      "price": 17500
+    },
+    {
+      "id": 1956,
+      "name": "Rante Whip",
+      "slots": 0,
+      "price": 32000
+    },
+    {
+      "id": 1958,
+      "name": "Tail Whip [1]",
+      "slots": 0,
+      "price": 41000
+    },
+    {
+      "id": 1960,
+      "name": "Whip [1]",
+      "slots": 0,
+      "price": 38000
+    },
+    {
+      "id": 1250,
+      "name": "Jur [2]",
+      "slots": 0,
+      "price": 19500
+    },
+    {
+      "id": 1252,
+      "name": "Katar [1]",
+      "slots": 0,
+      "price": 41000
+    },
+    {
+      "id": 1254,
+      "name": "Jamadhar",
+      "slots": 0,
+      "price": 37200
+    },
+    {
+      "id": 13102,
+      "name": "Crimson Bolt [1]",
+      "slots": 0,
+      "price": 20000
+    },
+    {
+      "id": 13150,
+      "name": "Branch [3]",
+      "slots": 0,
+      "price": 3000
+    },
+    {
+      "id": 13151,
+      "name": "Cyclone [1]",
+      "slots": 0,
+      "price": 17500
+    },
+    {
+      "id": 13163,
+      "name": "Long Barrel",
+      "slots": 0,
+      "price": 40000
+    },
+    {
+      "id": 13165,
+      "name": "Jungle Carbine",
+      "slots": 0,
+      "price": 56000
+    },
+    {
+      "id": 13154,
+      "name": "Rolling Stone [1]",
+      "slots": 0,
+      "price": 12000
+    },
+    {
+      "id": 13155,
+      "name": "Black Rose [1]",
+      "slots": 0,
+      "price": 32000
+    },
+    {
+      "id": 13168,
+      "name": "Thunder P [1]",
+      "slots": 0,
+      "price": 76000
+    }
+  ],
+  "renewal": [
+    {
+      "id": 1201,
+      "name": "Knife [3]",
+      "slots": 0,
+      "price": 50
+    },
+    {
+      "id": 1204,
+      "name": "Cutter [3]",
+      "slots": 0,
+      "price": 1250
+    },
+    {
+      "id": 1207,
+      "name": "Main Gauche [3]",
+      "slots": 0,
+      "price": 2400
+    },
+    {
+      "id": 1210,
+      "name": "Dirk [2]",
+      "slots": 0,
+      "price": 8500
+    },
+    {
+      "id": 1213,
+      "name": "Dagger [2]",
+      "slots": 0,
+      "price": 14000
+    },
+    {
+      "id": 1216,
+      "name": "Stiletto [2]",
+      "slots": 0,
+      "price": 19500
+    },
+    {
+      "id": 1219,
+      "name": "Gladius [2]",
+      "slots": 0,
+      "price": 43000
+    },
+    {
+      "id": 1222,
+      "name": "Damascus [1]",
+      "slots": 0,
+      "price": 49000
+    },
+    {
+      "id": 1245,
+      "name": "Cinquedea [1]",
+      "slots": 0,
+      "price": 40000
+    },
+    {
+      "id": 1247,
+      "name": "Kindle Dagger",
+      "slots": 0,
+      "price": 10000
+    },
+    {
+      "id": 1248,
+      "name": "Obsidian Dagger",
+      "slots": 0,
+      "price": 10000
+    },
+    {
+      "id": 1249,
+      "name": "Fisherman's Dagger",
+      "slots": 0,
+      "price": 10000
+    },
+    {
+      "id": 13000,
+      "name": "Jujube Dagger",
+      "slots": 0,
+      "price": 10000
+    },
+    {
+      "id": 13003,
+      "name": "Cowardice Blade [1]",
+      "slots": 0,
+      "price": 52000
+    },
+    {
+      "id": 1101,
+      "name": "Sword [3]",
+      "slots": 0,
+      "price": 100
+    },
+    {
+      "id": 1104,
+      "name": "Falchion [3]",
+      "slots": 0,
+      "price": 1500
+    },
+    {
+      "id": 1107,
+      "name": "Blade [3]",
+      "slots": 0,
+      "price": 2900
+    },
+    {
+      "id": 1110,
+      "name": "Rapier [2]",
+      "slots": 0,
+      "price": 10000
+    },
+    {
+      "id": 1113,
+      "name": "Scimitar [2]",
+      "slots": 0,
+      "price": 17000
+    },
+    {
+      "id": 1119,
+      "name": "Tsurugi [1]",
+      "slots": 0,
+      "price": 51000
+    },
+    {
+      "id": 1122,
+      "name": "Ring Pommel Saber [2]",
+      "slots": 0,
+      "price": 24000
+    },
+    {
+      "id": 1123,
+      "name": "Haedonggum [1]",
+      "slots": 0,
+      "price": 50000
+    },
+    {
+      "id": 1126,
+      "name": "Saber [2]",
+      "slots": 0,
+      "price": 49000
+    },
+    {
+      "id": 1129,
+      "name": "Flamberge",
+      "slots": 0,
+      "price": 60000
+    },
+    {
+      "id": 1146,
+      "name": "Town Sword [1]",
+      "slots": 0,
+      "price": 42000
+    },
+    {
+      "id": 1116,
+      "name": "Katana [3]",
+      "slots": 0,
+      "price": 2000
+    },
+    {
+      "id": 1151,
+      "name": "Slayer [2]",
+      "slots": 0,
+      "price": 15000
+    },
+    {
+      "id": 1154,
+      "name": "Bastard Sword [2]",
+      "slots": 0,
+      "price": 22500
+    },
+    {
+      "id": 1157,
+      "name": "Two-Handed Sword [1]",
+      "slots": 0,
+      "price": 60000
+    },
+    {
+      "id": 1160,
+      "name": "Broad Sword [1]",
+      "slots": 0,
+      "price": 65000
+    },
+    {
+      "id": 1401,
+      "name": "Javelin [3]",
+      "slots": 0,
+      "price": 150
+    },
+    {
+      "id": 1404,
+      "name": "Spear [3]",
+      "slots": 0,
+      "price": 1700
+    },
+    {
+      "id": 1407,
+      "name": "Pike [3]",
+      "slots": 0,
+      "price": 3450
+    },
+    {
+      "id": 1410,
+      "name": "Lance",
+      "slots": 0,
+      "price": 60000
+    },
+    {
+      "id": 1451,
+      "name": "Guisarme [2]",
+      "slots": 0,
+      "price": 13000
+    },
+    {
+      "id": 1454,
+      "name": "Glaive [2]",
+      "slots": 0,
+      "price": 20000
+    },
+    {
+      "id": 1457,
+      "name": "Partizan [1]",
+      "slots": 0,
+      "price": 27000
+    },
+    {
+      "id": 1460,
+      "name": "Trident [2]",
+      "slots": 0,
+      "price": 51000
+    },
+    {
+      "id": 1463,
+      "name": "Halberd [1]",
+      "slots": 0,
+      "price": 54000
+    },
+    {
+      "id": 1301,
+      "name": "Axe [3]",
+      "slots": 0,
+      "price": 500
+    },
+    {
+      "id": 1351,
+      "name": "Battle Axe [3]",
+      "slots": 0,
+      "price": 5400
+    },
+    {
+      "id": 1354,
+      "name": "Hammer [2]",
+      "slots": 0,
+      "price": 15500
+    },
+    {
+      "id": 1357,
+      "name": "Buster [1]",
+      "slots": 0,
+      "price": 34000
+    },
+    {
+      "id": 1360,
+      "name": "Two-Handed Axe [1]",
+      "slots": 0,
+      "price": 55000
+    },
+    {
+      "id": 1501,
+      "name": "Club [3]",
+      "slots": 0,
+      "price": 120
+    },
+    {
+      "id": 1504,
+      "name": "Mace [3]",
+      "slots": 0,
+      "price": 1600
+    },
+    {
+      "id": 1507,
+      "name": "Smasher [2]",
+      "slots": 0,
+      "price": 9000
+    },
+    {
+      "id": 1510,
+      "name": "Flail [2]",
+      "slots": 0,
+      "price": 16000
+    },
+    {
+      "id": 1513,
+      "name": "Morning Star [1]",
+      "slots": 0,
+      "price": 41000
+    },
+    {
+      "id": 1516,
+      "name": "Sword Mace",
+      "slots": 0,
+      "price": 50000
+    },
+    {
+      "id": 1519,
+      "name": "Chain [2]",
+      "slots": 0,
+      "price": 23000
+    },
+    {
+      "id": 1522,
+      "name": "Stunner",
+      "slots": 0,
+      "price": 60000
+    },
+    {
+      "id": 1601,
+      "name": "Rod [3]",
+      "slots": 0,
+      "price": 50
+    },
+    {
+      "id": 1604,
+      "name": "Wand [2]",
+      "slots": 0,
+      "price": 2500
+    },
+    {
+      "id": 1607,
+      "name": "Staff [2]",
+      "slots": 0,
+      "price": 9500
+    },
+    {
+      "id": 1610,
+      "name": "Arc Wand [1]",
+      "slots": 0,
+      "price": 45000
+    },
+    {
+      "id": 1617,
+      "name": "Survivor's Rod (Dex)",
+      "slots": 0,
+      "price": 85000
+    },
+    {
+      "id": 1619,
+      "name": "Survivor's Rod (Int)",
+      "slots": 0,
+      "price": 85000
+    },
+    {
+      "id": 1701,
+      "name": "Bow [3]",
+      "slots": 0,
+      "price": 1000
+    },
+    {
+      "id": 1704,
+      "name": "Composite Bow [3]",
+      "slots": 0,
+      "price": 2500
+    },
+    {
+      "id": 1707,
+      "name": "Great Bow [2]",
+      "slots": 0,
+      "price": 10000
+    },
+    {
+      "id": 1710,
+      "name": "Crossbow [2]",
+      "slots": 0,
+      "price": 17000
+    },
+    {
+      "id": 1713,
+      "name": "Arbalest [1]",
+      "slots": 0,
+      "price": 48000
+    },
+    {
+      "id": 1714,
+      "name": "Gakkung Bow [1]",
+      "slots": 0,
+      "price": 42000
+    },
+    {
+      "id": 1718,
+      "name": "Hunter Bow",
+      "slots": 0,
+      "price": 64000
+    },
+    {
+      "id": 1721,
+      "name": "Repeating Crossbow [1]",
+      "slots": 0,
+      "price": 89000
+    },
+    {
+      "id": 1801,
+      "name": "Waghnak [3]",
+      "slots": 0,
+      "price": 8000
+    },
+    {
+      "id": 1803,
+      "name": "Knuckle Dusters [2]",
+      "slots": 0,
+      "price": 25000
+    },
+    {
+      "id": 1805,
+      "name": "Studded Knuckles [2]",
+      "slots": 0,
+      "price": 32000
+    },
+    {
+      "id": 1807,
+      "name": "Fist",
+      "slots": 0,
+      "price": 53000
+    },
+    {
+      "id": 1809,
+      "name": "Claw [1]",
+      "slots": 0,
+      "price": 67000
+    },
+    {
+      "id": 1811,
+      "name": "Finger [1]",
+      "slots": 0,
+      "price": 58000
+    },
+    {
+      "id": 1901,
+      "name": "Violin [3]",
+      "slots": 0,
+      "price": 4000
+    },
+    {
+      "id": 1903,
+      "name": "Mandolin [2]",
+      "slots": 0,
+      "price": 18000
+    },
+    {
+      "id": 1905,
+      "name": "Lute [2]",
+      "slots": 0,
+      "price": 24500
+    },
+    {
+      "id": 1907,
+      "name": "Guitar",
+      "slots": 0,
+      "price": 47000
+    },
+    {
+      "id": 1909,
+      "name": "Harp [1]",
+      "slots": 0,
+      "price": 62000
+    },
+    {
+      "id": 1911,
+      "name": "Gumoongoh [1]",
+      "slots": 0,
+      "price": 54000
+    },
+    {
+      "id": 1950,
+      "name": "Rope [3]",
+      "slots": 0,
+      "price": 2500
+    },
+    {
+      "id": 1952,
+      "name": "Whip [2]",
+      "slots": 0,
+      "price": 12000
+    },
+    {
+      "id": 1954,
+      "name": "Wire Whip [2]",
+      "slots": 0,
+      "price": 17500
+    },
+    {
+      "id": 1956,
+      "name": "Rante Whip",
+      "slots": 0,
+      "price": 32000
+    },
+    {
+      "id": 1958,
+      "name": "Tail Whip [1]",
+      "slots": 0,
+      "price": 41000
+    },
+    {
+      "id": 1960,
+      "name": "Whip [1]",
+      "slots": 0,
+      "price": 38000
+    },
+    {
+      "id": 1250,
+      "name": "Jur [2]",
+      "slots": 0,
+      "price": 19500
+    },
+    {
+      "id": 1252,
+      "name": "Katar [1]",
+      "slots": 0,
+      "price": 41000
+    },
+    {
+      "id": 1254,
+      "name": "Jamadhar",
+      "slots": 0,
+      "price": 37200
+    },
+    {
+      "id": 13102,
+      "name": "Crimson Bolt [1]",
+      "slots": 0,
+      "price": 20000
+    },
+    {
+      "id": 13120,
+      "name": "Heaven's Feather & Hell's Fire [1]",
+      "slots": 0,
+      "price": 1200000
+    },
+    {
+      "id": 13122,
+      "name": "Altair & Ares",
+      "slots": 0,
+      "price": 1450000
+    },
+    {
+      "id": 13150,
+      "name": "Branch [3]",
+      "slots": 0,
+      "price": 3000
+    },
+    {
+      "id": 13151,
+      "name": "Cyclone [1]",
+      "slots": 0,
+      "price": 17500
+    },
+    {
+      "id": 13163,
+      "name": "Long Barrel",
+      "slots": 0,
+      "price": 40000
+    },
+    {
+      "id": 13165,
+      "name": "Jungle Carbine",
+      "slots": 0,
+      "price": 56000
+    },
+    {
+      "id": 13189,
+      "name": "Color Scope [2]",
+      "slots": 0,
+      "price": 1350000
+    },
+    {
+      "id": 13195,
+      "name": "RAG203",
+      "slots": 0,
+      "price": 1800000
+    },
+    {
+      "id": 13197,
+      "name": "Mini Mei [2]",
+      "slots": 0,
+      "price": 1600000
+    },
+    {
+      "id": 13198,
+      "name": "Tempest",
+      "slots": 0,
+      "price": 2200000
+    },
+    {
+      "id": 13154,
+      "name": "Rolling Stone [1]",
+      "slots": 0,
+      "price": 12000
+    },
+    {
+      "id": 13155,
+      "name": "Black Rose [1]",
+      "slots": 0,
+      "price": 32000
+    },
+    {
+      "id": 13168,
+      "name": "Thunder P [1]",
+      "slots": 0,
+      "price": 76000
+    },
+    {
+      "id": 13192,
+      "name": "Death Fire [1]",
+      "slots": 0,
+      "price": 1250000
+    },
+    {
+      "id": 13193,
+      "name": "Rolling Thunder [1]",
+      "slots": 0,
+      "price": 1350000
+    },
+    {
+      "id": 13194,
+      "name": "Peace Breaker",
+      "slots": 0,
+      "price": 1950000
+    },
+    {
+      "id": 28200,
+      "name": "End Of The Horizon [1]",
+      "slots": 0,
+      "price": 2700000
+    },
+    {
+      "id": 28201,
+      "name": "Southern Cross",
+      "slots": 0,
+      "price": 2800000
+    }
+  ]
+}
