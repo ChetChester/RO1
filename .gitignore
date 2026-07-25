@@ -134,3 +134,14 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+images/*
+node_modules/
+ro_aspd_data/
+ro_cards_data/
+ro_items_data/
+ro_monster_data/
+ro_npcshop_data/
+ro_skills_data/
+tools/
+暴擊特效/
+職業攻擊圖/
