@@ -72,16 +72,6 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-deep); co
 .slot-header { font-weight: 700; color: var(--gold-soft); min-width: 50px; }
 .slot-info { flex: 1; font-size: 13px; color: var(--ink); }
 .slot-item.empty-slot { opacity: 0.5; border-style: dashed; }
-
-/* 存檔欄位 */
-.slot-title { font-family: var(--font-display); color: var(--gold-soft); font-size: 18px; margin-bottom: 16px; }
-.slot-list { display: flex; flex-direction: column; gap: 10px; max-height: 50vh; overflow-y: auto; padding: 0 10px; }
-.slot-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--bg-panel); border: 1px solid var(--line); border-radius: 10px; cursor: pointer; transition: border-color 0.2s, background 0.2s; }
-.slot-item:hover { border-color: var(--gold); background: var(--bg-panel-2); }
-.slot-item.has-save { border-color: var(--gold); }
-.slot-header { font-weight: 700; color: var(--gold-soft); min-width: 50px; }
-.slot-info { flex: 1; font-size: 13px; color: var(--ink); }
-.slot-item.empty-slot { opacity: 0.5; border-style: dashed; }
 .slot-pagination { display: flex; justify-content: center; gap: 6px; margin-top: 12px; }
 .slot-pagination .btn-small.active { background: var(--gold); color: var(--bg-deep); }
 
@@ -672,24 +662,32 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-deep); co
 .skill-element { font-size: 12px; margin-left: 4px; }
 
 /* NPC Shop */
+.npc-shop { padding: 8px 0; }
 .npc-shop-list { display: flex; flex-direction: column; gap: 8px; }
 .npc-shop-card { display: flex; align-items: center; gap: 10px; padding: 10px; background: var(--bg-panel-2); border: 1px solid var(--line); border-radius: 8px; cursor: pointer; transition: border-color 0.2s; }
 .npc-shop-card:hover { border-color: var(--gold); }
 .npc-shop-icon { font-size: 1.5rem; }
-.npc-shop-name { font-weight: 600; color: var(--gold-soft); }
+.npc-shop-info { flex: 1; }
+.npc-shop-name { font-weight: 600; color: var(--gold-soft); font-size: 0.9rem; }
 .npc-shop-hint { font-size: 0.7rem; color: var(--ink-dim); margin-left: auto; }
-.npc-shop { padding: 8px 0; }
-.shop-items { display: flex; flex-direction: column; gap: 6px; }
+.npc-shop-count { font-size: 0.7rem; color: var(--ink-dim); }
+.npc-shop-arrow { color: var(--ink-dim); font-size: 0.8rem; }
+.npc-shop-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.npc-shop-header .panel-title { margin: 0; }
+.shop-category { margin-bottom: 12px; }
+.shop-category-title { font-size: 0.85rem; color: var(--gold-soft); margin: 0 0 6px; padding-bottom: 4px; border-bottom: 1px solid var(--line); }
+.shop-items { display: flex; flex-direction: column; gap: 4px; }
 .shop-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; background: var(--bg-panel-2); border: 1px solid var(--line); border-radius: 6px; }
-.shop-item-info { display: flex; align-items: center; gap: 6px; flex: 1; }
-.shop-item-icon { font-size: 1.1rem; }
+.shop-cannot-afford { opacity: 0.6; }
+.shop-item-info { display: flex; align-items: center; gap: 8px; flex: 1; }
+.shop-item-icon { font-size: 1.2rem; }
+.shop-item-details { display: flex; flex-direction: column; }
 .shop-item-name { font-weight: 500; font-size: 0.85rem; }
 .shop-item-desc { font-size: 0.7rem; color: var(--ink-dim); margin-left: 6px; }
+.shop-item-stats { font-size: 0.7rem; color: var(--teal-soft); }
 .shop-item-actions { display: flex; align-items: center; gap: 8px; }
 .shop-item-price { font-size: 0.75rem; color: var(--gold); font-weight: 600; }
 .shop-item-owned { font-size: 0.7rem; color: var(--ink-dim); }
-
-/* Equipment Grid */
 .equip-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 12px; }
 .equip-slot { background: var(--bg-panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 6px; text-align: center; }
 .equip-slot-name { font-size: 0.65rem; color: var(--ink-dim); margin-bottom: 4px; }
@@ -699,6 +697,112 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-deep); co
 .equip-refine { margin-top: 4px; }
 .equip-card { font-size: 0.65rem; color: #58d68d; margin-top: 2px; }
 .equip-card-actions { margin-top: 2px; }
+
+/* ---- RO 風裝備視窗（10 格自設計） ---- */
+.ro-equip-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 12px;
+  max-width: 360px;
+}
+.ro-equip-slot {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 4px;
+  background: var(--bg-panel-2);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  min-height: 52px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.ro-equip-slot:hover {
+  border-color: var(--gold);
+  background: var(--bg-panel);
+}
+.ro-equip-slot.has-item {
+  border-color: var(--gold);
+  border-style: solid;
+}
+.ro-equip-slot .slot-label {
+  font-size: 9px;
+  color: var(--ink-dim);
+  margin-bottom: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.ro-equip-slot .slot-icon {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+.ro-equip-slot .slot-empty {
+  width: 28px;
+  height: 28px;
+  border: 1px dashed var(--line);
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: var(--line);
+}
+.ro-equip-slot .slot-name {
+  font-size: 10px;
+  color: var(--gold-soft);
+  margin-top: 2px;
+  text-align: center;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ro-equip-slot .slot-refine {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 9px;
+  color: #5dade2;
+  font-weight: 700;
+}
+/* 頭部三格佔滿第一行 */
+.ro-equip-slot.head-slot {
+  grid-column: span 1;
+}
+/* 武器佔中間行 */
+.ro-equip-slot.weapon-slot {
+  grid-column: 2;
+}
+/* 裝備提示框 */
+.ro-equip-tooltip {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  background: #1a1a2e;
+  border: 2px solid var(--gold);
+  border-radius: 4px;
+  padding: 10px 12px;
+  min-width: 200px;
+  max-width: 280px;
+  font-size: 12px;
+  color: var(--ink);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+  pointer-events: none;
+}
+.ro-equip-tooltip.show { display: block; }
+.ro-equip-tooltip .tt-name { font-weight: 700; color: var(--gold-soft); font-size: 13px; margin-bottom: 4px; }
+.ro-equip-tooltip .tt-type { font-size: 11px; color: var(--ink-dim); margin-bottom: 6px; }
+.ro-equip-tooltip .tt-desc { font-size: 11px; color: var(--ink); line-height: 1.5; margin-bottom: 6px; }
+.ro-equip-tooltip .tt-stats { font-size: 11px; color: #5dade2; }
+.ro-equip-tooltip .tt-stats span { display: inline-block; margin-right: 8px; }
+.ro-equip-tooltip .tt-refine { color: #f0c040; font-weight: 700; }
+.ro-equip-tooltip .tt-card { color: #58d68d; margin-top: 4px; }
+.ro-equip-tooltip .tt-hint { font-size: 10px; color: var(--ink-dim); margin-top: 6px; border-top: 1px solid var(--line); padding-top: 4px; }
 
 /* Card system */
 .card-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
@@ -721,31 +825,6 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-deep); co
 .town-npc-card:hover .town-npc-name { color: var(--bg-deep); }
 .town-npc-hint { font-size: 0.7rem; color: var(--ink-dim); }
 
-/* NPC Shop */
-.npc-shop-list { display: flex; flex-direction: column; gap: 8px; }
-.npc-shop-card { display: flex; align-items: center; gap: 10px; padding: 10px; background: var(--bg-panel-2); border: 1px solid var(--line); border-radius: 8px; cursor: pointer; transition: border-color 0.2s; }
-.npc-shop-card:hover { border-color: var(--gold); }
-.npc-shop-icon { font-size: 1.5rem; }
-.npc-shop-info { flex: 1; }
-.npc-shop-name { font-weight: 600; color: var(--gold-soft); font-size: 0.9rem; }
-.npc-shop-count { font-size: 0.7rem; color: var(--ink-dim); }
-.npc-shop-arrow { color: var(--ink-dim); font-size: 0.8rem; }
-.npc-shop-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-.npc-shop-header .panel-title { margin: 0; }
-.shop-category { margin-bottom: 12px; }
-.shop-category-title { font-size: 0.85rem; color: var(--gold-soft); margin: 0 0 6px; padding-bottom: 4px; border-bottom: 1px solid var(--line); }
-.shop-items { display: flex; flex-direction: column; gap: 4px; }
-.shop-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; background: var(--bg-panel-2); border: 1px solid var(--line); border-radius: 6px; }
-.shop-cannot-afford { opacity: 0.6; }
-.shop-item-info { display: flex; align-items: center; gap: 8px; flex: 1; }
-.shop-item-icon { font-size: 1.2rem; }
-.shop-item-details { display: flex; flex-direction: column; }
-.shop-item-name { font-weight: 500; font-size: 0.85rem; }
-.shop-item-stats { font-size: 0.7rem; color: var(--teal-soft); }
-.shop-item-actions { display: flex; align-items: center; gap: 8px; }
-.shop-item-price { font-size: 0.75rem; color: var(--gold); font-weight: 600; }
-.shop-item-owned { font-size: 0.7rem; color: var(--ink-dim); }
-
 /* Auto Battle Tab */
 .ab-status { background: var(--bg-panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 14px; margin-bottom: 16px; }
 .ab-bar-label { font-size: 12px; color: var(--ink); margin-bottom: 4px; font-weight: 600; }
@@ -763,6 +842,7 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-deep); co
 .ab-mode-btns .btn-small.active { background: var(--gold); color: var(--bg-deep); border-color: var(--gold); }
 .ab-slider { width: 100%; accent-color: var(--gold); }
 .ab-slider-val { font-size: 12px; color: var(--gold-soft); font-weight: 700; }
+.ab-config-hint { font-size: 12px; color: var(--ink-dim); }
 .ab-info-text { font-size: 12px; color: var(--ink-dim); margin-top: 8px; line-height: 1.5; }
 .ab-skill-slot { background: var(--bg-panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px; margin-bottom: 10px; }
 .ab-skill-slot:last-child { margin-bottom: 0; }

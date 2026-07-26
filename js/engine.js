@@ -48,8 +48,9 @@ function createCharacter(name, statAlloc, gender) {
     statPoints: 0,
     skillPoints: 0, // 保留相容性，實際使用 jobSkillPoints
     jobSkillPoints: {}, // { jobId: remainingPoints } 按職業分離的技能點
+    jobLevelHistory: {}, // { jobId: jobLevel } 轉職歷史（職業加成跨職業繼承）
     learnedSkills: {},   // {skillId: level}
-    equip: { weapon: null, armor: null, shield: null, garment: null, footgear: null, accessory1: null, accessory2: null },
+    equip: { head_top: null, head_mid: null, head_bottom: null, weapon: null, armor: null, shield: null, garment: null, footgear: null, accessory1: null, accessory2: null },
     refinement: {},   // { itemId: refinementLevel } 例：{ sword_basic: 3 } 表示 +3
     equippedCards: {}, // { equipSlot: cardId } 例：{ weapon: 'poring_card' }
     inventory: [],        // [{item:'jellopy', qty:3}]
@@ -67,7 +68,7 @@ function createCharacter(name, statAlloc, gender) {
     buffs: [],             // [{type,mult,msRemaining}]
     autoSkill: true,
     autoSkillConfig: { skillId: null, mode: 'once', spThreshold: 30, skillId2: null, spThreshold2: 50, monsterCount2: 2 }, // skillId2=第二招, spThreshold2=SP%門檻, monsterCount2=怪物數門檻
-    autoPotion: { enabled: true, tier: 'red_potion' },
+    autoPotion: { enabled: true, primary: '', fallback: 'red_potion', hpThreshold: 50 },
     autoBuyPotion: true,
     cardEleDmgBonus: {}, // 屬性傷害加成（由卡片提供）
     muted: false,
@@ -113,7 +114,7 @@ function equippedMatk() {
 function equippedDef() {
   let def = 0;
   // Check all equipped armor slots
-  ['armor', 'shield', 'garment', 'footgear', 'accessory1', 'accessory2'].forEach(slot => {
+  ['head_top', 'head_mid', 'head_bottom', 'armor', 'shield', 'garment', 'footgear', 'accessory1', 'accessory2'].forEach(slot => {
     const a = state.equip[slot] ? ITEMS[state.equip[slot]] : null;
     const baseDef = a && a.def ? a.def : 0;
     const refLevel = (state.refinement && state.equip[slot]) ? (state.refinement[state.equip[slot]] || 0) : 0;
@@ -127,6 +128,9 @@ function recomputeDerived(fullHeal) {
   const s = state.stats;
   const bl = state.baseLevel;
 
+  // 職業加成（跨職業累計繼承）
+  const jobBonus = computeJobBonuses();
+
   // RO 官方 HP/SP 查找表
   // MAX_HP = floor(JOB_BASE_HP[jobId][level-1] × (1 + VIT*0.01))
   // MAX_SP = floor(JOB_BASE_SP[jobId][level-1] × (1 + INT*0.01))
@@ -135,21 +139,40 @@ function recomputeDerived(fullHeal) {
   const spTable = JOB_BASE_SP[jobId] || JOB_BASE_SP.novice;
   const baseHP = hpTable[Math.min(bl, 100) - 1] || 35;
   const baseSP = spTable[Math.min(bl, 100) - 1] || 10;
-  const newMaxHp = Math.floor(baseHP * (1 + s.vit * 0.01) * job.hpMod);
-  const newMaxSp = Math.floor(baseSP * (1 + s.int * 0.01) * job.spMod);
+  const effVit = s.vit + jobBonus.vit;
+  const effInt = s.int + jobBonus.int;
+  const newMaxHp = Math.floor(baseHP * (1 + effVit * 0.01) * job.hpMod);
+  const newMaxSp = Math.floor(baseSP * (1 + effInt * 0.01) * job.spMod);
 
   state.maxHp = newMaxHp;
   state.maxSp = newMaxSp;
   if (fullHeal) { state.hp = newMaxHp; state.sp = newMaxSp; }
   else { state.hp = Math.min(state.hp, newMaxHp); state.sp = Math.min(state.sp, newMaxSp); }
 
-  // ATK：StatusATK = STR + (STR/10)² + DEX/5 + LUK/5（含卡片加成）
-  const cStr = s.str + getCardBonus('str');
-  const cDex = s.dex + getCardBonus('dex');
-  const cLuk = s.luk + getCardBonus('luk');
-  const cAgi = s.agi + getCardBonus('agi');
-  const cVit = s.vit + getCardBonus('vit');
-  const cInt = s.int + getCardBonus('int');
+  // 被動技能 DEX 加成（必須在衍生數值計算之前，避免直接修改 state.stats.dex 導致膨脹）
+  let passiveDexBonus = 0;
+  const passiveJobsEarly = getAllLearnedJobs();
+  for (const jid of passiveJobsEarly) {
+    const jd = JOB_TREE[jid];
+    if (!jd) continue;
+    jd.skills.forEach(sk => {
+      const lv = state.learnedSkills[sk.id];
+      if (!lv || sk.type !== 'passive') return;
+      if (sk.passiveStat === 'dexFlat') {
+        const val = Array.isArray(sk.mult) ? sk.mult[lv - 1] : sk.mult;
+        passiveDexBonus += Math.round(val);
+      }
+    });
+  }
+  state._passiveDexBonus = passiveDexBonus;
+
+  // ATK：StatusATK = STR + (STR/10)² + DEX/5 + LUK/5（含職業加成與卡片加成）
+  const cStr = s.str + jobBonus.str + getCardBonus('str');
+  const cDex = s.dex + jobBonus.dex + getCardBonus('dex') + passiveDexBonus;
+  const cLuk = s.luk + jobBonus.luk + getCardBonus('luk');
+  const cAgi = s.agi + jobBonus.agi + getCardBonus('agi');
+  const cVit = s.vit + jobBonus.vit + getCardBonus('vit');
+  const cInt = s.int + jobBonus.int + getCardBonus('int');
   const statusAtk = cStr + Math.floor((cStr / 10) ** 2) + Math.floor(cDex / 5) + Math.floor(cLuk / 5);
   state.atk = Math.round(statusAtk * job.atkMod) + equippedAtk();
 
@@ -191,7 +214,7 @@ function recomputeDerived(fullHeal) {
         case 'critRate': state.critRate = Math.min(100, state.critRate + val); break;
         case 'hitFlat': state.hit += Math.round(val); break;
         case 'fleeFlat': state.flee += Math.round(val); break;
-        case 'dexFlat': state.stats.dex += Math.round(val); break;
+        // dexFlat 已在 recomputeDerived 開頭計算並加入 cDex，不再修改 state.stats.dex
         case 'defFlat': state.def += Math.round(val); break;
         case 'spRegen': state.spRegenMult = (state.spRegenMult || 1) * val; break;
         case 'hpRegenMult': state.hpRegenMult = (state.hpRegenMult || 1) * val; break;
@@ -352,14 +375,25 @@ function getItemQty(itemId) {
 /* ---------------- 藥水：自動使用 / 自動購買 ---------------- */
 function autoUsePotion() {
   if (!state.autoPotion || !state.autoPotion.enabled) return;
-  if (state.hp >= state.maxHp * AUTO_POTION_HP_RATIO) return;
+  const threshold = (state.autoPotion.hpThreshold || 50) / 100;
+  if (state.hp >= state.maxHp * threshold) return;
 
-  const tier = state.autoPotion.tier;
-  if (getItemQty(tier) <= 0 && state.autoBuyPotion) {
-    buyItem(tier, AUTO_BUY_QTY);
+  const primary = state.autoPotion.primary;
+  const fallback = state.autoPotion.fallback;
+
+  // 優先使用第一選擇（背包道具）
+  if (primary && getItemQty(primary) > 0) {
+    useItem(primary);
+    return;
   }
-  if (getItemQty(tier) > 0) {
-    useItem(tier);
+  // 第一選擇用完，使用第二選擇（固定藥水）
+  if (fallback) {
+    if (getItemQty(fallback) <= 0 && state.autoBuyPotion) {
+      buyItem(fallback, AUTO_BUY_QTY);
+    }
+    if (getItemQty(fallback) > 0) {
+      useItem(fallback);
+    }
   }
 }
 
@@ -382,12 +416,10 @@ function buyItem(itemId, qty) {
   return true;
 }
 
-function setAutoPotionTier(tier) {
-  if (!POTION_TIERS.includes(tier)) return;
-  state.autoPotion.tier = tier;
-  saveGame();
-}
+function setAutoPotionTier(tier) { state.autoPotion.primary = tier; saveGame(); }
+function setAutoPotionFallback(tier) { state.autoPotion.fallback = tier; saveGame(); }
 function setAutoPotionEnabled(v) { state.autoPotion.enabled = !!v; saveGame(); }
+function setAutoPotionThreshold(v) { state.autoPotion.hpThreshold = Math.max(10, Math.min(90, parseInt(v) || 50)); saveGame(); }
 function setAutoBuyPotion(v) { state.autoBuyPotion = !!v; saveGame(); }
 
 function tickCooldowns() {
@@ -413,11 +445,21 @@ function computeAspd() {
   // Step 1: 查表取得武器 ASPD 基礎值 & 盾牌懲罰
   const weapon = state.equip.weapon ? ITEMS[state.equip.weapon] : null;
   const weaponType = weapon ? weapon.weaponType : null;
-  const weaponValue = (job.baseAspd && weaponType && job.baseAspd[weaponType] !== undefined) ? job.baseAspd[weaponType] : 154;
+  // baseAspd 可以是數字（全武器統一值）或物件（依武器類型查表）
+  let weaponValue = 154;
+  if (job.baseAspd) {
+    if (typeof job.baseAspd === 'number') {
+      weaponValue = job.baseAspd;
+    } else if (weaponType && job.baseAspd[weaponType] !== undefined) {
+      weaponValue = job.baseAspd[weaponType];
+    }
+  }
   const shieldPenalty = state.equip.shield ? (job.shieldPenalty || -5) : 0;
 
   // Step 2: StatBonus = √(AGI × 1120/111 + DEX × 11/60)
-  const statBonus = Math.sqrt(s.agi * 1120 / 111 + s.dex * 11 / 60);
+  // 含被動技能 DEX 加成（避免直接修改 state.stats.dex 導致膨脹）
+  const effectiveDex = s.dex + (state._passiveDexBonus || 0);
+  const statBonus = Math.sqrt(s.agi * 1120 / 111 + effectiveDex * 11 / 60);
 
   // Step 3: Core（依武器基礎值分高低速公式）
   let core;
@@ -592,14 +634,25 @@ function playerAttack() {
 
   if (target.hp <= 0) {
     killMonster(monDef, target);
+    return;
   }
-}
 
-// 怪物攻擊（多怪物版本）
-function monsterAttack() {
-  if (!state.monsters || state.monsters.length === 0) return;
-  for (let i = state.monsters.length - 1; i >= 0; i--) {
-    monsterAttackSingle(state.monsters[i]);
+  // 二刀連擊：被動技能，有機率發動第二段攻擊
+  const daLv = state.learnedSkills['doubleattack'] || 0;
+  if (daLv > 0) {
+    const daSkill = findSkillById('doubleattack');
+    const daChance = daSkill.doubleAttackChance ? daSkill.doubleAttackChance[daLv - 1] : 10;
+    if (Math.random() * 100 < daChance) {
+      const daMult = daSkill.mult ? daSkill.mult[daLv - 1] : 1.0;
+      const daRaw = raw * daMult;
+      const daDmg = mitigateDamage(daRaw, monDefVal);
+      target.hp -= daDmg;
+      logMsg(`⚔️ 二刀連擊！對 ${monDef.name} 造成 ${daDmg} 點傷害！`);
+      if (typeof playHitSound === 'function') playHitSound();
+      if (target.hp <= 0) {
+        killMonster(monDef, target);
+      }
+    }
   }
 }
 
@@ -1193,6 +1246,21 @@ function getAllLearnedJobs() {
   return jobs;
 }
 
+// 計算所有已轉職職業的 job bonus 總和（累計繼承）
+function computeJobBonuses() {
+  const allJobs = getAllLearnedJobs();
+  const totals = { str: 0, agi: 0, vit: 0, int: 0, dex: 0, luk: 0 };
+  for (const jobId of allJobs) {
+    const jd = JOB_TREE[jobId];
+    if (!jd || !jd.bonusLevels) continue;
+    const jobLv = (jobId === state.jobId) ? state.jobLevel : (state.jobLevelHistory?.[jobId] || 0);
+    for (const [stat, levels] of Object.entries(jd.bonusLevels)) {
+      totals[stat] += levels.filter(lv => lv <= jobLv).length;
+    }
+  }
+  return totals;
+}
+
 // 根據 ID 尋找技能（搜尋所有已解鎖職業）
 function findSkillById(skillId) {
   const allJobs = getAllLearnedJobs();
@@ -1232,6 +1300,10 @@ function doJobChange(targetId) {
 
   // 記錄轉職前的技能（保留所有已學技能）
   const prevSkills = { ...state.learnedSkills };
+
+  // 存舊職業的 jobLevel（職業加成跨職業繼承）
+  if (!state.jobLevelHistory) state.jobLevelHistory = {};
+  state.jobLevelHistory[state.jobId] = state.jobLevel;
 
   state.jobId = targetId;
   state.jobLevel = 1;
@@ -1387,9 +1459,20 @@ function useItem(itemId) {
   const def = ITEMS[itemId];
   const row = state.inventory.find(r => r.item === itemId);
   if (!def || !row) return false;
-  if (def.type === 'consumable') {
+  if (def.type === 'consumable' || def.type === 'material') {
     if (def.heal) state.hp = Math.min(state.maxHp, state.hp + def.heal);
-    if (def.restoreSp) state.sp = Math.min(state.maxSp, state.sp + def.restoreSp);
+    else if (def.restoreSp) state.sp = Math.min(state.maxSp, state.sp + def.restoreSp);
+    else {
+      // 從描述中推斷回復量（背包道具/食材類）
+      const desc = def.desc || '';
+      const hpMatch = desc.match(/恢復(\d+)/) || desc.match(/恢复(\d+)/);
+      if (hpMatch) {
+        state.hp = Math.min(state.maxHp, state.hp + parseInt(hpMatch[1]));
+      } else if (desc.includes('恢復') || desc.includes('恢复')) {
+        // 無具體數值的回復道具，預設恢復 50 HP
+        state.hp = Math.min(state.maxHp, state.hp + 50);
+      }
+    }
     removeItem(itemId, 1);
     logMsg(`使用了 ${def.name}。`);
     saveGame();
@@ -1409,20 +1492,52 @@ function equipItem(itemId) {
   if (def.type === 'weapon') {
     slot = 'weapon';
   } else if (def.type === 'armor') {
-    // Determine slot based on armorType
     switch (def.armorType) {
+      case 'headgear':
+        // 根據物品描述中的「位置」決定頭部欄位（兼容簡繁體）
+        const pos = def.desc || '';
+        const hasTop = pos.includes('頭上') || pos.includes('头上');
+        const hasMid = pos.includes('頭中') || pos.includes('头中');
+        const hasBot = pos.includes('頭下') || pos.includes('头下');
+        if (hasTop && !hasMid && !hasBot) slot = 'head_top';
+        else if (hasMid && !hasTop && !hasBot) slot = 'head_mid';
+        else if (hasBot && !hasTop && !hasMid) slot = 'head_bottom';
+        else if (hasTop && hasMid && !hasBot) { slot = !state.equip.head_top ? 'head_top' : 'head_mid'; }
+        else if (hasMid && hasBot && !hasTop) { slot = !state.equip.head_mid ? 'head_mid' : 'head_bottom'; }
+        else if (hasTop && hasMid && hasBot) {
+          if (!state.equip.head_top) slot = 'head_top';
+          else if (!state.equip.head_mid) slot = 'head_mid';
+          else if (!state.equip.head_bottom) slot = 'head_bottom';
+          else slot = 'head_top';
+        }
+        else slot = 'head_top';
+        break;
       case 'shield': slot = 'shield'; break;
       case 'garment': slot = 'garment'; break;
       case 'footgear': slot = 'footgear'; break;
       case 'accessory':
-        // Accessories use accessory1 or accessory2
         if (!state.equip.accessory1) slot = 'accessory1';
         else if (!state.equip.accessory2) slot = 'accessory2';
-        else slot = 'accessory1'; // Replace first accessory
+        else slot = 'accessory1';
         break;
       default: slot = 'armor'; break;
     }
   } else {
+    return false;
+  }
+
+  // 雙手武器：裝備時自動卸下盾牌
+  if (slot === 'weapon' && isTwoHanded(itemId)) {
+    if (state.equip.shield) {
+      addItem(state.equip.shield, 1);
+      logMsg(`雙手武器無法搭配盾牌，卸下了 ${ITEMS[state.equip.shield]?.name || '盾牌'}。`);
+      state.equip.shield = null;
+    }
+  }
+
+  // 盾牌：如果目前武器是雙手武器，無法裝備
+  if (slot === 'shield' && isTwoHanded(state.equip.weapon)) {
+    logMsg(`⚠️ 雙手武器無法搭配盾牌！`);
     return false;
   }
 
@@ -1432,6 +1547,18 @@ function equipItem(itemId) {
   if (old) addItem(old, 1);
   recomputeDerived(false);
   logMsg(`裝備了 ${def.name}。`);
+  saveGame();
+  return true;
+}
+
+function unequipItem(slotKey) {
+  const itemId = state.equip[slotKey];
+  if (!itemId) return false;
+  const def = ITEMS[itemId];
+  state.equip[slotKey] = null;
+  addItem(itemId, 1);
+  recomputeDerived(false);
+  logMsg(`卸下了 ${def ? def.name : '裝備'}。`);
   saveGame();
   return true;
 }
@@ -1545,7 +1672,7 @@ function insertCard(equipSlot, cardId) {
     logMsg(`⚠️ ${card.name} 只能插在武器上。`);
     return false;
   }
-  if (card.slot === 'armor' && !['armor', 'shield', 'garment', 'footgear'].includes(equipSlot)) {
+  if (card.slot === 'armor' && !['head_top', 'head_mid', 'head_bottom', 'armor', 'shield', 'garment', 'footgear'].includes(equipSlot)) {
     logMsg(`⚠️ ${card.name} 只能插在防具上。`);
     return false;
   }
@@ -1557,7 +1684,7 @@ function insertCard(equipSlot, cardId) {
   }
 
   // 檢查卡槽限制
-  const maxSlots = EQUIP_CARD_SLOTS[equipSlot] || 0;
+  const maxSlots = getEquipCardSlots(equipSlot);
   if (maxSlots <= 0) {
     logMsg(`⚠️ 該欄位無法插卡。`);
     return false;
@@ -1657,7 +1784,13 @@ function loadGame() {
     if (!raw) return false;
     state = JSON.parse(raw);
     if (!state.lastActiveAt) state.lastActiveAt = Date.now();
-    if (!state.autoPotion) state.autoPotion = { enabled: true, tier: 'red_potion' };
+    if (!state.autoPotion) state.autoPotion = { enabled: true, primary: '', fallback: 'red_potion', hpThreshold: 50 };
+    if (typeof state.autoPotion.hpThreshold !== 'number') state.autoPotion.hpThreshold = 50;
+    // 舊版 tier 欄位遷移
+    if (state.autoPotion.tier && !state.autoPotion.fallback) {
+      state.autoPotion.fallback = state.autoPotion.tier;
+      delete state.autoPotion.tier;
+    }
     if (typeof state.autoBuyPotion !== 'boolean') state.autoBuyPotion = true;
     if (typeof state.muted !== 'boolean') state.muted = false;
     if (!state.autoSkillConfig) state.autoSkillConfig = { skillId: null, mode: 'once', spThreshold: 30, skillId2: null, spThreshold2: 50, monsterCount2: 2 };
@@ -1692,6 +1825,9 @@ function loadGame() {
 
     // Migration: add new equip slots if missing
     if (!state.equip) state.equip = {};
+    if (!state.equip.head_top) state.equip.head_top = null;
+    if (!state.equip.head_mid) state.equip.head_mid = null;
+    if (!state.equip.head_bottom) state.equip.head_bottom = null;
     if (!state.equip.shield) state.equip.shield = null;
     if (!state.equip.garment) state.equip.garment = null;
     if (!state.equip.footgear) state.equip.footgear = null;

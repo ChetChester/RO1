@@ -1,0 +1,272 @@
+/* ============================================================
+   RO 原版 UI 主題 — 用 RO 客戶端 BMP 素材覆蓋基礎樣式
+   切換方法：在 index.html 刪除或註解掉這行即可回到原版
+   <link rel="stylesheet" href="css/ro-theme.css">
+   ============================================================ */
+
+/* ---------------- 變數覆蓋 ---------------- */
+:root {
+  --ro-bg: #2a2a2a;
+  --ro-panel: #3a3a3a;
+  --ro-border: #5a5a5a;
+  --ro-gold: #d4af37;
+  --ro-text: #e0d8c8;
+  --ro-text-dim: #a0a0a0;
+  --ro-blue: #4a7abb;
+  --ro-red: #cc3333;
+}
+
+/* ---------------- 視窗背景 ---------------- */
+/* 用 basewin_bg.bmp 作為面板底圖，9-patch 風格 */
+.create-stage,
+.slot-item,
+.stat-grid,
+.derived-grid,
+.combat-log,
+.panel-title {
+  background-color: var(--ro-panel);
+  background-image: url('../ro_ui_basic/basic_basewin_bg.bmp');
+  background-size: 100% 100%;
+  border: 2px solid var(--ro-border);
+  border-image: url('../ro_ui_basic/sysbox_ld.bmp') 2 fill;
+}
+
+/* 標題列背景 */
+.hud-bar {
+  background-color: var(--ro-panel);
+  background-image: url('../ro_ui_basic/basic_titlebar_fix.bmp');
+  background-size: 100% 100%;
+  border-bottom: none;
+}
+
+/* ---------------- 按鈕 ---------------- */
+/* 主按鈕 — 用 btn_ok.bmp 9-patch */
+.btn {
+  background-color: transparent;
+  background-image: url('../ro_ui_basic/btn_ok.bmp');
+  background-size: 100% 100%;
+  border: none;
+  border-radius: 0;
+  color: var(--ro-text);
+  font-weight: 700;
+  text-shadow: 0 1px 2px #000;
+  min-width: 100px;
+  padding: 8px 24px;
+  image-rendering: pixelated;
+}
+.btn:hover {
+  background-image: url('../ro_ui_basic/btn_ok_a.bmp');
+  transform: none;
+  box-shadow: none;
+}
+.btn:active {
+  background-image: url('../ro_ui_basic/btn_ok_b.bmp');
+}
+.btn-primary {
+  background-image: url('../ro_ui_basic/btn_ok.bmp');
+  box-shadow: none;
+}
+
+/* 小按鈕 */
+.btn-small {
+  background-color: var(--ro-panel);
+  background-image: url('../ro_ui_basic/btn_ok.bmp');
+  background-size: 100% 100%;
+  border: 1px solid var(--ro-border);
+  border-radius: 0;
+  color: var(--ro-text);
+  text-shadow: 0 1px 1px #000;
+}
+.btn-small:hover {
+  background-image: url('../ro_ui_basic/btn_ok_a.bmp');
+}
+.btn-small.ghost {
+  background-image: url('../ro_ui_basic/btn_cancel.bmp');
+  border-color: var(--ro-border);
+  color: var(--ro-text-dim);
+}
+
+/* 微小按鈕 (+/-) */
+.btn-tiny {
+  background-color: var(--ro-panel);
+  background-image: url('../ro_ui_basic/basic_btn_ok.bmp');
+  background-size: 100% 100%;
+  border: 1px solid var(--ro-border);
+  border-radius: 0;
+  color: var(--ro-text);
+}
+
+/* 儲存按鈕 */
+.btn-save {
+  background-color: var(--ro-panel);
+  background-image: url('../ro_ui_basic/btn_ok.bmp');
+  background-size: 100% 100%;
+  border: 1px solid var(--ro-border);
+  border-radius: 0;
+  color: var(--ro-text);
+}
+.btn-save:hover {
+  background-image: url('../ro_ui_basic/btn_ok_a.bmp');
+}
+
+/* 性別選擇按鈕 */
+.btn-gender {
+  background-color: var(--ro-panel);
+  border: 2px solid var(--ro-border);
+  border-radius: 0;
+  color: var(--ro-text-dim);
+}
+.btn-gender:hover {
+  border-color: var(--ro-gold);
+  color: var(--ro-gold);
+}
+.btn-gender.active {
+  background-color: var(--ro-gold);
+  color: #111;
+  border-color: var(--ro-gold);
+}
+
+/* 轉職按鈕 */
+.btn-jobchange {
+  background-color: var(--ro-red);
+  border-radius: 0;
+  border: 1px solid #ff4444;
+}
+
+/* ---------------- 分頁籤 ---------------- */
+.tab-btn {
+  background-color: var(--ro-panel);
+  background-image: url('../ro_ui_basic/basic_tab_l.bmp');
+  background-size: 4px 100%;
+  background-repeat: no-repeat;
+  border: 1px solid var(--ro-border);
+  border-bottom: none;
+  border-radius: 0;
+  color: var(--ro-text-dim);
+  padding: 6px 14px;
+  font-size: 12px;
+}
+.tab-btn.active {
+  background-color: var(--ro-gold);
+  background-image: url('../ro_ui_basic/basic_tab_a_l.bmp');
+  color: #111;
+  border-color: var(--ro-gold);
+}
+
+/* ---------------- 滾動條 ---------------- */
+.slot-list::-webkit-scrollbar,
+.combat-log::-webkit-scrollbar {
+  width: 13px;
+}
+.slot-list::-webkit-scrollbar-track,
+.combat-log::-webkit-scrollbar-track {
+  background: url('../ro_ui_basic/scroll0mid.bmp') repeat-y;
+  background-size: 13px 4px;
+}
+.slot-list::-webkit-scrollbar-thumb,
+.combat-log::-webkit-scrollbar-thumb {
+  background: url('../ro_ui_basic/scroll0bar_mid.bmp') repeat-y;
+  background-size: 13px 4px;
+  border: none;
+}
+.slot-list::-webkit-scrollbar-button,
+.combat-log::-webkit-scrollbar-button {
+  height: 13px;
+  background: url('../ro_ui_basic/scroll0up.bmp') no-repeat center;
+  background-size: 13px 13px;
+  border: none;
+}
+
+/* ---------------- 輸入框 ---------------- */
+.name-input {
+  background-color: #1a1a2e;
+  border: 2px inset var(--ro-border);
+  border-radius: 0;
+  color: var(--ro-text);
+  font-family: var(--font-body);
+}
+
+/* ---------------- 屬性欄位 ---------------- */
+.stat-row {
+  border-bottom: 1px dashed var(--ro-border);
+}
+.stat-label { color: var(--ro-text); }
+.stat-value { color: var(--ro-gold); font-weight: 700; }
+.stat-cost { color: var(--ro-text-dim); }
+.stat-points-left { color: var(--ro-gold); font-weight: 700; }
+
+/* ---------------- 派生數值 ---------------- */
+.derived-grid div {
+  color: var(--ro-text);
+  border-bottom: 1px dotted var(--ro-border);
+  padding: 4px 0;
+}
+
+/* ---------------- HP/SP 條 ---------------- */
+.bar-track {
+  background: #0a0a0a;
+  border: 1px solid var(--ro-border);
+  border-radius: 0;
+}
+.hp-fill {
+  background: linear-gradient(90deg, #8b0000, var(--ro-red));
+}
+.sp-fill {
+  background: linear-gradient(90deg, #003366, var(--ro-blue));
+}
+.bexp-fill {
+  background: linear-gradient(90deg, #665500, var(--ro-gold));
+}
+.jexp-fill {
+  background: linear-gradient(90deg, #334466, #6688bb);
+}
+
+/* ---------------- 戰鬥面板 ---------------- */
+.battle-panel {
+  background: #0a0a14;
+  border-right: 2px solid var(--ro-border);
+}
+
+/* ---------------- 對話框 ---------------- */
+.monster-card.target {
+  border: 2px solid var(--ro-gold);
+  border-radius: 0;
+  background: rgba(212,175,55,0.08);
+}
+
+/* ---------------- 技能按鈕 ---------------- */
+.skill-slot {
+  border: 1px solid var(--ro-border);
+  border-radius: 0;
+  background: var(--ro-panel);
+}
+
+/* ---------------- 任務視窗 ---------------- */
+.quest-panel {
+  background-color: var(--ro-panel);
+  background-image: url('../ro_ui_basic/basic_basewin_bg.bmp');
+  background-size: 100% 100%;
+  border: 2px solid var(--ro-border);
+}
+
+/* ---------------- 地圖選擇 ---------------- */
+.map-select {
+  background-color: #1a1a2e;
+  border: 2px inset var(--ro-border);
+  border-radius: 0;
+  color: var(--ro-text);
+}
+
+/* ---------------- NPC 商店 ---------------- */
+.npc-shop-panel {
+  background-color: var(--ro-panel);
+  background-image: url('../ro_ui_basic/basic_basewin_bg.bmp');
+  background-size: 100% 100%;
+  border: 2px solid var(--ro-border);
+}
+
+/* ---------------- 動畫修正 ---------------- */
+@keyframes pulse {
+  0%,100% { opacity:1; }
+  50% { opacity:.7; }
+}
