@@ -197,16 +197,16 @@ const JOB_TREE = {
     nextLocked: ['rogue'],
     bonusLevels: { str:[6,30,38,47], agi:[2,33,36,50], vit:[14,44], int:[18], dex:[10,22,42,49], luk:[26,40,46] },
     skills: [
-      // Quest skills
-      { id: 'steal', name: '偷竊', maxLv: 1, isQuest: true, type: 'passive', passiveStat: 'steal', spCost: [0], cooldown: [0], mult: [1], desc: '學會從怪物身上偷取物品。' },
-      { id: 'detoxify', name: '解毒', maxLv: 1, isQuest: true, type: 'heal', spCost: [10], cooldown: [3], mult: [0.5], desc: '解除中毒狀態。' },
-      { id: 'sandman', name: '噴砂', maxLv: 1, isQuest: true, type: 'debuff', spCost: [10], cooldown: [15], mult: [1], duration: [5], desc: '噴砂使敵人陷入昏睡。' },
-      { id: 'backsliding', name: '後退迴避', maxLv: 1, isQuest: true, type: 'buff_flee', spCost: [0], cooldown: [10], mult: [1.5], duration: [3], desc: '向後跳躍並短暫提升迴避。' },
+      // Quest skills（皆為被動，無需手動施放）
+      { id: 'detoxify', name: '解毒', maxLv: 1, isQuest: true, type: 'passive', passiveStat: 'autoDetox', spCost: [0], cooldown: [0], mult: [1], internalCooldown: [30], desc: '被動技能，玩家中毒時自動解除（冷卻30秒）。' },
+      { id: 'sandman', name: '噴砂', maxLv: 1, isQuest: true, type: 'passive', passiveStat: 'sandmanProc', spCost: [0], cooldown: [0], mult: [1], procChance: [10], hitDebuff: [20], duration: [5], desc: '被動技能，攻擊時有10%機率使敵人命中下降20，持續5秒。' },
+      { id: 'backsliding', name: '後退迴避', maxLv: 1, isQuest: true, type: 'passive', passiveStat: 'backslideDodge', spCost: [0], cooldown: [0], mult: [1], dodgeChance: [5], desc: '被動技能，被攻擊時有5%機率向後閃避，完全免疫該次傷害。' },
       // Normal skills
-      { id: 'doubleattack', name: '二刀連擊', maxLv: 10, type: 'passive', passiveStat: 'doubleAttack', element: 'neutral', spCost: [0], cooldown: [0], mult: [1.1,1.2,1.3,1.4,1.5,1.6,1.7,1.8,1.9,2.0], doubleAttackChance: [10,15,20,25,30,35,40,45,50,55], desc: '被動技能，普攻有 10%~55% 機率造成二連擊，第二段傷害 ×1.1~2.0。' },
-      { id: 'improvedodge', name: '殘影', maxLv: 10, type: 'passive', passiveStat: 'fleeFlat', element: 'neutral', spCost: [0], cooldown: [0], mult: [3,6,9,12,15,18,21,24,27,30], desc: '永久提升迴避率。' },
+      { id: 'steal', name: '偷竊', maxLv: 10, type: 'passive', passiveStat: 'steal', spCost: [0], cooldown: [0], mult: [8,14,20,26,32,38,44,50,56,62], desc: '被動技能，擊敗怪物時有 8%~62% 機率額外掉落一份該怪物的道具。' },
+      { id: 'doubleattack', name: '二刀連擊', maxLv: 10, type: 'passive', passiveStat: 'doubleAttack', element: 'neutral', spCost: [0], cooldown: [0], mult: [1,1,1,1,1,1,1,1,1,1], doubleAttackChance: [7,14,21,28,35,42,49,56,63,70], hitBonus: [1,2,3,4,5,6,7,8,9,10], desc: '被動技能，普攻有 7%~70% 機率造成二連擊（傷害與第一段相同），並永久提升命中 +1~10。' },
+      { id: 'improvedodge', name: '殘影', maxLv: 10, type: 'passive', passiveStat: 'fleeFlat', element: 'neutral', spCost: [0], cooldown: [0], mult: [3,6,9,12,15,18,21,24,27,30], assassinMult: [4,8,12,16,20,24,28,32,36,40], desc: '永久提升迴避率 FLEE+3~30（轉職刺客系後提升為+4~40）。' },
       { id: 'hiding', name: '隱匿', maxLv: 10, type: 'buff_flee', spCost: [10,10,10,10,10,10,10,10,10,10], cooldown: [30,30,30,30,30,30,30,30,30,30], mult: [1.3,1.35,1.4,1.45,1.5,1.55,1.6,1.65,1.7,1.75], duration: [10,10,10,10,10,10,10,10,10,10], desc: '短暫隱匿身形，大幅提升迴避。' },
-      { id: 'envenom', name: '施毒', maxLv: 10, type: 'dot', element: 'poison', spCost: [12,12,12,12,12,12,12,12,12,12], cooldown: [10,10,10,10,10,10,10,10,10,10], mult: [0.10,0.15,0.20,0.25,0.30,0.35,0.40,0.45,0.50,0.55], duration: [8,8,8,8,8,8,8,8,8,8], desc: '使敵人中毒，持續造成傷害。' },
+      { id: 'envenom', name: '施毒', maxLv: 10, type: 'poison_proc', element: 'poison', spCost: [12,12,12,12,12,12,12,12,12,12], cooldown: [10,10,10,10,10,10,10,10,10,10], mult: 1.2, procChance: [5,10,15,20,25,30,35,40,45,50], desc: '主動技能，命中造成固定ATK120%傷害（不隨等級變化），另外有5%~50%（依等級）機率使敵人中毒，持續3秒，每秒造成ATK120%的中毒傷害（不會疊加）。毒屬性怪物免疫。' },
     ],
     desc: '身法敏捷、擅長暗殺的邊緣行走者。'
   },
@@ -370,19 +370,17 @@ const JOB_TREE = {
     next: [], nextLocked: ['assassincross'],
     bonusLevels: { str:[11,25,27,32,45,48], agi:[1,2,3,15,16,17,18,19,20,21], vit:[6,8], int:[4,14,38,42], dex:[9,24,30,31,40,41,46,50], luk:[] },
     skills: [
-      // Quest skills
-      { id: 'enchantpoison', name: '偽裝', maxLv: 10, isQuest: true, type: 'buff_flee', spCost: [10,10,10,10,10,12,12,12,12,12], cooldown: [20,20,20,20,20,20,20,20,20,20], mult: [1.3,1.35,1.4,1.45,1.5,1.55,1.6,1.65,1.7,1.75], duration: [10,10,10,10,10,10,10,10,10,10], desc: '偽裝成其他玩家，提升迴避。' },
-      // Normal skills
-      { id: 'rightmaster', name: '右手修練', maxLv: 5, type: 'passive', passiveStat: 'atkFlat', element: 'neutral', spCost: [0], cooldown: [0], mult: [5,10,15,20,25], desc: '永久提升右手攻擊力。' },
-      { id: 'leftmaster', name: '左手修練', maxLv: 5, type: 'passive', passiveStat: 'atkFlat', element: 'neutral', spCost: [0], cooldown: [0], mult: [3,6,9,12,15], desc: '永久提升左手攻擊力。' },
+      { id: 'rightmaster', name: '右手修練', maxLv: 5, type: 'passive', passiveStat: 'rightHandPct', element: 'neutral', spCost: [0], cooldown: [0], mult: [60,70,80,90,100], desc: '雙持單手武器時，右手（主手）傷害修正60%→100%（未修練時僅50%）。' },
+      { id: 'leftmaster', name: '左手修練', maxLv: 5, type: 'passive', passiveStat: 'leftHandPct', element: 'neutral', spCost: [0], cooldown: [0], mult: [40,50,60,70,80], desc: '雙持單手武器時，左手（副手）傷害修正40%→80%（未修練時僅30%）。' },
       { id: 'katarmastery', name: '拳刃修練', maxLv: 10, type: 'passive', passiveStat: 'atkFlat', element: 'neutral', spCost: [0], cooldown: [0], mult: [3,6,9,12,15,18,21,24,27,30], desc: '永久提升拳刃攻擊力。' },
-      { id: 'sonicblow', name: '音速投擲', maxLv: 10, type: 'damage', element: 'neutral', spCost: [16,16,16,16,16,18,18,18,18,18], cooldown: [4,4,4,4,4,4,4,4,4,4], mult: [1.5,1.8,2.1,2.4,2.7,3.0,3.3,3.6,3.9,4.2], desc: '極速投擲武器攻擊敵人。' },
-      { id: 'grimtooth', name: '無影之牙', maxLv: 5, type: 'damage', element: 'neutral', spCost: [14,14,14,14,14], cooldown: [3,3,3,3,3], mult: [1.5,1.8,2.1,2.4,2.7], desc: '用無影之牙攻擊敵人。' },
-      { id: 'enchantweapon', name: '塗毒', maxLv: 10, type: 'dot', element: 'poison', spCost: [12,12,12,12,12,14,14,14,14,14], cooldown: [10,10,10,10,10,10,10,10,10,10], mult: [0.10,0.15,0.20,0.25,0.30,0.35,0.40,0.45,0.50,0.55], duration: [8,8,8,8,8,8,8,8,8,8], desc: '使敵人中毒，持續造成傷害。' },
-      { id: 'poisonreact', name: '毒性反彈', maxLv: 10, type: 'damage', element: 'poison', spCost: [10,10,10,10,10,12,12,12,12,12], cooldown: [5,5,5,5,5,5,5,5,5,5], mult: [1.0,1.2,1.4,1.6,1.8,2.0,2.2,2.4,2.6,2.8], desc: '反彈敵人的毒性攻擊。' },
-      { id: 'venomdust', name: '病毒散播', maxLv: 10, type: 'dot', element: 'poison', spCost: [12,12,12,12,12,14,14,14,14,14], cooldown: [10,10,10,10,10,10,10,10,10,10], mult: [0.10,0.15,0.20,0.25,0.30,0.35,0.40,0.45,0.50,0.55], duration: [8,8,8,8,8,8,8,8,8,8], desc: '散播病毒使敵人中毒。' },
-      { id: 'venominfusion', name: '毒性感染', maxLv: 10, type: 'dot', element: 'poison', spCost: [12,12,12,12,12,14,14,14,14,14], cooldown: [10,10,10,10,10,10,10,10,10,10], mult: [0.10,0.15,0.20,0.25,0.30,0.35,0.40,0.45,0.50,0.55], duration: [8,8,8,8,8,8,8,8,8,8], desc: '感染敵人使其持續中毒。' },
-      { id: 'sonicblow_max', name: '超音速投擲', maxLv: 5, type: 'damage', element: 'neutral', spCost: [20,20,20,20,20], cooldown: [3,3,3,3,3], mult: [2.5,2.8,3.1,3.4,3.7], desc: '極速投擲武器攻擊敵人。' },
+      { id: 'cloaking', name: '偽裝', maxLv: 10, type: 'buff_flee', spCost: [10,10,10,10,10,12,12,12,12,12], cooldown: [20,20,20,20,20,20,20,20,20,20], mult: [1.3,1.35,1.4,1.45,1.5,1.55,1.6,1.65,1.7,1.75], duration: [10,10,10,10,10,10,10,10,10,10], desc: '偽裝成其他玩家，提升迴避。勾選自動施放後，偽裝生效中會自動連動施放無影之牙。' },
+      { id: 'sonicblow', name: '音速投擲', maxLv: 10, type: 'damage', element: 'neutral', spCost: [16,16,16,16,16,18,18,18,18,18], cooldown: [3,3,3,3,3,3,3,3,3,3], mult: [3.0,4.0,5.0,6.0,7.0,8.0,9.0,10.0,11.0,12.0], lowHpThreshold: 0.5, lowHpMult: 1.5, desc: '拳刃專屬技能，極速攻擊造成ATK 300%~1200%傷害；目標HP低於50%時傷害額外+50%。冷卻3秒，無法連續施放。' },
+      { id: 'grimtooth', name: '無影之牙', maxLv: 5, type: 'damage_aoe', element: 'neutral', spCost: [14,14,14,14,14], cooldown: [3,3,3,3,3], mult: [1.2,1.4,1.6,1.8,2.0], desc: '偽裝專屬技能，對目標與周圍怪物造成ATK 120%~200%範圍傷害。偽裝生效中會自動施放。' },
+      { id: 'enchantweapon', name: '塗毒', maxLv: 10, type: 'buff_poison', element: 'poison', spCost: [12,12,12,12,12,14,14,14,14,14], cooldown: [10,10,10,10,10,10,10,10,10,10], mult: [0.10,0.15,0.20,0.25,0.30,0.35,0.40,0.45,0.50,0.55], duration: [8,8,8,8,8,8,8,8,8,8], procChance: 20, desc: '輔助技能，施放後武器沾毒（持續8秒），生效中攻擊有20%機率使敵人中毒3秒，每秒造成ATK 10%~55%傷害（不會疊加）。毒屬性怪物免疫。' },
+      { id: 'poisonreact', name: '毒性反彈', maxLv: 10, type: 'passive', passiveStat: 'poisonReact', element: 'poison', spCost: [0], cooldown: [0], mult: [1.0,1.2,1.4,1.6,1.8,2.0,2.2,2.4,2.6,2.8], internalCooldown: 10, desc: '被動技能，被毒屬性怪物攻擊時觸發反擊，造成ATK 100%~280%傷害（依等級，冷卻10秒）。目前遊戲中沒有毒屬性怪物，之後新增後才會實際觸發。' },
+      { id: 'venomdust', name: '病毒散播', maxLv: 10, type: 'passive', passiveStat: 'venomdustProc', element: 'poison', spCost: [0], cooldown: [0], mult: [0.10,0.15,0.20,0.25,0.30,0.35,0.40,0.45,0.50,0.55], internalCooldown: 10, desc: '被動技能，攻擊已中毒的敵人時，讓場上所有敵人一起陷入中毒，每秒造成ATK 10%~55%傷害（依等級，冷卻10秒）。' },
+      { id: 'venominfusion', name: '毒性感染', maxLv: 10, type: 'passive', passiveStat: 'venominfusionProc', element: 'poison', spCost: [0], cooldown: [0], mult: [0.2,0.4,0.6,0.8,1.0,1.2,1.4,1.6,1.8,2.0], procChance: 20, internalCooldown: 10, desc: '被動技能，攻擊已中毒的敵人時有20%機率引爆，對全體敵人造成ATK 20%~200%範圍傷害（依等級，冷卻10秒）。' },
+      { id: 'sonicblow_max', name: '超音速投擲', maxLv: 1, isQuest: true, type: 'passive', passiveStat: 'sonicblowBoost', element: 'neutral', spCost: [0], cooldown: [0], mult: [1], desc: '被動技能，使用音速投擲時命中率修正+90%、傷害+90%。' },
       { id: 'enchantblade', name: '毒刃', maxLv: 1, type: 'damage', element: 'poison', spCost: [14], cooldown: [5], mult: [2.0], desc: '用毒刃攻擊敵人。' },
     ],
     desc: '潛行於暗處、一擊致命的殺手。'

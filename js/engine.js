@@ -100,12 +100,27 @@ function createCharacter(name, statAlloc, gender) {
 ------------------------------------------------- */
 function currentJob() { return JOB_TREE[state.jobId]; }
 
+// 可雙持單手武器的職業（左手欄位可放武器而非盾牌）
+function canDualWield(jobId) { return jobId === 'assassin'; }
+
 function equippedAtk() {
   const w = state.equip.weapon ? ITEMS[state.equip.weapon] : null;
   const baseAtk = w && w.atk ? w.atk : 0;
   const refLevel = (state.refinement && state.equip.weapon) ? (state.refinement[state.equip.weapon] || 0) : 0;
   const weaponLv = w ? (w.weaponLv || 1) : 1;
-  return baseAtk + getRefinementAtkBonus(refLevel, weaponLv);
+  let mainAtk = baseAtk + getRefinementAtkBonus(refLevel, weaponLv);
+
+  // 雙持：左手欄位裝備的是單手武器而非盾牌時，套用右手/左手修練的傷害修正
+  const offItem = state.equip.shield ? ITEMS[state.equip.shield] : null;
+  if (offItem && offItem.type === 'weapon' && canDualWield(state.jobId)) {
+    const offRefLevel = (state.refinement && state.equip.shield) ? (state.refinement[state.equip.shield] || 0) : 0;
+    const offWeaponLv = offItem.weaponLv || 1;
+    const offAtk = (offItem.atk || 0) + getRefinementAtkBonus(offRefLevel, offWeaponLv);
+    const rightPct = (state.rightHandPct != null ? state.rightHandPct : 50) / 100;
+    const leftPct = (state.leftHandPct != null ? state.leftHandPct : 30) / 100;
+    mainAtk = mainAtk * rightPct + offAtk * leftPct;
+  }
+  return mainAtk;
 }
 function equippedMatk() {
   const w = state.equip.weapon ? ITEMS[state.equip.weapon] : null;
@@ -198,6 +213,17 @@ function recomputeDerived(fullHeal) {
   computeAspd();
 
   // Passive skill bonuses（跨職業）
+  state.stealChance = 0;
+  state.hasAutoDetox = false;
+  state.hasSandmanProc = false;
+  state.hasBackslideDodge = false;
+  state.hasPoisonReact = false;
+  state.hasVenomdustProc = false;
+  state.hasVenominfusionProc = false;
+  state.hasSonicblowBoost = false;
+  // 雙持右手/左手傷害修正：未修練時的預設值（低於Lv1）
+  state.rightHandPct = 50;
+  state.leftHandPct = 30;
   const passiveJobs = getAllLearnedJobs();
   for (const jid of passiveJobs) {
     const jd = JOB_TREE[jid];
@@ -213,7 +239,15 @@ function recomputeDerived(fullHeal) {
         case 'maxSpMult': state.maxSp = Math.round(state.maxSp * val); state.sp = Math.min(state.sp, state.maxSp); break;
         case 'critRate': state.critRate = Math.min(100, state.critRate + val); break;
         case 'hitFlat': state.hit += Math.round(val); break;
-        case 'fleeFlat': state.flee += Math.round(val); break;
+        case 'fleeFlat': {
+          // 殘影：轉職刺客系後改用較高的加成曲線
+          let fleeVal = val;
+          if (sk.id === 'improvedodge' && sk.assassinMult && state.jobId === 'assassin') {
+            fleeVal = Array.isArray(sk.assassinMult) ? sk.assassinMult[lv - 1] : sk.assassinMult;
+          }
+          state.flee += Math.round(fleeVal);
+          break;
+        }
         // dexFlat 已在 recomputeDerived 開頭計算並加入 cDex，不再修改 state.stats.dex
         case 'defFlat': state.def += Math.round(val); break;
         case 'spRegen': state.spRegenMult = (state.spRegenMult || 1) * val; break;
@@ -223,6 +257,54 @@ function recomputeDerived(fullHeal) {
         case 'bashStun': state.hasBashStun = true; break;
         case 'riding': state.maxMonsters = Math.max(state.maxMonsters || 1, 1); state.hasRiding = true; break;
         case 'counterAttack': state.hasCounterAttack = true; state.counterAttackChance = val; break;
+        case 'steal': state.stealChance = val; break;
+        case 'doubleAttack': {
+          // 二刀連擊：額外附帶永久命中加成
+          if (sk.hitBonus) {
+            const hb = Array.isArray(sk.hitBonus) ? sk.hitBonus[lv - 1] : sk.hitBonus;
+            state.hit += Math.round(hb);
+          }
+          break;
+        }
+        case 'autoDetox': {
+          state.hasAutoDetox = true;
+          state.autoDetoxCooldownSec = Array.isArray(sk.internalCooldown) ? sk.internalCooldown[lv - 1] : (sk.internalCooldown || 30);
+          break;
+        }
+        case 'sandmanProc': {
+          state.hasSandmanProc = true;
+          state.sandmanProcChance = Array.isArray(sk.procChance) ? sk.procChance[lv - 1] : sk.procChance;
+          state.sandmanHitDebuff = Array.isArray(sk.hitDebuff) ? sk.hitDebuff[lv - 1] : sk.hitDebuff;
+          state.sandmanDebuffDuration = Array.isArray(sk.duration) ? sk.duration[lv - 1] : sk.duration;
+          break;
+        }
+        case 'backslideDodge': {
+          state.hasBackslideDodge = true;
+          state.backslideDodgeChance = Array.isArray(sk.dodgeChance) ? sk.dodgeChance[lv - 1] : sk.dodgeChance;
+          break;
+        }
+        case 'rightHandPct': state.rightHandPct = val; break;
+        case 'leftHandPct': state.leftHandPct = val; break;
+        case 'poisonReact': {
+          state.hasPoisonReact = true;
+          state.poisonReactMult = val;
+          state.poisonReactCooldownSec = sk.internalCooldown || 10;
+          break;
+        }
+        case 'venomdustProc': {
+          state.hasVenomdustProc = true;
+          state.venomdustDmgPct = val;
+          state.venomdustCooldownSec = sk.internalCooldown || 10;
+          break;
+        }
+        case 'venominfusionProc': {
+          state.hasVenominfusionProc = true;
+          state.venominfusionDmgMult = val;
+          state.venominfusionProcChance = Array.isArray(sk.procChance) ? sk.procChance[lv - 1] : sk.procChance;
+          state.venominfusionCooldownSec = sk.internalCooldown || 10;
+          break;
+        }
+        case 'sonicblowBoost': state.hasSonicblowBoost = true; break;
       }
     });
   }
@@ -280,6 +362,36 @@ function mitigateDamage(rawDmg, def) {
 function monsterHitOf(def) { return def.hit || (90 + def.level * 2.5); }
 function monsterFleeOf(def) { return def.flee || (80 + def.level * 4); }
 
+/* ---------------- 中毒（施毒/塗毒共用）----------------
+   固定持續3秒、不疊加（同一隻怪再次中毒直接覆蓋刷新）、毒屬性怪物免疫 */
+function applyPoisonDot(mon, monDef, rawDmgPerTick) {
+  const elemMult = getElementMultiplier('poison', monDef.element || 'none');
+  if (elemMult === 0) {
+    logMsg(`🚫 ${monDef.name} 對毒免疫！`);
+    return;
+  }
+  mon.poisonDotPerTick = Math.round(rawDmgPerTick * elemMult);
+  mon.poisonDotEnd = Date.now() + 3000;
+}
+function tickPoisonDot() {
+  if (!state.monsters || state.monsters.length === 0) return;
+  const now = Date.now();
+  for (let i = state.monsters.length - 1; i >= 0; i--) {
+    const mon = state.monsters[i];
+    if (!mon.poisonDotEnd) continue;
+    if (now >= mon.poisonDotEnd) {
+      delete mon.poisonDotEnd;
+      delete mon.poisonDotPerTick;
+      continue;
+    }
+    const monDef = MONSTERS[mon.defId];
+    const dmg = mitigateDamage(mon.poisonDotPerTick, monDef.def * 0.6);
+    mon.hp -= dmg;
+    logMsg(`☠️ 中毒對 ${monDef.name} 造成 ${dmg} 點傷害！`);
+    if (mon.hp <= 0) killMonster(monDef, mon);
+  }
+}
+
 /* ---------------- 戰鬥主迴圈 ---------------- */
 function startLoop() {
   if (tickTimer) clearInterval(tickTimer);
@@ -305,6 +417,17 @@ function gameTick() {
     }
     // 輔助技能獨立控制，不受自動施放技能開關影響
     tryAutoCastSupportSkills();
+    // 中毒持續傷害：每秒跳一次
+    tickPoisonDot();
+    // 解毒被動：玩家中毒時自動解除（目前遊戲尚無玩家中毒機制，此為預留掛鉤）
+    if (state.hasAutoDetox && state.playerPoisoned) {
+      const readyAt = state.autoDetoxReadyAt || 0;
+      if (Date.now() >= readyAt) {
+        state.playerPoisoned = false;
+        state.autoDetoxReadyAt = Date.now() + (state.autoDetoxCooldownSec || 30) * 1000;
+        logMsg('💊 解毒發動！自動解除了中毒狀態。');
+      }
+    }
   }
 
   // 每10秒：移動時恢復HP（戰鬥中也有效）
@@ -454,7 +577,9 @@ function computeAspd() {
       weaponValue = job.baseAspd[weaponType];
     }
   }
-  const shieldPenalty = state.equip.shield ? (job.shieldPenalty || -5) : 0;
+  // 左手欄位裝備的是武器（雙持）時不算盾牌懲罰，只有真正的盾牌才扣ASPD
+  const shieldSlotItem = state.equip.shield ? ITEMS[state.equip.shield] : null;
+  const shieldPenalty = (shieldSlotItem && shieldSlotItem.type !== 'weapon') ? (job.shieldPenalty || -5) : 0;
 
   // Step 2: StatBonus = √(AGI × 1120/111 + DEX × 11/60)
   // 含被動技能 DEX 加成（避免直接修改 state.stats.dex 導致膨脹）
@@ -654,6 +779,50 @@ function playerAttack() {
       }
     }
   }
+
+  // 噴砂被動：攻擊時機率使敵人命中下降
+  if (state.hasSandmanProc && state.monsters.includes(target) && Math.random() * 100 < state.sandmanProcChance) {
+    target.debuffHit = state.sandmanHitDebuff;
+    target.debuffHitEnd = Date.now() + state.sandmanDebuffDuration * 1000;
+    logMsg(`💨 噴砂發動！${monDef.name} 的命中下降了！`);
+  }
+
+  // 塗毒：武器沾毒生效中，攻擊時機率使敵人中毒
+  const ewLv = state.learnedSkills['enchantweapon'] || 0;
+  if (ewLv > 0 && state.monsters.includes(target) && state.buffs.some(b => b.skillId === 'enchantweapon')) {
+    const ewSkill = findSkillById('enchantweapon');
+    const ewChance = ewSkill.procChance != null ? ewSkill.procChance : 20;
+    if (Math.random() * 100 < ewChance) {
+      const ewDmgPct = ewSkill.mult[ewLv - 1];
+      applyPoisonDot(target, monDef, state.atk * ewDmgPct);
+      logMsg(`☠️ 塗毒發動！${monDef.name} 中毒了！`);
+    }
+  }
+
+  // 病毒散播被動：攻擊已中毒的敵人時，讓場上所有敵人一起中毒（10秒冷卻）
+  if (state.hasVenomdustProc && target.poisonDotEnd && Date.now() >= (state.venomdustReadyAt || 0)) {
+    state.venomdustReadyAt = Date.now() + state.venomdustCooldownSec * 1000;
+    logMsg(`🦠 病毒散播發動！全場敵人陷入中毒！`);
+    state.monsters.forEach(mon => {
+      const mDef = MONSTERS[mon.defId];
+      applyPoisonDot(mon, mDef, state.atk * state.venomdustDmgPct);
+    });
+  }
+
+  // 毒性感染被動：攻擊已中毒的敵人時機率引爆全體（10秒冷卻）
+  if (state.hasVenominfusionProc && target.poisonDotEnd && Date.now() >= (state.venominfusionReadyAt || 0) && Math.random() * 100 < state.venominfusionProcChance) {
+    state.venominfusionReadyAt = Date.now() + state.venominfusionCooldownSec * 1000;
+    logMsg(`💥 毒性感染引爆！`);
+    for (let i = state.monsters.length - 1; i >= 0; i--) {
+      const mon = state.monsters[i];
+      const mDef = MONSTERS[mon.defId];
+      const elemMult = getElementMultiplier('poison', mDef.element || 'none');
+      const dmg = mitigateDamage(state.atk * state.venominfusionDmgMult * elemMult, mDef.def);
+      mon.hp -= dmg;
+      logMsg(`  → 對 ${mDef.name} 造成 ${dmg} 點傷害！`);
+      if (mon.hp <= 0) killMonster(mDef, mon);
+    }
+  }
 }
 
 // 單一怪物攻擊
@@ -665,10 +834,38 @@ function monsterAttackSingle(mon) {
     if (typeof showPlayerFloat === 'function') showPlayerFloat('MISS', 'miss');
     return;
   }
-  const hitPct = hitChancePct(monsterHitOf(monDef), state.flee);
+  // 噴砂被動造成的命中下降
+  let monHitVal = monsterHitOf(monDef);
+  if (mon.debuffHit && mon.debuffHitEnd && Date.now() < mon.debuffHitEnd) {
+    monHitVal = Math.max(0, monHitVal - mon.debuffHit);
+  } else {
+    delete mon.debuffHit;
+    delete mon.debuffHitEnd;
+  }
+  const hitPct = hitChancePct(monHitVal, state.flee);
   if (Math.random() * 100 > hitPct) {
     logMsg(`你迴避了 ${monDef.name} 的攻擊！`);
     if (typeof showPlayerFloat === 'function') showPlayerFloat('MISS', 'miss');
+    return;
+  }
+
+  // 後退迴避被動：被攻擊時機率完全免傷
+  if (state.hasBackslideDodge && Math.random() * 100 < state.backslideDodgeChance) {
+    logMsg(`💨 後退迴避發動！完全免疫了 ${monDef.name} 的攻擊！`);
+    if (typeof showPlayerFloat === 'function') showPlayerFloat('MISS', 'miss');
+    return;
+  }
+
+  // 毒性反彈被動：被毒屬性怪物攻擊時觸發反擊（10秒冷卻，目前遊戲無毒屬性怪物，暫無實際效果）
+  if (state.hasPoisonReact && monDef.element === 'poison' && Date.now() >= (state.poisonReactReadyAt || 0)) {
+    logMsg(`🛡️ 毒性反彈發動！完全迴避了 ${monDef.name} 的攻擊！`);
+    const counterDmg = mitigateDamage(state.atk * state.poisonReactMult, monDef.def);
+    mon.hp -= counterDmg;
+    logMsg(`⚔️ 反擊造成 ${counterDmg} 點傷害！`);
+    state.poisonReactReadyAt = Date.now() + state.poisonReactCooldownSec * 1000;
+    if (mon.hp <= 0) {
+      killMonster(monDef, mon);
+    }
     return;
   }
 
@@ -716,6 +913,13 @@ function killMonster(def, monObj) {
   (def.drops || []).forEach(d => {
     if (Math.random() < d.chance) addItem(d.item, 1);
   });
+  // 偷竊被動：擊敗怪物時機率額外掉落一份道具
+  if (state.stealChance && def.drops && def.drops.length > 0 && Math.random() * 100 < state.stealChance) {
+    const stolen = def.drops[Math.floor(Math.random() * def.drops.length)];
+    addItem(stolen.item, 1);
+    const stolenName = ITEMS[stolen.item] ? ITEMS[stolen.item].name : stolen.item;
+    logMsg(`🗡️ 偷竊發動！額外獲得了 ${stolenName}！`);
+  }
   // 卡片掉落
   const cardDrop = MONSTER_CARD_DROPS[def.id];
   if (cardDrop && Math.random() < cardDrop.chance) {
@@ -902,7 +1106,7 @@ function castSkill(skillId) {
 
   const isHeal = sk.type === 'heal' || sk.type === 'heal_over_time';
   const isBuff = ['buff_atk', 'buff_def', 'buff_aspd', 'buff_flee', 'buff_gold', 'buff_crit', 'debuff_def', 'debuff'].includes(sk.type);
-  const needsMonster = ['damage', 'magic', 'dot', 'damage_multihit', 'damage_multi', 'debuff_def', 'debuff', 'special_charge'].includes(sk.type);
+  const needsMonster = ['damage', 'magic', 'dot', 'damage_multihit', 'damage_multi', 'debuff_def', 'debuff', 'special_charge', 'poison_proc'].includes(sk.type);
   if (needsMonster && (!state.monsters || state.monsters.length === 0)) return false;
 
   state.sp -= spCost;
@@ -922,6 +1126,18 @@ function castSkill(skillId) {
       if (!state.monsters || state.monsters.length === 0) break;
       const target = state.monsters[0];
       const def = MONSTERS[target.defId];
+      // 命中判定：物理技能才需要，法術類技能無視閃避
+      if (sk.type !== 'magic') {
+        // 超音速投擲被動：音速投擲命中率修正+90%
+        let effectiveHit = state.hit;
+        if (sk.id === 'sonicblow' && state.hasSonicblowBoost) effectiveHit += 90;
+        const hitPct = hitChancePct(effectiveHit, monsterFleeOf(def));
+        if (Math.random() * 100 > hitPct) {
+          logMsg(`「${sk.name}」被 ${def.name} 閃避了！`);
+          if (typeof showPlayerFloat === 'function') showPlayerFloat('MISS', 'miss');
+          break;
+        }
+      }
       const elemMult = getElementMultiplier(skElement, def.element || 'none');
       if (elemMult !== 1) {
         const pctStr = Math.round(elemMult * 100);
@@ -930,7 +1146,16 @@ function castSkill(skillId) {
       }
       // 卡片屬性傷害加成
       const skEleDmgBonus = (state.cardEleDmgBonus && state.cardEleDmgBonus[def.element || 'none']) || 0;
-      const dmg = mitigateDamage(baseDmgStat * mult * elemMult * (1 + skEleDmgBonus), def.def);
+      let skillMult = mult;
+      // 超音速投擲被動：音速投擲傷害+90%
+      if (sk.id === 'sonicblow' && state.hasSonicblowBoost) {
+        skillMult *= 1.9;
+      }
+      // 低血量加成（例如音速投擲：目標HP低於門檻時傷害加成）
+      if (sk.lowHpThreshold && target.hp < target.maxHp * sk.lowHpThreshold) {
+        skillMult *= sk.lowHpMult;
+      }
+      const dmg = mitigateDamage(baseDmgStat * skillMult * elemMult * (1 + skEleDmgBonus), def.def);
       target.hp -= dmg;
       logMsg(`⚡ 「${sk.name}」Lv${lv} 造成 ${dmg} 點傷害！`);
       // 攻擊弱點：狂擊Lv6以上有機率暈眩
@@ -954,6 +1179,14 @@ function castSkill(skillId) {
       for (let i = state.monsters.length - 1; i >= 0; i--) {
         const mon = state.monsters[i];
         const monDef = MONSTERS[mon.defId];
+        // 命中判定：物理範圍技能對每隻怪物個別判定，法術範圍技能無視閃避
+        if (sk.type !== 'magic_aoe') {
+          const hitPct = hitChancePct(state.hit, monsterFleeOf(monDef));
+          if (Math.random() * 100 > hitPct) {
+            combatLogBuf.push(`  → ${monDef.name} 閃避了！`);
+            continue;
+          }
+        }
         const monElemMult = getElementMultiplier(skElement, monDef.element || 'none');
         const monEleDmgBonus = (state.cardEleDmgBonus && state.cardEleDmgBonus[monDef.element || 'none']) || 0;
         const dmg = mitigateDamage(baseDmgStat * mult * monElemMult * (1 + monEleDmgBonus), monDef.def);
@@ -983,12 +1216,42 @@ function castSkill(skillId) {
       if (!state.monsters || state.monsters.length === 0) break;
       const target = state.monsters[0];
       const def = MONSTERS[target.defId];
+      // 命中判定：中毒類技能屬於物理技能
+      const dotHitPct = hitChancePct(state.hit, monsterFleeOf(def));
+      if (Math.random() * 100 > dotHitPct) {
+        logMsg(`「${sk.name}」被 ${def.name} 閃避了！`);
+        if (typeof showPlayerFloat === 'function') showPlayerFloat('MISS', 'miss');
+        break;
+      }
       const elemMult = getElementMultiplier(skElement, def.element || 'none');
       const dotEleDmgBonus = (state.cardEleDmgBonus && state.cardEleDmgBonus[def.element || 'none']) || 0;
       const dmg = mitigateDamage(baseDmgStat * mult * elemMult * (1 + dotEleDmgBonus), def.def * 0.6);
       target.hp -= dmg;
       logMsg(`☠️ 「${sk.name}」Lv${lv} 造成 ${dmg} 點持續傷害！`);
       if (target.hp <= 0) killMonster(def, target);
+      break;
+    }
+    case 'poison_proc': {
+      // 施毒：命中後造成固定傷害（不隨等級變化），另外骰一次中毒機率（依等級），中毒固定3秒不疊加
+      if (!state.monsters || state.monsters.length === 0) break;
+      const target = state.monsters[0];
+      const def = MONSTERS[target.defId];
+      const hitPct = hitChancePct(state.hit, monsterFleeOf(def));
+      if (Math.random() * 100 > hitPct) {
+        logMsg(`「${sk.name}」被 ${def.name} 閃避了！`);
+        if (typeof showPlayerFloat === 'function') showPlayerFloat('MISS', 'miss');
+        break;
+      }
+      const elemMult = getElementMultiplier(skElement, def.element || 'none');
+      const dmg = mitigateDamage(baseDmgStat * mult * elemMult, def.def);
+      target.hp -= dmg;
+      logMsg(`⚡ 「${sk.name}」Lv${lv} 造成 ${dmg} 點傷害！`);
+      if (target.hp <= 0) { killMonster(def, target); break; }
+      const procChance = Array.isArray(sk.procChance) ? sk.procChance[lv - 1] : sk.procChance;
+      if (Math.random() * 100 < procChance) {
+        applyPoisonDot(target, def, baseDmgStat * mult);
+        logMsg(`☠️ ${def.name} 中毒了！`);
+      }
       break;
     }
     case 'heal': {
@@ -1035,6 +1298,13 @@ function castSkill(skillId) {
       if (!state.monsters || state.monsters.length === 0) break;
       const target = state.monsters[0];
       const def = MONSTERS[target.defId];
+      // 命中判定：整招視為一次判定，miss 時兩段都不生效
+      const mhHitPct = hitChancePct(state.hit, monsterFleeOf(def));
+      if (Math.random() * 100 > mhHitPct) {
+        logMsg(`「${sk.name}」被 ${def.name} 閃避了！`);
+        if (typeof showPlayerFloat === 'function') showPlayerFloat('MISS', 'miss');
+        break;
+      }
       const elemMult = getElementMultiplier(skElement, def.element || 'none');
       const mhEleDmgBonus = (state.cardEleDmgBonus && state.cardEleDmgBonus[def.element || 'none']) || 0;
       // 第一段：單體傷害
@@ -1079,6 +1349,13 @@ function castSkill(skillId) {
       if (!state.monsters || state.monsters.length === 0) break;
       const target = state.monsters[0];
       const def = MONSTERS[target.defId];
+      // 命中判定：整招視為一次判定
+      const dmHitPct = hitChancePct(state.hit, monsterFleeOf(def));
+      if (Math.random() * 100 > dmHitPct) {
+        logMsg(`「${sk.name}」被 ${def.name} 閃避了！`);
+        if (typeof showPlayerFloat === 'function') showPlayerFloat('MISS', 'miss');
+        break;
+      }
       const elemMult = getElementMultiplier(skElement, def.element || 'none');
       const multiEleDmgBonus = (state.cardEleDmgBonus && state.cardEleDmgBonus[def.element || 'none']) || 0;
       const hits = Array.isArray(sk.hits) ? sk.hits[lv - 1] : (sk.hits || 1);
@@ -1098,12 +1375,19 @@ function castSkill(skillId) {
       if (!state.monsters || state.monsters.length === 0) break;
       const target = state.monsters[0];
       const def = MONSTERS[target.defId];
-      const elemMult = getElementMultiplier(skElement, def.element || 'none');
-      const scEleDmgBonus = (state.cardEleDmgBonus && state.cardEleDmgBonus[def.element || 'none']) || 0;
-      const dmg = mitigateDamage(baseDmgStat * mult * elemMult * (1 + scEleDmgBonus), def.def);
-      target.hp -= dmg;
-      logMsg(`⚡ 「${sk.name}」Lv${lv} 造成 ${dmg} 點傷害！`);
-      if (target.hp <= 0) killMonster(def, target);
+      // 命中判定：miss 時不造成傷害，但衝鋒生怪效果仍然發動
+      const scHitPct = hitChancePct(state.hit, monsterFleeOf(def));
+      if (Math.random() * 100 <= scHitPct) {
+        const elemMult = getElementMultiplier(skElement, def.element || 'none');
+        const scEleDmgBonus = (state.cardEleDmgBonus && state.cardEleDmgBonus[def.element || 'none']) || 0;
+        const dmg = mitigateDamage(baseDmgStat * mult * elemMult * (1 + scEleDmgBonus), def.def);
+        target.hp -= dmg;
+        logMsg(`⚡ 「${sk.name}」Lv${lv} 造成 ${dmg} 點傷害！`);
+        if (target.hp <= 0) killMonster(def, target);
+      } else {
+        logMsg(`「${sk.name}」被 ${def.name} 閃避了！`);
+        if (typeof showPlayerFloat === 'function') showPlayerFloat('MISS', 'miss');
+      }
       // 立即生成新怪（不取代現有怪物）
       if (state.monsters && state.monsters.length < 5) {
         spawnExtraMonster();
@@ -1113,8 +1397,15 @@ function castSkill(skillId) {
     }
     case 'buff_flee': {
       const dur = Array.isArray(sk.duration) ? sk.duration[lv - 1] : sk.duration;
-      state.buffs.push({ type: 'flee', mult, msRemaining: dur * 1000 });
+      state.buffs.push({ type: 'flee', mult, msRemaining: dur * 1000, skillId: sk.id });
       logMsg(`🌫️ 「${sk.name}」Lv${lv} 發動，迴避上升！`);
+      break;
+    }
+    case 'buff_poison': {
+      // 塗毒：武器沾毒，生效期間攻擊有機率使敵人中毒（實際觸發在 playerAttack()）
+      const dur = Array.isArray(sk.duration) ? sk.duration[lv - 1] : sk.duration;
+      state.buffs.push({ type: 'poison', mult: 1, msRemaining: dur * 1000, skillId: sk.id });
+      logMsg(`☠️ 「${sk.name}」Lv${lv} 發動，武器沾上了毒！`);
       break;
     }
     case 'buff_gold': {
@@ -1162,7 +1453,7 @@ function tryAutoCastSkill() {
         if (!skillReady(sk.id)) continue;
         const spCost = Array.isArray(sk.spCost) ? sk.spCost[lv - 1] : sk.spCost;
         if (state.sp < spCost) continue;
-        const isAttack = ['damage', 'magic', 'dot', 'damage_multihit', 'damage_multi', 'damage_aoe', 'magic_aoe'].includes(sk.type);
+        const isAttack = ['damage', 'magic', 'dot', 'damage_multihit', 'damage_multi', 'damage_aoe', 'magic_aoe', 'poison_proc'].includes(sk.type);
         if (isAttack && monsterCount === 0) continue;
         castSkill(sk.id);
         return;
@@ -1178,7 +1469,7 @@ function tryAutoCastSkill() {
       const lv = state.learnedSkills[sk.id];
       if (lv && skillReady(sk.id)) {
         const spCost = Array.isArray(sk.spCost) ? sk.spCost[lv - 1] : sk.spCost;
-        const isAttack = ['damage', 'magic', 'dot', 'damage_multihit', 'damage_multi', 'damage_aoe', 'magic_aoe'].includes(sk.type);
+        const isAttack = ['damage', 'magic', 'dot', 'damage_multihit', 'damage_multi', 'damage_aoe', 'magic_aoe', 'poison_proc'].includes(sk.type);
         if (state.sp >= spCost && spPct >= config.spThreshold) {
           if (!isAttack || monsterCount > 0) {
             castSkill(sk.id);
@@ -1221,7 +1512,7 @@ function tryAutoCastSupportSkills() {
       if (state.sp < spCost) continue;
 
       // Buff 類：如果已有相同類型 buff 則跳過（等 buff 消失後自動補）
-      if (['buff_atk', 'buff_def', 'buff_aspd', 'buff_flee', 'buff_gold', 'buff_crit'].includes(sk.type)) {
+      if (['buff_atk', 'buff_def', 'buff_aspd', 'buff_flee', 'buff_gold', 'buff_crit', 'buff_poison'].includes(sk.type)) {
         const buffType = sk.type.replace('buff_', '');
         if (state.buffs.some(b => b.type === buffType)) continue;
       }
@@ -1231,6 +1522,17 @@ function tryAutoCastSupportSkills() {
       if (sk.type === 'heal' && state.hp > state.maxHp * 0.7) continue;
 
       castSkill(sk.id);
+    }
+  }
+
+  // 偽裝連動：勾選了自動偽裝，且偽裝生效中時，自動施放無影之牙
+  if (state.autoSupportSkills['cloaking']) {
+    const cloakActive = state.buffs.some(b => b.type === 'flee' && b.skillId === 'cloaking');
+    const gtLv = state.learnedSkills['grimtooth'];
+    if (cloakActive && gtLv && skillReady('grimtooth') && state.monsters && state.monsters.length > 0) {
+      const gtSk = findSkillById('grimtooth');
+      const gtCost = Array.isArray(gtSk.spCost) ? gtSk.spCost[gtLv - 1] : gtSk.spCost;
+      if (state.sp >= gtCost) castSkill('grimtooth');
     }
   }
 }
@@ -1490,7 +1792,16 @@ function equipItem(itemId) {
 
   let slot;
   if (def.type === 'weapon') {
-    slot = 'weapon';
+    if (isTwoHanded(itemId)) {
+      slot = 'weapon';
+    } else if (!state.equip.weapon) {
+      slot = 'weapon';
+    } else if (canDualWield(state.jobId) && !isTwoHanded(state.equip.weapon)) {
+      // 主手已有單手武器，且職業支援雙持 → 放入左手（副手武器）
+      slot = 'shield';
+    } else {
+      slot = 'weapon';
+    }
   } else if (def.type === 'armor') {
     switch (def.armorType) {
       case 'headgear':
@@ -1526,16 +1837,17 @@ function equipItem(itemId) {
     return false;
   }
 
-  // 雙手武器：裝備時自動卸下盾牌
+  // 雙手武器：裝備時自動卸下左手欄位（盾牌或副手武器）
   if (slot === 'weapon' && isTwoHanded(itemId)) {
     if (state.equip.shield) {
+      const offName = ITEMS[state.equip.shield]?.name || '左手裝備';
       addItem(state.equip.shield, 1);
-      logMsg(`雙手武器無法搭配盾牌，卸下了 ${ITEMS[state.equip.shield]?.name || '盾牌'}。`);
+      logMsg(`雙手武器無法搭配左手裝備，卸下了 ${offName}。`);
       state.equip.shield = null;
     }
   }
 
-  // 盾牌：如果目前武器是雙手武器，無法裝備
+  // 左手欄位：如果目前武器是雙手武器，無法裝備
   if (slot === 'shield' && isTwoHanded(state.equip.weapon)) {
     logMsg(`⚠️ 雙手武器無法搭配盾牌！`);
     return false;

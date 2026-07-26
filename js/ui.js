@@ -795,7 +795,7 @@ function renderAutoBattleTab() {
     if (!jobDef) continue;
     jobDef.skills.forEach(sk => {
       const lv = state.learnedSkills[sk.id];
-      if (lv && ['damage', 'magic', 'dot', 'damage_multihit', 'damage_multi', 'damage_aoe', 'magic_aoe'].includes(sk.type) && !sk.isQuest) {
+      if (lv && ['damage', 'magic', 'dot', 'damage_multihit', 'damage_multi', 'damage_aoe', 'magic_aoe', 'poison_proc'].includes(sk.type) && !sk.isQuest) {
         attackSkills.push({ ...sk, lv, jobName: jobDef.name });
       }
     });
@@ -808,7 +808,7 @@ function renderAutoBattleTab() {
     if (!jobDef) continue;
     jobDef.skills.forEach(sk => {
       const lv = state.learnedSkills[sk.id];
-      if (lv && ['buff_atk', 'buff_def', 'buff_aspd', 'buff_flee', 'buff_gold', 'buff_crit', 'debuff_def', 'debuff', 'heal', 'heal_over_time'].includes(sk.type) && !sk.isQuest) {
+      if (lv && ['buff_atk', 'buff_def', 'buff_aspd', 'buff_flee', 'buff_gold', 'buff_crit', 'buff_poison', 'debuff_def', 'debuff', 'heal', 'heal_over_time'].includes(sk.type) && !sk.isQuest) {
         supportSkills.push({ ...sk, lv, jobName: jobDef.name });
       }
     });
@@ -1005,7 +1005,14 @@ function setAutoSkillConfig(key, value) {
 function toggleAutoSupportSkill(skillId, enabled) {
   if (!state.autoSupportSkills) state.autoSupportSkills = {};
   state.autoSupportSkills[skillId] = enabled;
+  // 隱匿（盜賊）與偽裝（刺客）效果重疊，自動施放只能二選一
+  const fleeExclusivePair = ['hiding', 'cloaking'];
+  if (enabled && fleeExclusivePair.includes(skillId)) {
+    const other = fleeExclusivePair.find(id => id !== skillId);
+    state.autoSupportSkills[other] = false;
+  }
   saveGame();
+  renderAutoBattleTab();
 }
 
 // 遇怪模式切換
