@@ -181,11 +181,16 @@ function recomputeDerived(fullHeal) {
   }
   state._passiveDexBonus = passiveDexBonus;
 
+  // 心神凝聚buff：DEX/AGI 百分比加成（影響下面所有衍生自DEX/AGI的數值，含攻速）
+  let buffStatPct = 0;
+  state.buffs.forEach(b => { if (b.type === 'statpct') buffStatPct += b.mult; });
+  state._buffStatPct = buffStatPct;
+
   // ATK：StatusATK = STR + (STR/10)² + DEX/5 + LUK/5（含職業加成與卡片加成）
   const cStr = s.str + jobBonus.str + getCardBonus('str');
-  const cDex = s.dex + jobBonus.dex + getCardBonus('dex') + passiveDexBonus;
+  const cDex = Math.round((s.dex + jobBonus.dex + getCardBonus('dex') + passiveDexBonus) * (1 + buffStatPct));
   const cLuk = s.luk + jobBonus.luk + getCardBonus('luk');
-  const cAgi = s.agi + jobBonus.agi + getCardBonus('agi');
+  const cAgi = Math.round((s.agi + jobBonus.agi + getCardBonus('agi')) * (1 + buffStatPct));
   const cVit = s.vit + jobBonus.vit + getCardBonus('vit');
   const cInt = s.int + jobBonus.int + getCardBonus('int');
   const statusAtk = cStr + Math.floor((cStr / 10) ** 2) + Math.floor(cDex / 5) + Math.floor(cLuk / 5);
@@ -221,6 +226,11 @@ function recomputeDerived(fullHeal) {
   state.hasVenomdustProc = false;
   state.hasVenominfusionProc = false;
   state.hasSonicblowBoost = false;
+  state.passiveAspdFlat = 0;
+  state.falconFlatBonus = 0;
+  state.animalDamageFlat = 0;
+  state.trapCdReductionSec = 0;
+  state.trapChanceBonusPct = 0;
   // 雙持右手/左手傷害修正：未修練時的預設值（低於Lv1）
   state.rightHandPct = 50;
   state.leftHandPct = 30;
@@ -238,7 +248,15 @@ function recomputeDerived(fullHeal) {
         case 'maxHpMult': state.maxHp = Math.round(state.maxHp * val); state.hp = Math.min(state.hp, state.maxHp); break;
         case 'maxSpMult': state.maxSp = Math.round(state.maxSp * val); state.sp = Math.min(state.sp, state.maxSp); break;
         case 'critRate': state.critRate = Math.min(100, state.critRate + val); break;
-        case 'hitFlat': state.hit += Math.round(val); break;
+        case 'hitFlat': {
+          state.hit += Math.round(val);
+          // 蒼鷹之眼：額外附帶固定ASPD加成
+          if (sk.id === 'vultureeye' && sk.aspdFlat) {
+            const aspdBonus = Array.isArray(sk.aspdFlat) ? sk.aspdFlat[lv - 1] : sk.aspdFlat;
+            state.passiveAspdFlat += aspdBonus;
+          }
+          break;
+        }
         case 'fleeFlat': {
           // 殘影：轉職刺客系後改用較高的加成曲線
           let fleeVal = val;
@@ -305,6 +323,11 @@ function recomputeDerived(fullHeal) {
           break;
         }
         case 'sonicblowBoost': state.hasSonicblowBoost = true; break;
+        case 'falconFlatBonus': state.falconFlatBonus = val; break;
+        case 'animalDamageFlat': state.animalDamageFlat = val; break;
+        case 'trapCdReduction': state.trapCdReductionSec = val; break;
+        case 'trapChanceBonus': state.trapChanceBonusPct = val; break;
+        case 'huntingMastery': break; // 馴鷹術本身無效果，僅作為前置解鎖
       }
     });
   }
@@ -390,6 +413,74 @@ function tickPoisonDot() {
     logMsg(`☠️ 中毒對 ${monDef.name} 造成 ${dmg} 點傷害！`);
     if (mon.hp <= 0) killMonster(monDef, mon);
   }
+}
+
+/* ---------------- 暈眩 ----------------
+   additive=true 時會疊加時長（滑動/睡魔/定位陷阱共用），否則直接覆蓋（衝鋒箭） */
+function applyStun(mon, sec, additive) {
+  const now = Date.now();
+  if (additive) {
+    mon.stunnedUntil = Math.max(now, mon.stunnedUntil || 0) + sec * 1000;
+  } else {
+    mon.stunnedUntil = now + sec * 1000;
+  }
+}
+
+/* ---------------- 獵人陷阱：被動觸發（攻擊時機率/固定觸發，各自獨立冷卻）---------------- */
+const TRAP_SKILL_IDS = ['trap', 'skidtrap', 'flasher', 'sleeptrap', 'freezingtrap', 'blastmine', 'claymoretrap', 'magnumbreak_h'];
+function tryTrapProcs(target, monDef) {
+  if (!state.learnedSkills) return;
+  if (!state.trapReadyAt) state.trapReadyAt = {};
+  TRAP_SKILL_IDS.forEach(skillId => {
+    const lv = state.learnedSkills[skillId];
+    if (!lv) return;
+    const readyAt = state.trapReadyAt[skillId] || 0;
+    if (Date.now() < readyAt) return;
+
+    const sk = findSkillById(skillId);
+    let proc = false;
+    if (sk.procChance == null) {
+      proc = true; // 定時爆炸陷阱：無機率判定，冷卻好就必定觸發
+    } else {
+      const baseChance = Array.isArray(sk.procChance) ? sk.procChance[lv - 1] : sk.procChance;
+      const chance = Math.min(100, baseChance + (state.trapChanceBonusPct || 0));
+      proc = Math.random() * 100 < chance;
+    }
+    if (!proc) return;
+
+    const cdSec = Math.max(1, (sk.internalCooldown || 10) - (state.trapCdReductionSec || 0));
+    state.trapReadyAt[skillId] = Date.now() + cdSec * 1000;
+
+    if (sk.trapEffect === 'stun') {
+      applyStun(target, sk.stunSec || 1, true);
+      logMsg(`💥 「${sk.name}」觸發！${monDef.name} 暈眩了！`);
+    } else if (sk.trapEffect === 'hitDebuff') {
+      const hitDebuff = Array.isArray(sk.hitDebuff) ? sk.hitDebuff[lv - 1] : sk.hitDebuff;
+      const dur = Array.isArray(sk.duration) ? sk.duration[lv - 1] : sk.duration;
+      target.debuffHit = hitDebuff;
+      target.debuffHitEnd = Date.now() + dur * 1000;
+      logMsg(`💥 「${sk.name}」觸發！${monDef.name} 的命中下降了！`);
+    } else if (sk.trapEffect === 'damage') {
+      const mult = Array.isArray(sk.mult) ? sk.mult[lv - 1] : sk.mult;
+      const elemMult = getElementMultiplier(sk.element || 'none', monDef.element || 'none');
+      const dmg = mitigateDamage(state.atk * mult * elemMult, monDef.def);
+      target.hp -= dmg;
+      logMsg(`💥 「${sk.name}」觸發！對 ${monDef.name} 造成 ${dmg} 點傷害！`);
+      if (target.hp <= 0) killMonster(monDef, target);
+    } else if (sk.trapEffect === 'damageAoe') {
+      const mult = Array.isArray(sk.mult) ? sk.mult[lv - 1] : sk.mult;
+      logMsg(`💥 「${sk.name}」觸發！範圍爆炸！`);
+      for (let i = state.monsters.length - 1; i >= 0; i--) {
+        const mon = state.monsters[i];
+        const mDef = MONSTERS[mon.defId];
+        const elemMult = getElementMultiplier(sk.element || 'none', mDef.element || 'none');
+        const dmg = mitigateDamage(state.atk * mult * elemMult, mDef.def);
+        mon.hp -= dmg;
+        logMsg(`  → 對 ${mDef.name} 造成 ${dmg} 點傷害！`);
+        if (mon.hp <= 0) killMonster(mDef, mon);
+      }
+    }
+  });
 }
 
 /* ---------------- 戰鬥主迴圈 ---------------- */
@@ -556,7 +647,9 @@ function tickBuffs() {
     b.msRemaining -= TICK_MS;
     return b.msRemaining > 0;
   });
-  computeAspd(); // buff 變動後重新計算 ASPD
+  // buff 變動後重新計算所有衍生數值（心神凝聚等 DEX/AGI% buff 會影響 ATK/MATK/命中/迴避/攻速，
+  // 光重算 ASPD 不夠，需要整個 recomputeDerived）
+  recomputeDerived(false);
 }
 
 // ASPD 計算（每次 tick 重新計算，反映即時 buff）
@@ -582,9 +675,11 @@ function computeAspd() {
   const shieldPenalty = (shieldSlotItem && shieldSlotItem.type !== 'weapon') ? (job.shieldPenalty || -5) : 0;
 
   // Step 2: StatBonus = √(AGI × 1120/111 + DEX × 11/60)
-  // 含被動技能 DEX 加成（避免直接修改 state.stats.dex 導致膨脹）
-  const effectiveDex = s.dex + (state._passiveDexBonus || 0);
-  const statBonus = Math.sqrt(s.agi * 1120 / 111 + effectiveDex * 11 / 60);
+  // 含被動技能 DEX 加成、心神凝聚 DEX/AGI% buff（避免直接修改 state.stats.dex 導致膨脹）
+  const buffStatPct = state._buffStatPct || 0;
+  const effectiveDex = (s.dex + (state._passiveDexBonus || 0)) * (1 + buffStatPct);
+  const effectiveAgi = s.agi * (1 + buffStatPct);
+  const statBonus = Math.sqrt(effectiveAgi * 1120 / 111 + effectiveDex * 11 / 60);
 
   // Step 3: Core（依武器基礎值分高低速公式）
   let core;
@@ -604,9 +699,9 @@ function computeAspd() {
   });
   const afterSkill = 200 - (200 - core) * (1 - skillAspdPct);
 
-  // Step 5: 裝備攻速百分比 + 固定值
+  // Step 5: 裝備攻速百分比 + 固定值（含蒼鷹之眼等被動固定ASPD加成）
   let equipAspdPct = 0;
-  let aspdFlatBonus = 0;
+  let aspdFlatBonus = state.passiveAspdFlat || 0;
   ['weapon', 'armor'].forEach(slot => {
     const item = state.equip[slot] ? ITEMS[state.equip[slot]] : null;
     if (item) {
@@ -823,11 +918,39 @@ function playerAttack() {
       if (mon.hp <= 0) killMonster(mDef, mon);
     }
   }
+
+  // 獵人陷阱被動：攻擊時各陷阱獨立判定觸發
+  if (state.monsters.includes(target)) {
+    tryTrapProcs(target, monDef);
+  }
+
+  // 閃電衝擊被動：普攻時依LUK機率額外觸發一次獵鷹單體攻擊
+  const bbLv = state.learnedSkills['blitzbeat'] || 0;
+  if (bbLv > 0 && state.monsters.includes(target)) {
+    const luk = state.stats.luk || 1;
+    const bbChance = Math.min(30, 5 + (luk - 1) * 25 / 119);
+    if (Math.random() * 100 < bbChance) {
+      const bbSkill = findSkillById('blitzbeat');
+      const passiveMultVal = bbSkill.passiveMult[bbLv - 1];
+      const bbElemMult = getElementMultiplier(bbSkill.element || 'none', monDef.element || 'none');
+      let bbDmg = mitigateDamage(state.atk * passiveMultVal * bbElemMult, monDef.def);
+      if (state.falconFlatBonus) bbDmg += state.falconFlatBonus;
+      target.hp -= bbDmg;
+      logMsg(`🦅 獵鷹突襲！對 ${monDef.name} 造成 ${bbDmg} 點傷害！`);
+      if (target.hp <= 0) killMonster(monDef, target);
+    }
+  }
 }
 
 // 單一怪物攻擊
 function monsterAttackSingle(mon) {
   const monDef = MONSTERS[mon.defId];
+
+  // 暈眩中無法攻擊（例如衝鋒箭擊退效果）
+  if (mon.stunnedUntil && Date.now() < mon.stunnedUntil) {
+    logMsg(`💫 ${monDef.name} 還在暈眩中，無法攻擊！`);
+    return;
+  }
 
   if (Math.random() * 100 < state.perfectDodge) {
     logMsg(`你完全迴避了 ${monDef.name} 的攻擊！`);
@@ -1031,6 +1154,16 @@ function levelUpSkill(skillId) {
   const currentLv = state.learnedSkills[skillId] || 0;
   if (currentLv >= sk.maxLv) return false;
 
+  // 前置技能檢查（目前僅閃電衝擊需要馴鷹術，特例硬綁，尚未做成通用系統）
+  if (sk.requires) {
+    const reqLv = state.learnedSkills[sk.requires.skillId] || 0;
+    if (reqLv < sk.requires.level) {
+      const reqSk = findSkillById(sk.requires.skillId);
+      logMsg(`⚠️ 需要先學習「${reqSk ? reqSk.name : sk.requires.skillId}」！`);
+      return false;
+    }
+  }
+
   // 找出這個技能所屬的職業
   const skillJobId = findSkillJob(skillId);
   if (!skillJobId) return false;
@@ -1168,6 +1301,12 @@ function castSkill(skillId) {
         state.hp = Math.max(1, state.hp - selfDmg);
         logMsg(`🔥 怒爆的反噬對你造成 ${selfDmg} 點傷害！`);
       }
+      // 衝鋒箭：命中時使敵人暈眩1~3秒（代表擊退）
+      if (sk.id === 'chargearrow' && target.hp > 0) {
+        const stunSec = 1 + Math.random() * 2;
+        applyStun(target, stunSec, false);
+        logMsg(`💫 ${def.name} 被擊退撞暈了，${stunSec.toFixed(1)}秒內無法攻擊！`);
+      }
       if (target.hp <= 0) killMonster(def, target);
       break;
     }
@@ -1189,7 +1328,9 @@ function castSkill(skillId) {
         }
         const monElemMult = getElementMultiplier(skElement, monDef.element || 'none');
         const monEleDmgBonus = (state.cardEleDmgBonus && state.cardEleDmgBonus[monDef.element || 'none']) || 0;
-        const dmg = mitigateDamage(baseDmgStat * mult * monElemMult * (1 + monEleDmgBonus), monDef.def);
+        let dmg = mitigateDamage(baseDmgStat * mult * monElemMult * (1 + monEleDmgBonus), monDef.def);
+        // 鋼製喙：閃電衝擊額外固定傷害（不受倍率影響）
+        if (sk.id === 'blitzbeat' && state.falconFlatBonus) dmg += state.falconFlatBonus;
         mon.hp -= dmg;
         combatLogBuf.push(`  → 對 ${monDef.name} 造成 ${dmg} 點傷害！`);
         // AoE 飄字：直接找怪物 DOM 元素
@@ -1408,6 +1549,14 @@ function castSkill(skillId) {
       logMsg(`☠️ 「${sk.name}」Lv${lv} 發動，武器沾上了毒！`);
       break;
     }
+    case 'buff_statpct': {
+      // 心神凝聚：DEX/AGI 百分比加成（實際套用在 recomputeDerived()）
+      const dur = Array.isArray(sk.duration) ? sk.duration[lv - 1] : sk.duration;
+      state.buffs.push({ type: 'statpct', mult, msRemaining: dur * 1000, skillId: sk.id });
+      logMsg(`🎯 「${sk.name}」Lv${lv} 發動，DEX/AGI提升 ${Math.round(mult * 100)}%！`);
+      recomputeDerived(false);
+      break;
+    }
     case 'buff_gold': {
       const dur = Array.isArray(sk.duration) ? sk.duration[lv - 1] : sk.duration;
       state.buffs.push({ type: 'gold', mult, msRemaining: dur * 1000 });
@@ -1512,7 +1661,7 @@ function tryAutoCastSupportSkills() {
       if (state.sp < spCost) continue;
 
       // Buff 類：如果已有相同類型 buff 則跳過（等 buff 消失後自動補）
-      if (['buff_atk', 'buff_def', 'buff_aspd', 'buff_flee', 'buff_gold', 'buff_crit', 'buff_poison'].includes(sk.type)) {
+      if (['buff_atk', 'buff_def', 'buff_aspd', 'buff_flee', 'buff_gold', 'buff_crit', 'buff_poison', 'buff_statpct'].includes(sk.type)) {
         const buffType = sk.type.replace('buff_', '');
         if (state.buffs.some(b => b.type === buffType)) continue;
       }

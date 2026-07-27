@@ -808,7 +808,7 @@ function renderAutoBattleTab() {
     if (!jobDef) continue;
     jobDef.skills.forEach(sk => {
       const lv = state.learnedSkills[sk.id];
-      if (lv && ['buff_atk', 'buff_def', 'buff_aspd', 'buff_flee', 'buff_gold', 'buff_crit', 'buff_poison', 'debuff_def', 'debuff', 'heal', 'heal_over_time'].includes(sk.type) && !sk.isQuest) {
+      if (lv && ['buff_atk', 'buff_def', 'buff_aspd', 'buff_flee', 'buff_gold', 'buff_crit', 'buff_poison', 'buff_statpct', 'debuff_def', 'debuff', 'heal', 'heal_over_time'].includes(sk.type) && !sk.isQuest) {
         supportSkills.push({ ...sk, lv, jobName: jobDef.name });
       }
     });
