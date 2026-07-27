@@ -224,6 +224,11 @@ function recomputeDerived(fullHeal) {
         const sb = Array.isArray(sk.strBonus) ? sk.strBonus[lv - 1] : sk.strBonus;
         passiveStrBonus += Math.round(sb);
       }
+      // 怪物情報：附加固定INT加成
+      if (sk.intBonus) {
+        const ib = Array.isArray(sk.intBonus) ? sk.intBonus[lv - 1] : sk.intBonus;
+        passiveIntBonus += Math.round(ib);
+      }
     });
   }
   // 大聲吶喊buff：STR 固定加成
@@ -343,6 +348,37 @@ function recomputeDerived(fullHeal) {
   state.autoRevive2CooldownSec = 0;
   if (!state.activeFieldEffects) state.activeFieldEffects = [];
   if (!state.shields) state.shields = [];
+  state.hasEnergyCoatUnlock = false;
+  state.energyCoatDmgReductionPct = 0;
+  state.energyCoatSpCostPct = 0;
+  if (typeof state.energyCoatEnabled !== 'boolean') state.energyCoatEnabled = false;
+  if (typeof state.energyCoatSpFloorPct !== 'number') state.energyCoatSpFloorPct = 20;
+  state.hasOnHitAoeProc = false;
+  state.onHitAoeProcChance = 0;
+  state.onHitAoeProcMult = 0;
+  state.onHitAoeProcElement = 'none';
+  state.onHitAoeProcCooldownSec = 5;
+  state.hasOnAttackAoeProc = false;
+  state.onAttackAoeProcChance = 0;
+  state.onAttackAoeFlatDmg = 0;
+  state.onAttackAoeMult = 0;
+  state.onAttackAoeElement = 'none';
+  state.onAttackAoeCooldownSec = 5;
+  state.hasAutoShield = false;
+  state.autoShieldCapacity = 0;
+  state.autoShieldCharges = 0;
+  state.autoShieldCooldownSec = 20;
+  state.hasOnHitAoeStunProc = false;
+  state.onHitAoeStunChance = 0;
+  state.onHitAoeStunMult = 0;
+  state.onHitAoeStunElement = 'none';
+  state.onHitAoeStunStunChance = 0;
+  state.onHitAoeStunStunSec = 0;
+  state.onHitAoeStunCooldownSec = 10;
+  state.hasOnHitStunProc2 = false;
+  state.onHitStunChance2 = 0;
+  state.onHitStunSec2 = 0.5;
+  state.onHitStunCooldownSec2 = 10;
   // 雙持右手/左手傷害修正：未修練時的預設值（低於Lv1）
   state.rightHandPct = 50;
   state.leftHandPct = 30;
@@ -524,6 +560,12 @@ function recomputeDerived(fullHeal) {
           if (sk.itemEffectBonus) state.spItemEffectBonusPct = Array.isArray(sk.itemEffectBonus) ? sk.itemEffectBonus[lv - 1] : sk.itemEffectBonus;
           break;
         }
+        case 'energyCoatUnlock': {
+          state.hasEnergyCoatUnlock = true;
+          state.energyCoatDmgReductionPct = Array.isArray(sk.dmgReductionPct) ? sk.dmgReductionPct[lv - 1] : sk.dmgReductionPct;
+          state.energyCoatSpCostPct = Array.isArray(sk.spCostPct) ? sk.spCostPct[lv - 1] : sk.spCostPct;
+          break;
+        }
         case 'aspdFlat': {
           state.hasAspdFlatPassive = true;
           state.passiveAspdFlat += val;
@@ -545,6 +587,47 @@ function recomputeDerived(fullHeal) {
           state.hasAutoRevive2 = true;
           state.autoRevive2HpPct = Array.isArray(sk.revivePct) ? sk.revivePct[lv - 1] : sk.revivePct;
           state.autoRevive2CooldownSec = Array.isArray(sk.internalCooldown) ? sk.internalCooldown[lv - 1] : sk.internalCooldown;
+          break;
+        }
+        case 'onHitAoeProc': {
+          state.hasOnHitAoeProc = true;
+          state.onHitAoeProcChance = Array.isArray(sk.procChance) ? sk.procChance[lv - 1] : sk.procChance;
+          state.onHitAoeProcMult = Array.isArray(sk.mult) ? sk.mult[lv - 1] : sk.mult;
+          state.onHitAoeProcElement = sk.element || 'none';
+          state.onHitAoeProcCooldownSec = Array.isArray(sk.internalCooldown) ? sk.internalCooldown[lv - 1] : (sk.internalCooldown || 5);
+          break;
+        }
+        case 'onAttackAoeProc': {
+          state.hasOnAttackAoeProc = true;
+          state.onAttackAoeProcChance = Array.isArray(sk.procChance) ? sk.procChance[lv - 1] : sk.procChance;
+          state.onAttackAoeFlatDmg = Array.isArray(sk.flatDmg) ? sk.flatDmg[lv - 1] : (sk.flatDmg || 0);
+          state.onAttackAoeMult = Array.isArray(sk.mult) ? sk.mult[lv - 1] : (sk.mult || 0);
+          state.onAttackAoeElement = sk.element || 'none';
+          state.onAttackAoeCooldownSec = Array.isArray(sk.internalCooldown) ? sk.internalCooldown[lv - 1] : (sk.internalCooldown || 5);
+          break;
+        }
+        case 'autoShield': {
+          state.hasAutoShield = true;
+          state.autoShieldCapacity = Array.isArray(sk.shieldCapacityFlat) ? sk.shieldCapacityFlat[lv - 1] : sk.shieldCapacityFlat;
+          state.autoShieldCharges = Array.isArray(sk.shieldCharges) ? sk.shieldCharges[lv - 1] : sk.shieldCharges;
+          state.autoShieldCooldownSec = Array.isArray(sk.internalCooldown) ? sk.internalCooldown[lv - 1] : (sk.internalCooldown || 20);
+          break;
+        }
+        case 'onHitAoeStunProc': {
+          state.hasOnHitAoeStunProc = true;
+          state.onHitAoeStunChance = Array.isArray(sk.procChance) ? sk.procChance[lv - 1] : sk.procChance;
+          state.onHitAoeStunMult = Array.isArray(sk.mult) ? sk.mult[lv - 1] : sk.mult;
+          state.onHitAoeStunElement = sk.element || 'none';
+          state.onHitAoeStunStunChance = Array.isArray(sk.stunChance) ? sk.stunChance[lv - 1] : (sk.stunChance || 0);
+          state.onHitAoeStunStunSec = Array.isArray(sk.stunSec) ? sk.stunSec[lv - 1] : (sk.stunSec || 1);
+          state.onHitAoeStunCooldownSec = Array.isArray(sk.internalCooldown) ? sk.internalCooldown[lv - 1] : (sk.internalCooldown || 10);
+          break;
+        }
+        case 'onHitStunProc2': {
+          state.hasOnHitStunProc2 = true;
+          state.onHitStunChance2 = Array.isArray(sk.procChance) ? sk.procChance[lv - 1] : sk.procChance;
+          state.onHitStunSec2 = sk.stunSec ? (Array.isArray(sk.stunSec) ? sk.stunSec[lv - 1] : sk.stunSec) : 0.5;
+          state.onHitStunCooldownSec2 = Array.isArray(sk.internalCooldown) ? sk.internalCooldown[lv - 1] : (sk.internalCooldown || 10);
           break;
         }
       }
@@ -645,6 +728,14 @@ function applyStun(mon, sec, additive) {
   }
 }
 
+// 冰凍術/石化術：被反制暈眩的目標，之後只要受到我方魔法傷害就會提前甦醒
+function wakeIfFrozen(mon) {
+  if (mon && mon.frozenByProc) {
+    mon.stunnedUntil = Date.now();
+    mon.frozenByProc = false;
+  }
+}
+
 /* ---------------- 獵人陷阱：被動觸發（攻擊時機率/固定觸發，各自獨立冷卻）---------------- */
 const TRAP_SKILL_IDS = ['trap', 'skidtrap', 'flasher', 'sleeptrap', 'freezingtrap', 'blastmine', 'claymoretrap', 'magnumbreak_h'];
 function tryTrapProcs(target, monDef) {
@@ -702,6 +793,118 @@ function tryTrapProcs(target, monDef) {
   });
 }
 
+/* ---------------- 冰凍術/石化術：被攻擊時機率反制暈眩並造成魔法傷害（各自獨立冷卻）---------------- */
+const MAGIC_STUN_SKILL_IDS = ['frostdiver', 'stonecurse'];
+function tryMagicStunProcs(mon, monDef) {
+  if (!state.learnedSkills) return;
+  if (!state.magicStunReadyAt) state.magicStunReadyAt = {};
+  MAGIC_STUN_SKILL_IDS.forEach(skillId => {
+    const lv = state.learnedSkills[skillId];
+    if (!lv) return;
+    const readyAt = state.magicStunReadyAt[skillId] || 0;
+    if (Date.now() < readyAt) return;
+
+    const sk = findSkillById(skillId);
+    const chance = Array.isArray(sk.procChance) ? sk.procChance[lv - 1] : sk.procChance;
+    if (Math.random() * 100 >= chance) return;
+
+    const cdSec = Array.isArray(sk.internalCooldown) ? sk.internalCooldown[lv - 1] : (sk.internalCooldown || 10);
+    state.magicStunReadyAt[skillId] = Date.now() + cdSec * 1000;
+
+    const stunSec = Array.isArray(sk.stunSec) ? sk.stunSec[lv - 1] : (sk.stunSec || 10);
+    applyStun(mon, stunSec, true);
+    mon.frozenByProc = true;
+    const dmgMult = Array.isArray(sk.mult) ? sk.mult[lv - 1] : sk.mult;
+    const elemMult = getElementMultiplier(sk.element || 'none', monDef.element || 'none');
+    const dmg = mitigateDamage(state.matk * dmgMult * elemMult, monDef.def);
+    mon.hp -= dmg;
+    logMsg(`❄️ 「${sk.name}」觸發！${monDef.name} 暈眩了，並受到 ${dmg} 點魔法傷害！`);
+    if (mon.hp <= 0) killMonster(monDef, mon);
+  });
+}
+
+// 火之獵殺：被攻擊時觸發，對全體造成範圍魔法傷害
+function tryOnHitAoeProc() {
+  if (!state.hasOnHitAoeProc || !state.monsters || state.monsters.length === 0) return;
+  if (Date.now() < (state.onHitAoeProcReadyAt || 0)) return;
+  if (Math.random() * 100 >= state.onHitAoeProcChance) return;
+  state.onHitAoeProcReadyAt = Date.now() + state.onHitAoeProcCooldownSec * 1000;
+  logMsg('🔥 火之獵殺發動！');
+  for (let i = state.monsters.length - 1; i >= 0; i--) {
+    const mon = state.monsters[i];
+    const monDef = MONSTERS[mon.defId];
+    const elemMult = getElementMultiplier(state.onHitAoeProcElement, monDef.element || 'none');
+    const dmg = mitigateDamage(state.matk * state.onHitAoeProcMult * elemMult, monDef.def);
+    mon.hp -= dmg;
+    wakeIfFrozen(mon);
+    combatLogBuf.push(`  → 對 ${monDef.name} 造成 ${dmg} 點傷害！`);
+    if (mon.hp <= 0) killMonster(monDef, mon);
+  }
+  if (typeof renderLog === 'function') renderLog();
+}
+
+// 火柱攻擊：普攻時機率觸發，對全體造成固定值+百分比範圍魔法傷害
+function tryOnAttackAoeProc() {
+  if (!state.hasOnAttackAoeProc || !state.monsters || state.monsters.length === 0) return;
+  if (Date.now() < (state.onAttackAoeProcReadyAt || 0)) return;
+  if (Math.random() * 100 >= state.onAttackAoeProcChance) return;
+  state.onAttackAoeProcReadyAt = Date.now() + state.onAttackAoeCooldownSec * 1000;
+  logMsg('🔥 火柱攻擊發動！');
+  for (let i = state.monsters.length - 1; i >= 0; i--) {
+    const mon = state.monsters[i];
+    const monDef = MONSTERS[mon.defId];
+    const elemMult = getElementMultiplier(state.onAttackAoeElement, monDef.element || 'none');
+    const dmg = mitigateDamage((state.onAttackAoeFlatDmg + state.matk * state.onAttackAoeMult) * elemMult, monDef.def);
+    mon.hp -= dmg;
+    wakeIfFrozen(mon);
+    combatLogBuf.push(`  → 對 ${monDef.name} 造成 ${dmg} 點傷害！`);
+    if (mon.hp <= 0) killMonster(monDef, mon);
+  }
+  if (typeof renderLog === 'function') renderLog();
+}
+
+// 冰刃之牆：沒有護盾在身且冷卻完畢時，自動補上一層護盾
+function tryAutoShield() {
+  if (!state.hasAutoShield) return;
+  if (state.shields && state.shields.some(sh => sh.id === 'icewall')) return;
+  if (Date.now() < (state.autoShieldReadyAt || 0)) return;
+  state.autoShieldReadyAt = Date.now() + state.autoShieldCooldownSec * 1000;
+  if (!state.shields) state.shields = [];
+  state.shields.push({ id: 'icewall', remainingHp: state.autoShieldCapacity, remainingCharges: state.autoShieldCharges, expiresAt: Date.now() + 999999 * 1000 });
+  logMsg('🧊 冰刃之牆自動展開！');
+}
+
+// 霜凍之術：被攻擊時觸發，對全體造成範圍魔法傷害並各自有機率暈眩
+function tryOnHitAoeStunProc() {
+  if (!state.hasOnHitAoeStunProc || !state.monsters || state.monsters.length === 0) return;
+  if (Date.now() < (state.onHitAoeStunReadyAt || 0)) return;
+  if (Math.random() * 100 >= state.onHitAoeStunChance) return;
+  state.onHitAoeStunReadyAt = Date.now() + state.onHitAoeStunCooldownSec * 1000;
+  logMsg('❄️ 霜凍之術發動！');
+  for (let i = state.monsters.length - 1; i >= 0; i--) {
+    const mon = state.monsters[i];
+    const monDef = MONSTERS[mon.defId];
+    const elemMult = getElementMultiplier(state.onHitAoeStunElement, monDef.element || 'none');
+    const dmg = mitigateDamage(state.matk * state.onHitAoeStunMult * elemMult, monDef.def);
+    mon.hp -= dmg;
+    wakeIfFrozen(mon);
+    if (Math.random() * 100 < state.onHitAoeStunStunChance) applyStun(mon, state.onHitAoeStunStunSec, true);
+    combatLogBuf.push(`  → 對 ${monDef.name} 造成 ${dmg} 點傷害！`);
+    if (mon.hp <= 0) killMonster(monDef, mon);
+  }
+  if (typeof renderLog === 'function') renderLog();
+}
+
+// 泥沼地：被攻擊時觸發反制暈眩攻擊者（獨立於緩速術的狀態，避免同時學習時互相覆蓋）
+function tryOnHitStunProc2(mon, monDef) {
+  if (!state.hasOnHitStunProc2) return;
+  if (Date.now() < (state.onHitStunReadyAt2 || 0)) return;
+  if (Math.random() * 100 >= state.onHitStunChance2) return;
+  state.onHitStunReadyAt2 = Date.now() + state.onHitStunCooldownSec2 * 1000;
+  applyStun(mon, state.onHitStunSec2, true);
+  logMsg(`💫 泥沼地發動！${monDef.name} 暈眩了！`);
+}
+
 /* ---------------- 戰鬥主迴圈 ---------------- */
 function startLoop() {
   if (tickTimer) clearInterval(tickTimer);
@@ -751,6 +954,8 @@ function gameTick() {
     }
     // 露天商店被動：定時自動以10倍價格販售已選擇的道具
     tryAutoVending();
+    // 冰刃之牆被動：自動補上護盾
+    tryAutoShield();
     // 屬性石製造被動：定時機率隨機獲得一顆屬性石
     if (state.hasElementalStoneProc) {
       const readyAt = state.elementalStoneReadyAt || 0;
@@ -779,14 +984,33 @@ function gameTick() {
           if (state.monsters && state.monsters.length > 0) {
             state.monsters.forEach(mon => {
               const monDef = MONSTERS[mon.defId];
-              const elemMult = getElementMultiplier('holy', monDef.element || 'none');
+              const elemMult = getElementMultiplier(f.element || 'holy', monDef.element || 'none');
               const dmg = mitigateDamage(state.matk * f.mult * elemMult, monDef.def);
               mon.hp -= dmg;
+              wakeIfFrozen(mon);
+              if (f.stunChance && Math.random() * 100 < f.stunChance) applyStun(mon, f.stunSec || 1, true);
               combatLogBuf.push(`  → 「${f.name}」對 ${monDef.name} 造成 ${dmg} 點傷害！`);
             });
             for (let i = state.monsters.length - 1; i >= 0; i--) {
               const mon = state.monsters[i];
               if (mon.hp <= 0) killMonster(MONSTERS[mon.defId], mon);
+            }
+            if (typeof renderLog === 'function') renderLog();
+          }
+        } else if (f.kind === 'multi_dot') {
+          if (state.monsters && state.monsters.length > 0 && f.targetIds && f.targetIds.length > 0) {
+            const targets = state.monsters.filter(m => f.targetIds.includes(m.id));
+            targets.forEach(mon => {
+              const monDef = MONSTERS[mon.defId];
+              const elemMult = getElementMultiplier(f.element || 'none', monDef.element || 'none');
+              const dmg = mitigateDamage(state.matk * f.mult * elemMult, monDef.def);
+              mon.hp -= dmg;
+              wakeIfFrozen(mon);
+              combatLogBuf.push(`  → 「${f.name}」對 ${monDef.name} 造成 ${dmg} 點持續傷害！`);
+            });
+            for (let i = state.monsters.length - 1; i >= 0; i--) {
+              const mon = state.monsters[i];
+              if (f.targetIds.includes(mon.id) && mon.hp <= 0) killMonster(MONSTERS[mon.defId], mon);
             }
             if (typeof renderLog === 'function') renderLog();
           }
@@ -929,6 +1153,10 @@ function setAutoHealSpThreshold(skillId, v) {
   saveGame();
 }
 function setAutoBuyPotion(v) { state.autoBuyPotion = !!v; saveGame(); }
+
+// 能量外套：勾選開關與SP%下限
+function setEnergyCoatEnabled(v) { state.energyCoatEnabled = !!v; saveGame(); }
+function setEnergyCoatSpFloor(v) { state.energyCoatSpFloorPct = Math.max(0, Math.min(100, parseInt(v) || 0)); saveGame(); }
 
 function tickCooldowns() {
   Object.keys(state.cooldowns).forEach(k => {
@@ -1159,6 +1387,8 @@ function playerAttack() {
   const dmg = mitigateDamage(raw, monDefVal);
   target.hp -= dmg;
   logMsg(`你對 ${monDef.name} 造成 ${dmg} 點傷害${isCrit ? '（暴擊！無視閃避）' : ''}`);
+  // 冰凍術/石化術：魔法傷害命中會提前喚醒被反制暈眩的目標
+  if (useMag) wakeIfFrozen(target);
   // 命中音效
   if (typeof playHitSound === 'function') playHitSound();
 
@@ -1206,6 +1436,9 @@ function playerAttack() {
       }
     }
   }
+
+  // 火柱攻擊被動：普攻時機率觸發範圍魔法傷害
+  tryOnAttackAoeProc();
 
   // 塗毒：武器沾毒生效中，攻擊時機率使敵人中毒
   const ewLv = state.learnedSkills['enchantweapon'] || 0;
@@ -1350,6 +1583,15 @@ function monsterAttackSingle(mon) {
   }
 
   let dmg = mitigateDamage(raw, playerDef);
+  // 能量外套：啟動中減傷並消耗SP，SP%低於下限時暫停生效
+  if (state.hasEnergyCoatUnlock && state.energyCoatEnabled) {
+    const spPct = state.maxSp > 0 ? (state.sp / state.maxSp) * 100 : 0;
+    if (spPct >= (state.energyCoatSpFloorPct || 0)) {
+      dmg = Math.round(dmg * (1 - (state.energyCoatDmgReductionPct || 0) / 100));
+      const spCost = Math.round(state.maxSp * ((state.energyCoatSpCostPct || 0) / 100));
+      state.sp = Math.max(0, state.sp - spCost);
+    }
+  }
   // 護盾（霸邪之陣/暗之障壁）：吸收近距離物理傷害，直到耐久或次數耗盡
   if (state.shields && state.shields.length > 0) {
     const now = Date.now();
@@ -1385,6 +1627,14 @@ function monsterAttackSingle(mon) {
     applyStun(mon, state.onHitStunSec, true);
     logMsg(`💫 緩速術發動！${monDef.name} 暈眩了！`);
   }
+  // 冰凍術/石化術：被攻擊時機率反制暈眩並造成魔法傷害
+  tryMagicStunProcs(mon, monDef);
+  // 火之獵殺：被攻擊時觸發範圍魔法傷害
+  tryOnHitAoeProc();
+  // 霜凍之術：被攻擊時觸發範圍魔法傷害+機率暈眩
+  tryOnHitAoeStunProc();
+  // 泥沼地：被攻擊時反制暈眩攻擊者
+  tryOnHitStunProc2(mon, monDef);
 }
 
 function killMonster(def, monObj) {
@@ -1654,7 +1904,7 @@ function castSkill(skillId) {
 
   const isHeal = sk.type === 'heal' || sk.type === 'heal_over_time';
   const isBuff = ['buff_atk', 'buff_def', 'buff_aspd', 'buff_flee', 'buff_gold', 'buff_crit', 'buff_maxroll', 'buff_blessing', 'buff_shield', 'buff_sprate', 'buff_lukflat', 'buff_holyweapon', 'debuff_def', 'debuff'].includes(sk.type);
-  const needsMonster = ['damage', 'magic', 'dot', 'damage_multihit', 'damage_multi', 'debuff_def', 'debuff', 'special_charge', 'poison_proc', 'stun_field'].includes(sk.type);
+  const needsMonster = ['damage', 'magic', 'dot', 'damage_multihit', 'damage_multi', 'debuff_def', 'debuff', 'special_charge', 'poison_proc', 'stun_field', 'multi_dot_stun'].includes(sk.type);
   if (needsMonster && (!state.monsters || state.monsters.length === 0)) return false;
 
   state.sp -= spCost;
@@ -1718,6 +1968,14 @@ function castSkill(skillId) {
       const dmg = mitigateDamage(baseDmgStat * skillMult * elemMult * (1 + skEleDmgBonus), def.def);
       target.hp -= dmg;
       logMsg(`⚡ 「${sk.name}」Lv${lv} 造成 ${dmg} 點傷害！`);
+      // 冰凍術/石化術：魔法傷害命中會提前喚醒被反制暈眩的目標
+      if (sk.type === 'magic') wakeIfFrozen(target);
+      // 雷鳴術：命中必定使目標暈眩
+      if (sk.stunOnHit) {
+        const stunSecHit = Array.isArray(sk.stunSec) ? sk.stunSec[lv - 1] : (sk.stunSec || 1);
+        applyStun(target, stunSecHit, true);
+        logMsg(`💫 ${def.name} 被暈眩了！`);
+      }
       // 攻擊弱點：狂擊Lv6以上有機率暈眩
       if (sk.id === 'bash' && state.hasBashStun && lv >= 6 && Math.random() < 0.5) {
         logMsg(`💫 ${def.name} 被暈眩了！`);
@@ -1762,6 +2020,16 @@ function castSkill(skillId) {
         // 鋼製喙：閃電衝擊額外固定傷害（不受倍率影響）
         if (sk.id === 'blitzbeat' && state.falconFlatBonus) dmg += state.falconFlatBonus;
         mon.hp -= dmg;
+        // 冰凍術/石化術：魔法傷害命中會提前喚醒被反制暈眩的目標
+        if (sk.type === 'magic_aoe') wakeIfFrozen(mon);
+        // 怒雷強擊：範圍技附加機率暈眩
+        if (sk.stunChance) {
+          const scLv = Array.isArray(sk.stunChance) ? sk.stunChance[lv - 1] : sk.stunChance;
+          if (Math.random() * 100 < scLv) {
+            const ssLv = Array.isArray(sk.stunSec) ? sk.stunSec[lv - 1] : (sk.stunSec || 1);
+            applyStun(mon, ssLv, true);
+          }
+        }
         combatLogBuf.push(`  → 對 ${monDef.name} 造成 ${dmg} 點傷害！`);
         // AoE 飄字：直接找怪物 DOM 元素
         if (typeof showDamageFloat === 'function') {
@@ -1853,9 +2121,25 @@ function castSkill(skillId) {
       if (!state.monsters || state.monsters.length === 0) break;
       const dur = Array.isArray(sk.duration) ? sk.duration[lv - 1] : sk.duration;
       const tickSec = sk.fieldTickIntervalSec || 3;
+      const stunChance = Array.isArray(sk.stunChance) ? sk.stunChance[lv - 1] : sk.stunChance;
+      const stunSec = Array.isArray(sk.stunSec) ? sk.stunSec[lv - 1] : sk.stunSec;
       if (!state.activeFieldEffects) state.activeFieldEffects = [];
-      state.activeFieldEffects.push({ kind: 'aoe_holydmg', name: sk.name, mult, tickIntervalSec: tickSec, nextTickAt: Date.now(), endsAt: Date.now() + dur * 1000 });
+      state.activeFieldEffects.push({ kind: 'aoe_holydmg', name: sk.name, mult, element: skElement || 'holy', stunChance, stunSec, tickIntervalSec: tickSec, nextTickAt: Date.now(), endsAt: Date.now() + dur * 1000 });
       logMsg(`✨ 「${sk.name}」Lv${lv} 發動！`);
+      break;
+    }
+    case 'multi_dot_stun': {
+      if (!state.monsters || state.monsters.length === 0) break;
+      const maxTargets = Array.isArray(sk.maxTargets) ? sk.maxTargets[lv - 1] : (sk.maxTargets || 1);
+      const stunSec = Array.isArray(sk.stunSec) ? sk.stunSec[lv - 1] : (sk.stunSec || 1);
+      const tickSec = Array.isArray(sk.tickIntervalSec) ? sk.tickIntervalSec[lv - 1] : (sk.tickIntervalSec || 1);
+      const dotDur = Array.isArray(sk.dotDurationSec) ? sk.dotDurationSec[lv - 1] : (sk.dotDurationSec || 1);
+      const targets = state.monsters.slice(0, maxTargets);
+      const targetIds = targets.map(m => m.id);
+      targets.forEach(m => applyStun(m, stunSec, true));
+      if (!state.activeFieldEffects) state.activeFieldEffects = [];
+      state.activeFieldEffects.push({ kind: 'multi_dot', name: sk.name, mult, element: skElement, targetIds, tickIntervalSec: tickSec, nextTickAt: Date.now() + tickSec * 1000, endsAt: Date.now() + dotDur * 1000 });
+      logMsg(`🔥 「${sk.name}」Lv${lv} 發動！${targets.length}隻敵人暈眩了！`);
       break;
     }
     case 'dot': {
@@ -2191,10 +2475,12 @@ function tryAutoCastSupportSkills() {
       if (state.sp < spCost) continue;
 
       // Buff 類：如果已有相同類型 buff 則跳過（等 buff 消失後自動補）
-      if (['buff_atk', 'buff_def', 'buff_aspd', 'buff_flee', 'buff_gold', 'buff_crit', 'buff_poison', 'buff_statpct', 'buff_flatstat'].includes(sk.type)) {
+      if (['buff_atk', 'buff_def', 'buff_aspd', 'buff_flee', 'buff_gold', 'buff_crit', 'buff_poison', 'buff_statpct', 'buff_flatstat', 'buff_maxroll', 'buff_blessing', 'buff_sprate', 'buff_lukflat', 'buff_holyweapon'].includes(sk.type)) {
         const buffType = sk.type.replace('buff_', '');
         if (state.buffs.some(b => b.type === buffType)) continue;
       }
+      // 護盾類：耐久或次數尚未耗盡時跳過
+      if (sk.type === 'buff_shield' && state.shields && state.shields.some(sh => sh.id === sk.id)) continue;
       // Debuff 類：需要有怪物
       if (['debuff_def', 'debuff'].includes(sk.type) && (!state.monsters || state.monsters.length === 0)) continue;
       // Heal 類：依技能自訂的HP%門檻觸發，並可設SP%下限保護

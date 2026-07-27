@@ -808,7 +808,7 @@ function renderAutoBattleTab() {
     if (!jobDef) continue;
     jobDef.skills.forEach(sk => {
       const lv = state.learnedSkills[sk.id];
-      if (lv && ['buff_atk', 'buff_def', 'buff_aspd', 'buff_flee', 'buff_gold', 'buff_crit', 'buff_poison', 'buff_statpct', 'debuff_def', 'debuff', 'heal', 'heal_over_time'].includes(sk.type) && !sk.isQuest) {
+      if (lv && ['buff_atk', 'buff_def', 'buff_aspd', 'buff_flee', 'buff_gold', 'buff_crit', 'buff_poison', 'buff_statpct', 'buff_maxroll', 'buff_blessing', 'buff_shield', 'buff_sprate', 'buff_lukflat', 'buff_holyweapon', 'debuff_def', 'debuff', 'heal', 'heal_over_time', 'field_heal', 'field_aoe_magic', 'stun_field', 'multi_dot_stun'].includes(sk.type) && !sk.isQuest) {
         supportSkills.push({ ...sk, lv, jobName: jobDef.name });
       }
     });
@@ -962,6 +962,21 @@ function renderAutoBattleTab() {
         </div>
       </div>
     </div>
+
+    <!-- 能量外套 -->
+    ${state.hasEnergyCoatUnlock ? `
+    <div class="ab-section">
+      <h4 class="ab-section-title">🛡️ 能量外套</h4>
+      <label class="auto-toggle"><input type="checkbox" ${state.energyCoatEnabled ? 'checked' : ''} onchange="setEnergyCoatEnabled(this.checked);"> 啟動（減傷${state.energyCoatDmgReductionPct}%，每次受擊消耗${state.energyCoatSpCostPct}%最大SP）</label>
+      <div class="ab-config-row">
+        <label class="ab-config-label">SP 低於</label>
+        <input type="range" class="ab-slider" min="0" max="90" value="${state.energyCoatSpFloorPct}"
+          oninput="setEnergyCoatSpFloor(this.value);document.getElementById('energycoat-floor-val').textContent=this.value+'%'">
+        <span id="energycoat-floor-val" class="ab-slider-val">${state.energyCoatSpFloorPct}%</span>
+        <span class="ab-config-hint">時暫停生效</span>
+      </div>
+    </div>
+    ` : ''}
 
     <!-- 輔助技能設定 -->
     ${supportSkills.length > 0 ? `
