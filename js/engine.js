@@ -8,6 +8,42 @@ const MAX_SLOTS = 9;
 
 function getSlotKey(slot) { return SAVE_KEY_PREFIX + slot; }
 const TICK_MS = 100;
+
+/* ---------------- 跨角色倉庫（獨立於任何存檔欄位，全帳號共用）---------------- */
+const WAREHOUSE_KEY = 'ro_idle_warehouse';
+function loadWarehouse() {
+  try {
+    const raw = localStorage.getItem(WAREHOUSE_KEY);
+    return raw ? JSON.parse(raw) : { items: [] };
+  } catch (e) { return { items: [] }; }
+}
+function saveWarehouse(wh) {
+  try { localStorage.setItem(WAREHOUSE_KEY, JSON.stringify(wh)); } catch (e) { /* 忽略儲存失敗 */ }
+}
+function depositToWarehouse(itemId, qty) {
+  const row = state.inventory.find(r => r.item === itemId);
+  if (!row || row.qty < qty) return false;
+  removeItem(itemId, qty);
+  const wh = loadWarehouse();
+  const whRow = wh.items.find(r => r.item === itemId);
+  if (whRow) whRow.qty += qty; else wh.items.push({ item: itemId, qty });
+  saveWarehouse(wh);
+  saveGame();
+  logMsg(`📦 將 ${getItemDisplayName(itemId)} x${qty} 存入倉庫。`);
+  return true;
+}
+function withdrawFromWarehouse(itemId, qty) {
+  const wh = loadWarehouse();
+  const whRow = wh.items.find(r => r.item === itemId);
+  if (!whRow || whRow.qty < qty) return false;
+  whRow.qty -= qty;
+  if (whRow.qty <= 0) wh.items = wh.items.filter(r => r.item !== itemId);
+  saveWarehouse(wh);
+  addItem(itemId, qty);
+  saveGame();
+  logMsg(`📦 從倉庫領出 ${getItemDisplayName(itemId)} x${qty}。`);
+  return true;
+}
 const OFFLINE_CAP_MS = 12 * 60 * 60 * 1000; // 離線掛機最多累積 12 小時
 const OFFLINE_MIN_MS = 30 * 1000;            // 離線超過 30 秒才顯示結算
 
@@ -164,8 +200,8 @@ function recomputeDerived(fullHeal) {
   if (fullHeal) { state.hp = newMaxHp; state.sp = newMaxSp; }
   else { state.hp = Math.min(state.hp, newMaxHp); state.sp = Math.min(state.sp, newMaxSp); }
 
-  // 被動技能 DEX 加成（必須在衍生數值計算之前，避免直接修改 state.stats.dex 導致膨脹）
-  let passiveDexBonus = 0;
+  // 被動技能 STR/INT/DEX 固定加成（必須在衍生數值計算之前，避免直接修改 state.stats 導致膨脹）
+  let passiveStrBonus = 0, passiveIntBonus = 0, passiveDexBonus = 0;
   const passiveJobsEarly = getAllLearnedJobs();
   for (const jid of passiveJobsEarly) {
     const jd = JOB_TREE[jid];
@@ -176,9 +212,24 @@ function recomputeDerived(fullHeal) {
       if (sk.passiveStat === 'dexFlat') {
         const val = Array.isArray(sk.mult) ? sk.mult[lv - 1] : sk.mult;
         passiveDexBonus += Math.round(val);
+      } else if (sk.passiveStat === 'triStatBonus') {
+        // 物品鑑定：STR/INT/DEX 同時加成
+        const val = Array.isArray(sk.mult) ? sk.mult[lv - 1] : sk.mult;
+        passiveStrBonus += Math.round(val);
+        passiveIntBonus += Math.round(val);
+        passiveDexBonus += Math.round(val);
+      }
+      // 武器保有：附加固定STR加成
+      if (sk.strBonus) {
+        const sb = Array.isArray(sk.strBonus) ? sk.strBonus[lv - 1] : sk.strBonus;
+        passiveStrBonus += Math.round(sb);
       }
     });
   }
+  // 大聲吶喊buff：STR 固定加成
+  let buffStrBonus = 0;
+  state.buffs.forEach(b => { if (b.type === 'flatstat' && b.strBonus) buffStrBonus += b.strBonus; });
+  passiveStrBonus += buffStrBonus;
   state._passiveDexBonus = passiveDexBonus;
 
   // 心神凝聚buff：DEX/AGI 百分比加成（影響下面所有衍生自DEX/AGI的數值，含攻速）
@@ -187,14 +238,18 @@ function recomputeDerived(fullHeal) {
   state._buffStatPct = buffStatPct;
 
   // ATK：StatusATK = STR + (STR/10)² + DEX/5 + LUK/5（含職業加成與卡片加成）
-  const cStr = s.str + jobBonus.str + getCardBonus('str');
+  const cStr = s.str + jobBonus.str + getCardBonus('str') + passiveStrBonus;
   const cDex = Math.round((s.dex + jobBonus.dex + getCardBonus('dex') + passiveDexBonus) * (1 + buffStatPct));
   const cLuk = s.luk + jobBonus.luk + getCardBonus('luk');
   const cAgi = Math.round((s.agi + jobBonus.agi + getCardBonus('agi')) * (1 + buffStatPct));
   const cVit = s.vit + jobBonus.vit + getCardBonus('vit');
-  const cInt = s.int + jobBonus.int + getCardBonus('int');
+  const cInt = s.int + jobBonus.int + getCardBonus('int') + passiveIntBonus;
   const statusAtk = cStr + Math.floor((cStr / 10) ** 2) + Math.floor(cDex / 5) + Math.floor(cLuk / 5);
   state.atk = Math.round(statusAtk * job.atkMod) + equippedAtk();
+  // 大聲吶喊buff：ATK 固定加成（於狀態ATK算完後直接加）
+  let buffAtkFlat = 0;
+  state.buffs.forEach(b => { if (b.type === 'flatstat' && b.flatBonus) buffAtkFlat += b.flatBonus; });
+  state.atk += buffAtkFlat;
 
   // MATK：區間公式，min = INT+(INT/7)²，max = INT+(INT/5)²，取平均當戰鬥數值
   const matkMinRaw = cInt + Math.floor((cInt / 7) ** 2) + Math.floor(cDex / 5);
@@ -231,6 +286,29 @@ function recomputeDerived(fullHeal) {
   state.animalDamageFlat = 0;
   state.trapCdReductionSec = 0;
   state.trapChanceBonusPct = 0;
+  state.shopDiscountMult = 1;
+  state.shopOverchargeMult = 1;
+  state.hasAutoCartItem = false;
+  state.cartItemIntervalSec = 15;
+  state.cartItemPool = ['carrot'];
+  state.cartDmgBonusMult = 0;
+  state.hasElementalStoneProc = false;
+  state.elementalStoneChance = 0;
+  state.craftBonusPct = 0;
+  state.unlockedCraftCategories = [];
+  state.unlockedMaterialCrafts = [];
+  state.fireResistPct = 0;
+  state.neutralResistPct = 0;
+  state.hasFindingOreProc = false;
+  state.findingOreChance = 0;
+  state.hasGreedProc = false;
+  state.greedChance = 0;
+  state.hasHammerfallProc = false;
+  state.hammerfallSingleChance = 0;
+  state.hammerfallAoeChance = 0;
+  state.hammerfallStunSec = 1;
+  state.zenyCostReductionPct = {};
+  state.hiltBindingDurationBonus = 0;
   // 雙持右手/左手傷害修正：未修練時的預設值（低於Lv1）
   state.rightHandPct = 50;
   state.leftHandPct = 30;
@@ -243,7 +321,29 @@ function recomputeDerived(fullHeal) {
       if (!lv || sk.type !== 'passive') return;
       const val = Array.isArray(sk.mult) ? sk.mult[lv - 1] : sk.mult;
       switch (sk.passiveStat) {
-        case 'atkFlat': state.atk += Math.round(val); break;
+        case 'atkFlat': {
+          state.atk += Math.round(val);
+          // 武器修理：附加固定暴擊率加成
+          if (sk.critBonus) {
+            const cb = Array.isArray(sk.critBonus) ? sk.critBonus[lv - 1] : sk.critBonus;
+            state.critRate = Math.min(100, state.critRate + cb);
+          }
+          // 武器研究：附加固定HIT與鍛造成功率加成
+          if (sk.hitBonus) {
+            const hb = Array.isArray(sk.hitBonus) ? sk.hitBonus[lv - 1] : sk.hitBonus;
+            state.hit += Math.round(hb);
+          }
+          if (sk.craftBonusExtra) {
+            const cbe = Array.isArray(sk.craftBonusExtra) ? sk.craftBonusExtra[lv - 1] : sk.craftBonusExtra;
+            state.craftBonusPct += cbe;
+          }
+          // 武器保有：使速度激發/凶砍持續時間延長
+          if (sk.buffDurationBonusPct) {
+            const bd = Array.isArray(sk.buffDurationBonusPct) ? sk.buffDurationBonusPct[lv - 1] : sk.buffDurationBonusPct;
+            state.hiltBindingDurationBonus = bd / 100;
+          }
+          break;
+        }
         case 'matkFlat': state.matk += Math.round(val); break;
         case 'maxHpMult': state.maxHp = Math.round(state.maxHp * val); state.hp = Math.min(state.hp, state.maxHp); break;
         case 'maxSpMult': state.maxSp = Math.round(state.maxSp * val); state.sp = Math.min(state.sp, state.maxSp); break;
@@ -328,6 +428,55 @@ function recomputeDerived(fullHeal) {
         case 'trapCdReduction': state.trapCdReductionSec = val; break;
         case 'trapChanceBonus': state.trapChanceBonusPct = val; break;
         case 'huntingMastery': break; // 馴鷹術本身無效果，僅作為前置解鎖
+        case 'discount': state.shopDiscountMult = val; break;
+        case 'overcharge': state.shopOverchargeMult = val; break;
+        case 'autoCartItem': {
+          state.hasAutoCartItem = true;
+          state.cartItemIntervalSec = Array.isArray(sk.intervalSec) ? sk.intervalSec[lv - 1] : sk.intervalSec;
+          state.cartItemPool = Array.isArray(sk.itemPools) ? sk.itemPools[lv - 1] : ['carrot'];
+          break;
+        }
+        case 'cartDmgBonus': state.cartDmgBonusMult = val; break;
+        case 'vending': break; // 露天商店本身不影響數值，實際邏輯在 tryAutoVending()
+        case 'craftBonus': state.craftBonusPct += val; break;
+        case 'weaponCraft': {
+          if (sk.craftCategory) state.unlockedCraftCategories.push(sk.craftCategory);
+          break;
+        }
+        case 'materialCraft': {
+          if (sk.craftCategory) state.unlockedMaterialCrafts.push(sk.craftCategory);
+          break;
+        }
+        case 'fireResist': {
+          state.fireResistPct = val;
+          if (sk.neutralResistMult) {
+            const nv = Array.isArray(sk.neutralResistMult) ? sk.neutralResistMult[lv - 1] : sk.neutralResistMult;
+            state.neutralResistPct = nv;
+          }
+          break;
+        }
+        case 'findingoreProc': {
+          state.hasFindingOreProc = true;
+          state.findingOreChance = Array.isArray(sk.procChance) ? sk.procChance[lv - 1] : sk.procChance;
+          break;
+        }
+        case 'greedProc': {
+          state.hasGreedProc = true;
+          state.greedChance = Array.isArray(sk.procChance) ? sk.procChance[lv - 1] : sk.procChance;
+          break;
+        }
+        case 'hammerfallProc': {
+          state.hasHammerfallProc = true;
+          state.hammerfallSingleChance = Array.isArray(sk.singleStunChance) ? sk.singleStunChance[lv - 1] : sk.singleStunChance;
+          state.hammerfallAoeChance = Array.isArray(sk.aoeStunChance) ? sk.aoeStunChance[lv - 1] : sk.aoeStunChance;
+          state.hammerfallStunSec = Array.isArray(sk.stunSec) ? sk.stunSec[lv - 1] : (sk.stunSec || 1);
+          break;
+        }
+        case 'zenyCostReduction': {
+          // 詭計的商術：目前僅套用於金錢攻擊(mammonite)，手推車終結技留待未來新職業加入後再接上
+          state.zenyCostReductionPct['mammonite'] = val;
+          break;
+        }
       }
     });
   }
@@ -519,6 +668,32 @@ function gameTick() {
         logMsg('💊 解毒發動！自動解除了中毒狀態。');
       }
     }
+    // 手推車使用被動：定時從等級解鎖的道具池隨機獲得1個
+    if (state.hasAutoCartItem) {
+      const readyAt = state.cartItemReadyAt || 0;
+      if (Date.now() >= readyAt) {
+        state.cartItemReadyAt = Date.now() + (state.cartItemIntervalSec || 15) * 1000;
+        const pool = (state.cartItemPool && state.cartItemPool.length) ? state.cartItemPool : ['carrot'];
+        const itemId = pool[Math.floor(Math.random() * pool.length)];
+        addItem(itemId, 1);
+        logMsg(`🛒 手推車翻出了一個 ${ITEMS[itemId].name}！`);
+      }
+    }
+    // 露天商店被動：定時自動以10倍價格販售已選擇的道具
+    tryAutoVending();
+    // 屬性石製造被動：定時機率隨機獲得一顆屬性石
+    if (state.hasElementalStoneProc) {
+      const readyAt = state.elementalStoneReadyAt || 0;
+      if (Date.now() >= readyAt) {
+        state.elementalStoneReadyAt = Date.now() + (state.elementalStoneCooldownSec || 60) * 1000;
+        if (Math.random() * 100 < state.elementalStoneChance) {
+          const stones = ['gemstone_wind', 'gemstone_water', 'gemstone_fire', 'gemstone_earth'];
+          const stoneId = stones[Math.floor(Math.random() * stones.length)];
+          addItem(stoneId, 1);
+          logMsg(`💎 屬性石製造發動！獲得了 ${ITEMS[stoneId].name}！`);
+        }
+      }
+    }
   }
 
   // 每10秒：移動時恢復HP（戰鬥中也有效）
@@ -614,15 +789,16 @@ function autoUsePotion() {
 function buyItem(itemId, qty) {
   const def = ITEMS[itemId];
   if (!def || !def.buyPrice) return false;
+  const unitPrice = Math.max(1, Math.round(def.buyPrice * (state.shopDiscountMult || 1)));
   let actualQty = qty;
-  if (state.gold < def.buyPrice * actualQty) {
-    actualQty = Math.floor(state.gold / def.buyPrice);
+  if (state.gold < unitPrice * actualQty) {
+    actualQty = Math.floor(state.gold / unitPrice);
   }
   if (actualQty <= 0) {
     logMsg(`⚠️ 鋅幣不足，無法購買 ${def.name}。`);
     return false;
   }
-  const cost = def.buyPrice * actualQty;
+  const cost = unitPrice * actualQty;
   state.gold -= cost;
   addItem(itemId, actualQty);
   logMsg(`🛒 購買了 ${def.name} x${actualQty}，花費 ${cost} 鋅幣。`);
@@ -817,7 +993,9 @@ function playerAttack() {
     raw *= 1.32;
   }
   if (isCrit) raw *= 1.5;
-  raw *= (0.85 + Math.random() * 0.3);
+  // 武器值最大化：鎖定浮動值為最大值115%，否則正常85%~115%隨機浮動
+  const hasMaxRoll = state.buffs.some(b => b.type === 'maxroll');
+  raw *= hasMaxRoll ? 1.15 : (0.85 + Math.random() * 0.3);
 
   // 屬性相剋：武器屬性 vs 怪物屬性
   const weapon = state.equip.weapon ? ITEMS[state.equip.weapon] : null;
@@ -880,6 +1058,21 @@ function playerAttack() {
     target.debuffHit = state.sandmanHitDebuff;
     target.debuffHitEnd = Date.now() + state.sandmanDebuffDuration * 1000;
     logMsg(`💨 噴砂發動！${monDef.name} 的命中下降了！`);
+  }
+
+  // 大地之擊被動：裝備斧頭或鈍器攻擊時機率使敵人暈眩
+  if (state.hasHammerfallProc && state.monsters.includes(target)) {
+    const isAxeOrMace = weapon && (weapon.weaponType === 'mace' || /斧/.test(weapon.name || ''));
+    if (isAxeOrMace) {
+      if (Math.random() * 100 < state.hammerfallSingleChance) {
+        applyStun(target, state.hammerfallStunSec, true);
+        logMsg(`💥 大地之擊發動！${monDef.name} 暈眩了！`);
+      }
+      if (Math.random() * 100 < state.hammerfallAoeChance) {
+        state.monsters.forEach(m => applyStun(m, state.hammerfallStunSec, true));
+        logMsg(`💥 大地之擊（全體）發動！所有敵人都暈眩了！`);
+      }
+    }
   }
 
   // 塗毒：武器沾毒生效中，攻擊時機率使敵人中毒
@@ -1013,6 +1206,11 @@ function monsterAttackSingle(mon) {
   const elemMult = getElementMultiplier(monDef.element || 'none', 'none');
   raw *= elemMult;
 
+  // 強化火屬性：對火屬性/無屬性怪物攻擊的耐性
+  const monAtkElement = monDef.element || 'none';
+  if (monAtkElement === 'fire' && state.fireResistPct) raw *= (1 - state.fireResistPct / 100);
+  if (monAtkElement === 'none' && state.neutralResistPct) raw *= (1 - state.neutralResistPct / 100);
+
   // 狂暴狀態：DEF -55%
   let playerDef = state.def;
   if (state.hasBerserk && state.hp < state.maxHp * 0.25) {
@@ -1042,6 +1240,20 @@ function killMonster(def, monObj) {
     addItem(stolen.item, 1);
     const stolenName = ITEMS[stolen.item] ? ITEMS[stolen.item].name : stolen.item;
     logMsg(`🗡️ 偷竊發動！額外獲得了 ${stolenName}！`);
+  }
+  // 尋找礦石被動：擊敗怪物時機率額外獲得隨機屬性礦石（供屬性石製造使用）
+  if (state.hasFindingOreProc && Math.random() * 100 < state.findingOreChance) {
+    const orePool = ['boody_red', 'crystal_blue', 'wind_of_verdure', 'yellow_live'];
+    const ore = orePool[Math.floor(Math.random() * orePool.length)];
+    addItem(ore, 1);
+    logMsg(`⛏️ 尋找礦石發動！額外獲得了 ${ITEMS[ore].name}！`);
+  }
+  // 貪婪被動：擊敗怪物時機率多獲得一份戰利品
+  if (state.hasGreedProc && def.drops && def.drops.length > 0 && Math.random() * 100 < state.greedChance) {
+    const bonus = def.drops[Math.floor(Math.random() * def.drops.length)];
+    addItem(bonus.item, 1);
+    const bonusName = ITEMS[bonus.item] ? ITEMS[bonus.item].name : bonus.item;
+    logMsg(`💰 貪婪發動！額外獲得了 ${bonusName}！`);
   }
   // 卡片掉落
   const cardDrop = MONSTER_CARD_DROPS[def.id];
@@ -1237,12 +1449,26 @@ function castSkill(skillId) {
   const spCost = Array.isArray(sk.spCost) ? sk.spCost[lv - 1] : sk.spCost;
   if (state.sp < spCost) return false;
 
+  // 金錢攻擊：消耗鋅幣才能施放
+  let zenyCost = 0;
+  if (sk.zenyCost) {
+    zenyCost = Array.isArray(sk.zenyCost) ? sk.zenyCost[lv - 1] : sk.zenyCost;
+    // 詭計的商術：降低指定技能的鋅幣消耗
+    const zenyReductionPct = (state.zenyCostReductionPct && state.zenyCostReductionPct[sk.id]) || 0;
+    if (zenyReductionPct) zenyCost = Math.round(zenyCost * (1 - zenyReductionPct / 100));
+    if (state.gold < zenyCost) {
+      logMsg(`⚠️ 鋅幣不足，無法施放「${sk.name}」！`);
+      return false;
+    }
+  }
+
   const isHeal = sk.type === 'heal' || sk.type === 'heal_over_time';
-  const isBuff = ['buff_atk', 'buff_def', 'buff_aspd', 'buff_flee', 'buff_gold', 'buff_crit', 'debuff_def', 'debuff'].includes(sk.type);
+  const isBuff = ['buff_atk', 'buff_def', 'buff_aspd', 'buff_flee', 'buff_gold', 'buff_crit', 'buff_maxroll', 'debuff_def', 'debuff'].includes(sk.type);
   const needsMonster = ['damage', 'magic', 'dot', 'damage_multihit', 'damage_multi', 'debuff_def', 'debuff', 'special_charge', 'poison_proc'].includes(sk.type);
   if (needsMonster && (!state.monsters || state.monsters.length === 0)) return false;
 
   state.sp -= spCost;
+  if (zenyCost > 0) state.gold -= zenyCost;
   const cd = Array.isArray(sk.cooldown) ? sk.cooldown[lv - 1] : sk.cooldown;
   state.cooldowns[skillId] = cd * 1000;
 
@@ -1288,6 +1514,10 @@ function castSkill(skillId) {
       if (sk.lowHpThreshold && target.hp < target.maxHp * sk.lowHpThreshold) {
         skillMult *= sk.lowHpMult;
       }
+      // 負重量上升：加成金錢攻擊/手推車攻擊傷害
+      if ((sk.id === 'mammonite' || sk.id === 'cartattack') && state.cartDmgBonusMult) {
+        skillMult *= (1 + state.cartDmgBonusMult);
+      }
       const dmg = mitigateDamage(baseDmgStat * skillMult * elemMult * (1 + skEleDmgBonus), def.def);
       target.hp -= dmg;
       logMsg(`⚡ 「${sk.name}」Lv${lv} 造成 ${dmg} 點傷害！`);
@@ -1328,7 +1558,10 @@ function castSkill(skillId) {
         }
         const monElemMult = getElementMultiplier(skElement, monDef.element || 'none');
         const monEleDmgBonus = (state.cardEleDmgBonus && state.cardEleDmgBonus[monDef.element || 'none']) || 0;
-        let dmg = mitigateDamage(baseDmgStat * mult * monElemMult * (1 + monEleDmgBonus), monDef.def);
+        // 負重量上升：加成手推車攻擊傷害
+        let aoeMult = mult;
+        if (sk.id === 'cartattack' && state.cartDmgBonusMult) aoeMult *= (1 + state.cartDmgBonusMult);
+        let dmg = mitigateDamage(baseDmgStat * aoeMult * monElemMult * (1 + monEleDmgBonus), monDef.def);
         // 鋼製喙：閃電衝擊額外固定傷害（不受倍率影響）
         if (sk.id === 'blitzbeat' && state.falconFlatBonus) dmg += state.falconFlatBonus;
         mon.hp -= dmg;
@@ -1414,13 +1647,17 @@ function castSkill(skillId) {
       break;
     }
     case 'buff_atk': {
-      const dur = Array.isArray(sk.duration) ? sk.duration[lv - 1] : sk.duration;
+      let dur = Array.isArray(sk.duration) ? sk.duration[lv - 1] : sk.duration;
+      // 武器保有：凶砍持續時間+10%
+      if (sk.id === 'overthrustbuff' && state.hiltBindingDurationBonus) dur *= (1 + state.hiltBindingDurationBonus);
       state.buffs.push({ type: 'atk', mult, msRemaining: dur * 1000 });
       logMsg(`💪 「${sk.name}」Lv${lv} 發動，攻擊力上升！`);
       break;
     }
     case 'buff_aspd': {
-      const dur = Array.isArray(sk.duration) ? sk.duration[lv - 1] : sk.duration;
+      let dur = Array.isArray(sk.duration) ? sk.duration[lv - 1] : sk.duration;
+      // 武器保有：速度激發持續時間+10%
+      if (sk.id === 'adrenaline' && state.hiltBindingDurationBonus) dur *= (1 + state.hiltBindingDurationBonus);
       state.buffs.push({ type: 'aspd', mult, msRemaining: dur * 1000 });
       // 雙手劍加速額外加成：暴擊率+命中
       if (sk.bonusCrit) {
@@ -1432,6 +1669,12 @@ function castSkill(skillId) {
         state.buffs.push({ type: 'hit', mult: 1, flatBonus: hitBonus, msRemaining: dur * 1000 });
       }
       logMsg(`💨 「${sk.name}」Lv${lv} 發動，攻速上升！`);
+      break;
+    }
+    case 'buff_maxroll': {
+      const dur = Array.isArray(sk.duration) ? sk.duration[lv - 1] : sk.duration;
+      state.buffs.push({ type: 'maxroll', mult: 1, msRemaining: dur * 1000 });
+      logMsg(`⚒️ 「${sk.name}」Lv${lv} 發動，武器傷害浮動值最大化！`);
       break;
     }
     case 'damage_multihit': {
@@ -1557,6 +1800,16 @@ function castSkill(skillId) {
       recomputeDerived(false);
       break;
     }
+    case 'buff_flatstat': {
+      // 大聲吶喊：STR/ATK 固定加成（實際套用在 recomputeDerived()），隊伍效果暫不支援
+      const dur = Array.isArray(sk.duration) ? sk.duration[lv - 1] : sk.duration;
+      const strBonus = Array.isArray(sk.strBonus) ? sk.strBonus[lv - 1] : (sk.strBonus || 0);
+      const flatBonus = mult; // mult 存的是 ATK 固定加成
+      state.buffs.push({ type: 'flatstat', mult: 1, strBonus, flatBonus, msRemaining: dur * 1000, skillId: sk.id });
+      logMsg(`📢 「${sk.name}」Lv${lv} 發動，STR+${strBonus}、ATK+${flatBonus}！`);
+      recomputeDerived(false);
+      break;
+    }
     case 'buff_gold': {
       const dur = Array.isArray(sk.duration) ? sk.duration[lv - 1] : sk.duration;
       state.buffs.push({ type: 'gold', mult, msRemaining: dur * 1000 });
@@ -1661,7 +1914,7 @@ function tryAutoCastSupportSkills() {
       if (state.sp < spCost) continue;
 
       // Buff 類：如果已有相同類型 buff 則跳過（等 buff 消失後自動補）
-      if (['buff_atk', 'buff_def', 'buff_aspd', 'buff_flee', 'buff_gold', 'buff_crit', 'buff_poison', 'buff_statpct'].includes(sk.type)) {
+      if (['buff_atk', 'buff_def', 'buff_aspd', 'buff_flee', 'buff_gold', 'buff_crit', 'buff_poison', 'buff_statpct', 'buff_flatstat'].includes(sk.type)) {
         const buffType = sk.type.replace('buff_', '');
         if (state.buffs.some(b => b.type === buffType)) continue;
       }
@@ -2200,10 +2453,179 @@ function sellItem(itemId, qty) {
   const row = state.inventory.find(r => r.item === itemId);
   if (!def || !row || row.qty < qty) return false;
   removeItem(itemId, qty);
-  state.gold += def.sell * qty;
-  logMsg(`賣出 ${def.name} x${qty}，獲得 ${def.sell * qty} 鋅幣。`);
+  const unitPrice = Math.round(def.sell * (state.shopOverchargeMult || 1));
+  const total = unitPrice * qty;
+  state.gold += total;
+  logMsg(`賣出 ${def.name} x${qty}，獲得 ${total} 鋅幣。`);
   saveGame();
   return true;
+}
+
+/* ---------------- 露天商店：選定道具後自動定時以倍率販售 ---------------- */
+function setVendingItems(itemIds) {
+  state.vendingConfig = { items: (itemIds || []).slice(0, 3) };
+  saveGame();
+}
+function tryAutoVending() {
+  if (state.jobId !== 'merchant') return;
+  if (!state.learnedSkills || !state.learnedSkills['vending']) return;
+  if (!state.vendingConfig || !state.vendingConfig.items || state.vendingConfig.items.length === 0) return;
+  const readyAt = state.vendingReadyAt || 0;
+  if (Date.now() < readyAt) return;
+
+  const sk = findSkillById('vending');
+  const cdSec = sk.internalCooldown || 60;
+  const sellMult = sk.sellMultiplier || 10;
+  state.vendingReadyAt = Date.now() + cdSec * 1000;
+
+  let soldAny = false;
+  state.vendingConfig.items.forEach(itemId => {
+    const def = ITEMS[itemId];
+    const row = state.inventory.find(r => r.item === itemId);
+    if (!def || !row || row.qty < 1) return;
+    removeItem(itemId, 1);
+    const price = Math.round(def.sell * sellMult);
+    state.gold += price;
+    logMsg(`🏪 露天商店賣出了 ${def.name}，獲得 ${price} 鋅幣！`);
+    soldAny = true;
+  });
+  if (soldAny) saveGame();
+}
+
+/* ---------------- 鐵匠鍛造系統 ---------------- */
+const CRAFT_SUBTYPE_MATERIALS = {
+  dagger:   { iron: 3, steel: 1 },
+  sword1h:  { iron: 5, steel: 2 },
+  sword2h:  { iron: 8, steel: 3 },
+  axe1h:    { iron: 5, steel: 2 },
+  axe2h:    { iron: 8, steel: 3 },
+  knuckle:  { iron: 4, steel: 1 },
+  mace:     { iron: 5, steel: 2 },
+  spear1h:  { iron: 6, steel: 2 },
+  spear2h:  { iron: 9, steel: 3 },
+};
+const CRAFT_SUBTYPE_CATEGORY = {
+  dagger: 'dagger', sword1h: 'sword', sword2h: 'sword', axe1h: 'axe', axe2h: 'axe',
+  knuckle: 'knuckle', mace: 'mace', spear1h: 'spear', spear2h: 'spear',
+};
+const CRAFT_ELEMENT_STONE = { wind: 'gemstone_wind', water: 'gemstone_water', fire: 'gemstone_fire', earth: 'gemstone_earth' };
+const CRAFT_ZENY_COST = 10000;
+const CRAFT_CATEGORY_NAMES = { dagger: '短劍', sword: '劍', axe: '斧頭', knuckle: '拳套', mace: '鈍器', spear: '長矛' };
+const CRAFT_SUBTYPE_NAMES = { dagger: '短劍', sword1h: '單手劍', sword2h: '雙手劍', axe1h: '單手斧頭', axe2h: '雙手斧頭', knuckle: '拳套', mace: '鈍器', spear1h: '單手長矛', spear2h: '雙手長矛' };
+const CRAFT_ELEMENT_NAMES = { wind: '風', water: '水', fire: '火', earth: '地' };
+
+// 鍛造成功率：基礎15% + DEX(滿120給+20%) + LUK(滿120給+10%) + 神之金屬研究加成
+function getCraftingSuccessChance() {
+  const dexBonus = Math.min(20, (state.stats.dex || 0) / 120 * 20);
+  const lukBonus = Math.min(10, (state.stats.luk || 0) / 120 * 10);
+  return 15 + dexBonus + lukBonus + (state.craftBonusPct || 0);
+}
+
+// 掃描帳號內所有存檔欄位，找出鐵匠角色名字：剛好1位就用他的名字，2位以上顯示「某人」
+function getAccountBlacksmithName() {
+  const names = [];
+  for (let i = 0; i < MAX_SLOTS; i++) {
+    try {
+      const raw = localStorage.getItem(getSlotKey(i));
+      if (!raw) continue;
+      const s = JSON.parse(raw);
+      if (s && s.jobId === 'blacksmith' && s.name) names.push(s.name);
+    } catch (e) { /* 忽略壞檔 */ }
+  }
+  if (names.length === 0) return '鐵匠';
+  if (names.length === 1) return names[0];
+  return '某人';
+}
+
+// 取得道具顯示名稱：鐵匠鍛造武器會自動加上「XX製作的」前綴
+function getItemDisplayName(itemId) {
+  const def = ITEMS[itemId];
+  if (!def) return itemId;
+  if (typeof itemId !== 'string' || !itemId.startsWith('crafted_')) return def.name;
+  return getAccountBlacksmithName() + '製作的' + def.name;
+}
+
+function craftWeapon(subtype, element) {
+  const category = CRAFT_SUBTYPE_CATEGORY[subtype];
+  if (!category || !state.unlockedCraftCategories.includes(category)) {
+    logMsg('⚠️ 尚未學會這個鍛造技能！');
+    return false;
+  }
+  const stoneId = CRAFT_ELEMENT_STONE[element];
+  const mat = CRAFT_SUBTYPE_MATERIALS[subtype];
+  if (!stoneId || !mat) return false;
+
+  if (getItemQty('iron') < mat.iron || getItemQty('steel') < mat.steel || getItemQty(stoneId) < 1) {
+    logMsg('⚠️ 材料不足，無法鍛造！');
+    return false;
+  }
+  if (state.gold < CRAFT_ZENY_COST) {
+    logMsg('⚠️ 鋅幣不足，無法鍛造！');
+    return false;
+  }
+
+  // 消耗材料（不論成功與否）
+  removeItem('iron', mat.iron);
+  removeItem('steel', mat.steel);
+  removeItem(stoneId, 1);
+  state.gold -= CRAFT_ZENY_COST;
+
+  const chance = getCraftingSuccessChance();
+  const success = Math.random() * 100 < chance;
+  if (success) {
+    const itemId = 'crafted_' + subtype + '_' + element;
+    addItem(itemId, 1);
+    logMsg(`🔨 鍛造成功！獲得了 ${getItemDisplayName(itemId)}！`);
+  } else {
+    logMsg('🔨 鍛造失敗了……材料已經消耗。');
+  }
+  saveGame();
+  return success;
+}
+
+/* ---------------- 原料鍛造（鐵/鋼/屬性原石）---------------- */
+const MATERIAL_CRAFT_ZENY_COST = 500;
+const MATERIAL_CRAFT_SUCCESS_CHANCE = 50;
+const MATERIAL_CRAFT_RECIPES = {
+  iron:        { unlockCategory: 'iron',  consume: [{ item: 'iron_ore', qty: 1 }],                              result: 'iron' },
+  steel:       { unlockCategory: 'steel', consume: [{ item: 'iron', qty: 5 }, { item: 'coal', qty: 1 }],        result: 'steel' },
+  stone_fire:  { unlockCategory: 'stone', consume: [{ item: 'boody_red', qty: 10 }],                            result: 'gemstone_fire' },
+  stone_water: { unlockCategory: 'stone', consume: [{ item: 'crystal_blue', qty: 10 }],                         result: 'gemstone_water' },
+  stone_wind:  { unlockCategory: 'stone', consume: [{ item: 'wind_of_verdure', qty: 10 }],                      result: 'gemstone_wind' },
+  stone_earth: { unlockCategory: 'stone', consume: [{ item: 'yellow_live', qty: 10 }],                          result: 'gemstone_earth' },
+};
+
+function craftMaterial(kind) {
+  const recipe = MATERIAL_CRAFT_RECIPES[kind];
+  if (!recipe) return false;
+  if (!state.unlockedMaterialCrafts.includes(recipe.unlockCategory)) {
+    logMsg('⚠️ 尚未學會這個鍛造技能！');
+    return false;
+  }
+  for (const c of recipe.consume) {
+    if (getItemQty(c.item) < c.qty) {
+      logMsg('⚠️ 材料不足，無法鍛造！');
+      return false;
+    }
+  }
+  if (state.gold < MATERIAL_CRAFT_ZENY_COST) {
+    logMsg('⚠️ 鋅幣不足，無法鍛造！');
+    return false;
+  }
+
+  // 消耗材料（不論成功與否）
+  recipe.consume.forEach(c => removeItem(c.item, c.qty));
+  state.gold -= MATERIAL_CRAFT_ZENY_COST;
+
+  const success = Math.random() * 100 < MATERIAL_CRAFT_SUCCESS_CHANCE;
+  if (success) {
+    addItem(recipe.result, 1);
+    logMsg(`🔨 鍛造成功！獲得了 ${ITEMS[recipe.result].name}！`);
+  } else {
+    logMsg('🔨 鍛造失敗了……材料已經消耗。');
+  }
+  saveGame();
+  return success;
 }
 
 /* ---------------- 地圖切換 ---------------- */

@@ -1234,7 +1234,7 @@ function renderInventoryTab() {
       const iconHtml = item
         ? `<img class="slot-icon" src="${itemImgSrc(itemId)}" onerror="this.onerror=null;this.src='${placeholderImgSrc('armor')}'">`
         : `<div class="slot-empty">${slot.icon}</div>`;
-      const nameHtml = hasItem ? `<div class="slot-name">${item.name}</div>` : '';
+      const nameHtml = hasItem ? `<div class="slot-name">${getItemDisplayName(itemId)}</div>` : '';
       const refHtml = refLevel > 0 ? `<div class="slot-refine">+${refLevel}</div>` : '';
 
       // 雙手武器讓武器欄看起來更寬
@@ -1259,19 +1259,52 @@ function renderInventoryTab() {
     const items = state.inventory.map(row => {
       const def = ITEMS[row.item];
       if (!def) return '';
+      const displayName = getItemDisplayName(row.item);
       const canUse = def.type === 'consumable' || def.type === 'weapon' || def.type === 'armor';
       const elemTag = def.element ? ` ${ELEMENT_ICONS[def.element]}${ELEMENT_NAMES[def.element]}` : '';
       return `<div class="inv-row">
-        <div class="inv-icon"><img src="${itemImgSrc(row.item)}" alt="${def.name}" onerror="this.onerror=null;this.src='${placeholderImgSrc(itemPlaceholderKind(def))}'"></div>
-        <div class="inv-info"><div class="inv-name">${def.name} x${row.qty}${elemTag}</div><div class="inv-desc">${def.desc}</div></div>
+        <div class="inv-icon"><img src="${itemImgSrc(row.item)}" alt="${displayName}" onerror="this.onerror=null;this.src='${placeholderImgSrc(itemPlaceholderKind(def))}'"></div>
+        <div class="inv-info"><div class="inv-name">${displayName} x${row.qty}${elemTag}</div><div class="inv-desc">${def.desc}</div></div>
         <div class="inv-actions">
           ${canUse ? `<button class="btn-small" onclick="useItem('${row.item}');renderInventoryTab();">${def.type === 'consumable' ? '使用' : '裝備'}</button>` : ''}
           <button class="btn-small ghost" onclick="sellItem('${row.item}',1);renderInventoryTab();renderTopBar();">賣出(${def.sell})</button>
+          <button class="btn-small ghost" onclick="depositToWarehouse('${row.item}',1);renderInventoryTab();renderTopBar();">存倉庫</button>
         </div>
       </div>`;
     }).filter(html => html).join('');
 
-    el.innerHTML = `<h3 class="panel-title">裝備欄</h3>${equipHtml}<h3 class="panel-title">背包（${state.inventory.length}）</h3><div class="inv-list">${items || '<div class="empty-hint">背包空空如也，去打怪蒐集素材吧！</div>'}</div><div id="ro-equip-tooltip" class="ro-equip-tooltip"></div>`;
+    // 露天商店（僅商人職業且已學會露天商店技能時顯示）
+    let vendingHtml = '';
+    if (state.jobId === 'merchant' && state.learnedSkills && state.learnedSkills['vending']) {
+      const cfg = state.vendingConfig || { items: [] };
+      const itemNames = cfg.items.length
+        ? cfg.items.map(id => ITEMS[id] ? ITEMS[id].name : id).join('、')
+        : '尚未選擇';
+      const readyIn = Math.max(0, Math.ceil(((state.vendingReadyAt || 0) - Date.now()) / 1000));
+      vendingHtml = `<div class="vending-panel">
+        <h3 class="panel-title">🏪 露天商店</h3>
+        <div class="vending-info">已選擇：${itemNames}${readyIn > 0 ? `（下次販售倒數 ${readyIn}s）` : ''}</div>
+        <button class="btn-small" onclick="showVendingSelect()">設定販售道具</button>
+      </div>`;
+    }
+
+    // 鐵匠鍛造（僅鐵匠職業且已學會至少一種鍛造技能時顯示）
+    let craftingHtml = '';
+    if (state.jobId === 'blacksmith' && state.unlockedCraftCategories && state.unlockedCraftCategories.length > 0) {
+      craftingHtml = `<div class="crafting-panel">
+        <h3 class="panel-title">🔨 鍛造</h3>
+        <div class="empty-hint">已解鎖：${state.unlockedCraftCategories.map(c => CRAFT_CATEGORY_NAMES[c] || c).join('、')}　鍛造成功率：${getCraftingSuccessChance().toFixed(1)}%</div>
+        <button class="btn-small" onclick="showCraftingPanel()">開始鍛造</button>
+      </div>`;
+    }
+
+    // 跨角色倉庫（任何職業都可使用）
+    const warehouseHtml = `<div class="warehouse-panel">
+      <h3 class="panel-title">📦 倉庫</h3>
+      <button class="btn-small" onclick="showWarehousePanel()">開啟倉庫</button>
+    </div>`;
+
+    el.innerHTML = `<h3 class="panel-title">裝備欄</h3>${equipHtml}${vendingHtml}${craftingHtml}${warehouseHtml}<h3 class="panel-title">背包（${state.inventory.length}）</h3><div class="inv-list">${items || '<div class="empty-hint">背包空空如也，去打怪蒐集素材吧！</div>'}</div><div id="ro-equip-tooltip" class="ro-equip-tooltip"></div>`;
   } catch (e) {
     el.innerHTML = `<div class="empty-hint">背包載入錯誤：${e.message}</div>`;
     console.error('renderInventoryTab error:', e);
@@ -1293,7 +1326,7 @@ function showEquipTooltip(event, slotKey) {
   const cardId = getEquippedCard(slotKey);
   const card = cardId ? CARDS[cardId] : null;
 
-  let html = `<div class="tt-name">${item.name}${refLevel > 0 ? ` <span class="tt-refine">+${refLevel}</span>` : ''}</div>`;
+  let html = `<div class="tt-name">${getItemDisplayName(itemId)}${refLevel > 0 ? ` <span class="tt-refine">+${refLevel}</span>` : ''}</div>`;
   html += `<div class="tt-type">${item.type === 'weapon' ? '武器' : '防具'}${item.element ? ' · ' + ELEMENT_ICONS[item.element] + ELEMENT_NAMES[item.element] : ''}</div>`;
   if (item.desc) html += `<div class="tt-desc">${item.desc}</div>`;
   // 顯示數值
@@ -1687,6 +1720,194 @@ function doRefineSlot(slotKey) {
     renderInventoryTab();
     renderTopBar();
   }
+}
+
+/* ---------------- 露天商店 UI ---------------- */
+let _vendingTempSelection = [];
+function showVendingSelect() {
+  if (!state.vendingConfig) state.vendingConfig = { items: [] };
+  _vendingTempSelection = [...state.vendingConfig.items];
+  renderVendingSelectUI();
+}
+function renderVendingSelectUI() {
+  const el = document.getElementById('tab-inventory');
+  if (!el) return;
+  const sk = findSkillById('vending');
+  const sellMult = sk.sellMultiplier || 10;
+  const sellableItems = state.inventory.filter(row => {
+    const def = ITEMS[row.item];
+    return def && def.sell > 0;
+  });
+  let html = `<h3 class="panel-title">🏪 選擇露天商店販售道具（最多3樣）</h3>`;
+  html += `<button class="btn-small" onclick="renderInventoryTab()">← 返回</button>`;
+  html += `<div class="empty-hint">已選 ${_vendingTempSelection.length}/3，每${sk.internalCooldown || 60}秒自動以${sellMult}倍價格各賣出1個</div>`;
+  if (sellableItems.length === 0) {
+    html += `<div class="empty-hint">背包裡沒有可販售的道具。</div>`;
+  } else {
+    html += '<div class="card-list">';
+    sellableItems.forEach(row => {
+      const def = ITEMS[row.item];
+      const selected = _vendingTempSelection.includes(row.item);
+      html += `<div class="card-row${selected ? ' enabled' : ''}">
+        <div class="card-info">
+          <span class="card-icon">${def.icon || '📦'}</span>
+          <div class="card-details">
+            <span class="card-name">${def.name} x${row.qty}</span>
+            <span class="card-desc">原價${def.sell} → ${sellMult}倍價${def.sell * sellMult}</span>
+          </div>
+        </div>
+        <button class="btn-small" onclick="toggleVendingItem('${row.item}')">${selected ? '取消' : '選擇'}</button>
+      </div>`;
+    });
+    html += '</div>';
+  }
+  html += `<button class="btn btn-primary" ${_vendingTempSelection.length === 0 ? 'disabled' : ''} onclick="confirmVendingSelect()">確認設定</button>`;
+  el.innerHTML = html;
+}
+function toggleVendingItem(itemId) {
+  const idx = _vendingTempSelection.indexOf(itemId);
+  if (idx >= 0) {
+    _vendingTempSelection.splice(idx, 1);
+  } else {
+    if (_vendingTempSelection.length >= 3) {
+      showToast('最多只能選3樣道具');
+      return;
+    }
+    _vendingTempSelection.push(itemId);
+  }
+  renderVendingSelectUI();
+}
+function confirmVendingSelect() {
+  setVendingItems(_vendingTempSelection);
+  showToast('露天商店設定完成！');
+  renderInventoryTab();
+}
+
+/* ---------------- 鐵匠鍛造 UI ---------------- */
+function showCraftingPanel() {
+  const el = document.getElementById('tab-inventory');
+  if (!el) return;
+  const chance = getCraftingSuccessChance();
+  const ironQty = getItemQty('iron');
+  const steelQty = getItemQty('steel');
+
+  let html = `<h3 class="panel-title">🔨 鍛造</h3>`;
+  html += `<button class="btn-small" onclick="renderInventoryTab()">← 返回</button>`;
+  html += `<div class="empty-hint">成功率 ${chance.toFixed(1)}%（失敗材料照樣消耗）。目前持有：鐵x${ironQty}、鋼鐵x${steelQty}、鋅幣${state.gold}</div>`;
+
+  if (state.unlockedMaterialCrafts && state.unlockedMaterialCrafts.length > 0) {
+    html += `<h3 class="panel-title">原料鍛造</h3>`;
+    html += `<div class="empty-hint">成功率固定 ${MATERIAL_CRAFT_SUCCESS_CHANCE}%（失敗材料照樣消耗），每次花費鋅幣${MATERIAL_CRAFT_ZENY_COST}。</div>`;
+    html += '<div class="card-list">';
+    Object.keys(MATERIAL_CRAFT_RECIPES).forEach(kind => {
+      const recipe = MATERIAL_CRAFT_RECIPES[kind];
+      if (!state.unlockedMaterialCrafts.includes(recipe.unlockCategory)) return;
+      const resultDef = ITEMS[recipe.result];
+      const matText = recipe.consume.map(c => `${ITEMS[c.item] ? ITEMS[c.item].name : c.item}x${c.qty}（持有${getItemQty(c.item)}）`).join('、');
+      const canCraft = recipe.consume.every(c => getItemQty(c.item) >= c.qty) && state.gold >= MATERIAL_CRAFT_ZENY_COST;
+      html += `<div class="card-row${canCraft ? ' enabled' : ''}">
+        <div class="card-info">
+          <span class="card-icon">${resultDef ? resultDef.icon : '📦'}</span>
+          <div class="card-details">
+            <span class="card-name">${resultDef ? resultDef.name : recipe.result}</span>
+            <span class="card-desc">需要：${matText}、鋅幣${MATERIAL_CRAFT_ZENY_COST}</span>
+          </div>
+        </div>
+        <button class="btn-small" ${canCraft ? '' : 'disabled'} onclick="doCraftMaterial('${kind}')">鍛造</button>
+      </div>`;
+    });
+    html += '</div>';
+  }
+
+  html += `<h3 class="panel-title">武器鍛造</h3>`;
+  html += '<div class="card-list">';
+
+  state.unlockedCraftCategories.forEach(cat => {
+    const subtypes = Object.keys(CRAFT_SUBTYPE_CATEGORY).filter(st => CRAFT_SUBTYPE_CATEGORY[st] === cat);
+    subtypes.forEach(subtype => {
+      const mat = CRAFT_SUBTYPE_MATERIALS[subtype];
+      const subtypeName = CRAFT_SUBTYPE_NAMES[subtype] || subtype;
+      Object.keys(CRAFT_ELEMENT_STONE).forEach(element => {
+        const stoneId = CRAFT_ELEMENT_STONE[element];
+        const stoneQty = getItemQty(stoneId);
+        const elementName = CRAFT_ELEMENT_NAMES[element];
+        const stoneDef = ITEMS[stoneId];
+        const canCraft = ironQty >= mat.iron && steelQty >= mat.steel && stoneQty >= 1 && state.gold >= CRAFT_ZENY_COST;
+        html += `<div class="card-row${canCraft ? ' enabled' : ''}">
+          <div class="card-info">
+            <span class="card-icon">⚔️</span>
+            <div class="card-details">
+              <span class="card-name">${subtypeName}（${elementName}屬性）</span>
+              <span class="card-desc">需要：鐵x${mat.iron}、鋼鐵x${mat.steel}、${stoneDef ? stoneDef.name : stoneId}x1（持有${stoneQty}）、鋅幣${CRAFT_ZENY_COST}</span>
+            </div>
+          </div>
+          <button class="btn-small" ${canCraft ? '' : 'disabled'} onclick="doCraftWeapon('${subtype}','${element}')">鍛造</button>
+        </div>`;
+      });
+    });
+  });
+  html += '</div>';
+  el.innerHTML = html;
+}
+function doCraftWeapon(subtype, element) {
+  craftWeapon(subtype, element);
+  showCraftingPanel();
+  renderTopBar();
+}
+function doCraftMaterial(kind) {
+  craftMaterial(kind);
+  showCraftingPanel();
+  renderTopBar();
+}
+
+/* ---------------- 跨角色倉庫 UI ---------------- */
+function showWarehousePanel() {
+  const el = document.getElementById('tab-inventory');
+  if (!el) return;
+  const wh = loadWarehouse();
+
+  let html = `<h3 class="panel-title">📦 倉庫（跨角色共用）</h3>`;
+  html += `<button class="btn-small" onclick="renderInventoryTab()">← 返回</button>`;
+
+  html += `<h3 class="panel-title">背包 → 存入倉庫</h3>`;
+  const invRows = state.inventory.filter(row => ITEMS[row.item]);
+  if (invRows.length === 0) {
+    html += `<div class="empty-hint">背包是空的。</div>`;
+  } else {
+    html += '<div class="card-list">';
+    invRows.forEach(row => {
+      const name = getItemDisplayName(row.item);
+      html += `<div class="card-row">
+        <div class="card-info">
+          <span class="card-icon">${ITEMS[row.item].icon || '📦'}</span>
+          <div class="card-details"><span class="card-name">${name} x${row.qty}</span></div>
+        </div>
+        <button class="btn-small" onclick="depositToWarehouse('${row.item}',1);showWarehousePanel();">存入</button>
+      </div>`;
+    });
+    html += '</div>';
+  }
+
+  html += `<h3 class="panel-title">倉庫 → 領出背包</h3>`;
+  if (!wh.items || wh.items.length === 0) {
+    html += `<div class="empty-hint">倉庫是空的。</div>`;
+  } else {
+    html += '<div class="card-list">';
+    wh.items.forEach(row => {
+      const def = ITEMS[row.item];
+      if (!def) return;
+      const name = getItemDisplayName(row.item);
+      html += `<div class="card-row">
+        <div class="card-info">
+          <span class="card-icon">${def.icon || '📦'}</span>
+          <div class="card-details"><span class="card-name">${name} x${row.qty}</span></div>
+        </div>
+        <button class="btn-small" onclick="withdrawFromWarehouse('${row.item}',1);showWarehousePanel();renderTopBar();">領出</button>
+      </div>`;
+    });
+    html += '</div>';
+  }
+  el.innerHTML = html;
 }
 
 /* ---------------- 卡片系統 UI ---------------- */

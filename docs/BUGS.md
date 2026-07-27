@@ -80,3 +80,4 @@
 - [ ] 屬性克制在怪物頭上加大飄字
 - [ ] `items_generated.js` / `cards_generated.js` 未被載入（已合併進 data.js，可清理）
 - [ ] `pendingFloatTargetId` 跨檔案引用（engine.js 使用 ui.js 定義的變數）
+- [ ] 遊戲目前沒有任何補SP的消耗品道具（`ITEMS` 裡沒有 `restoreSp` 欄位）。手推車使用（`pushcart`）被動目前只會給HP藥水，等新增SP藥水道具後要讓它也能隨機給SP藥水
