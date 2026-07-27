@@ -859,6 +859,14 @@ function renderAutoBattleTab() {
     const enabled = state.autoSupportSkills && state.autoSupportSkills[sk.id];
     const spCost = Array.isArray(sk.spCost) ? sk.spCost[sk.lv - 1] : sk.spCost;
     const cd = Array.isArray(sk.cooldown) ? sk.cooldown[sk.lv - 1] : sk.cooldown;
+    let healCfgHtml = '';
+    if (sk.type === 'heal') {
+      const healCfg = (state.autoHealConfig && state.autoHealConfig[sk.id]) || { hpThreshold: 70, spThreshold: 0 };
+      healCfgHtml = `<span class="support-skill-heal-cfg">
+        HP% ≤ <input type="number" min="1" max="99" value="${healCfg.hpThreshold}" style="width:3.5em" onchange="setAutoHealHpThreshold('${sk.id}', this.value)">才施放
+        ・ SP% ≥ <input type="number" min="0" max="100" value="${healCfg.spThreshold}" style="width:3.5em" onchange="setAutoHealSpThreshold('${sk.id}', this.value)">才施放
+      </span>`;
+    }
     return `<div class="support-skill-row ${enabled ? 'enabled' : ''}">
       <label class="support-skill-toggle">
         <input type="checkbox" ${enabled ? 'checked' : ''} onchange="toggleAutoSupportSkill('${sk.id}', this.checked);">
@@ -866,6 +874,7 @@ function renderAutoBattleTab() {
           <span class="support-skill-name">${sk.name} Lv${sk.lv}</span>
           <span class="support-skill-desc">${sk.desc}</span>
           <span class="support-skill-cost">SP ${spCost} ・ 冷卻 ${cd}s</span>
+          ${healCfgHtml}
         </span>
       </label>
     </div>`;

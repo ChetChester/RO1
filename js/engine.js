@@ -230,18 +230,33 @@ function recomputeDerived(fullHeal) {
   let buffStrBonus = 0;
   state.buffs.forEach(b => { if (b.type === 'flatstat' && b.strBonus) buffStrBonus += b.strBonus; });
   passiveStrBonus += buffStrBonus;
+  // 天使之賜福buff：STR/INT/DEX 同時固定加成
+  state.buffs.forEach(b => {
+    if (b.type === 'blessing') {
+      passiveStrBonus += b.strBonus || 0;
+      passiveIntBonus += b.intBonus || 0;
+      passiveDexBonus += b.dexBonus || 0;
+    }
+  });
   state._passiveDexBonus = passiveDexBonus;
+  // 加速術buff：AGI 固定加成
+  let buffAgiBonus = 0;
+  state.buffs.forEach(b => { if (b.type === 'agiflat') buffAgiBonus += b.flatBonus || 0; });
 
   // 心神凝聚buff：DEX/AGI 百分比加成（影響下面所有衍生自DEX/AGI的數值，含攻速）
   let buffStatPct = 0;
   state.buffs.forEach(b => { if (b.type === 'statpct') buffStatPct += b.mult; });
   state._buffStatPct = buffStatPct;
 
+  // 幸運之頌歌buff：LUK 固定加成
+  let buffLukBonus = 0;
+  state.buffs.forEach(b => { if (b.type === 'lukflat') buffLukBonus += b.flatBonus || 0; });
+
   // ATK：StatusATK = STR + (STR/10)² + DEX/5 + LUK/5（含職業加成與卡片加成）
   const cStr = s.str + jobBonus.str + getCardBonus('str') + passiveStrBonus;
   const cDex = Math.round((s.dex + jobBonus.dex + getCardBonus('dex') + passiveDexBonus) * (1 + buffStatPct));
-  const cLuk = s.luk + jobBonus.luk + getCardBonus('luk');
-  const cAgi = Math.round((s.agi + jobBonus.agi + getCardBonus('agi')) * (1 + buffStatPct));
+  const cLuk = s.luk + jobBonus.luk + getCardBonus('luk') + buffLukBonus;
+  const cAgi = Math.round((s.agi + jobBonus.agi + getCardBonus('agi') + buffAgiBonus) * (1 + buffStatPct));
   const cVit = s.vit + jobBonus.vit + getCardBonus('vit');
   const cInt = s.int + jobBonus.int + getCardBonus('int') + passiveIntBonus;
   const statusAtk = cStr + Math.floor((cStr / 10) ** 2) + Math.floor(cDex / 5) + Math.floor(cLuk / 5);
@@ -309,6 +324,25 @@ function recomputeDerived(fullHeal) {
   state.hammerfallStunSec = 1;
   state.zenyCostReductionPct = {};
   state.hiltBindingDurationBonus = 0;
+  state.hasOnHitStunProc = false;
+  state.onHitStunChance = 0;
+  state.onHitStunSec = 0.5;
+  state.onHitStunCooldownSec = 10;
+  state.zenSpFlatBonus = 0;
+  state.zenSpPctBonus = 0;
+  state.spItemEffectBonusPct = 0;
+  state.hasAspdFlatPassive = false;
+  state.hasAngelusProc = false;
+  state.angelusCooldownSec = 10;
+  state.hasAutoRevive1 = false;
+  state.autoRevive1HpPct = 0;
+  state.autoRevive1CooldownSec = 0;
+  state.autoRevive1SpCost = 0;
+  state.hasAutoRevive2 = false;
+  state.autoRevive2HpPct = 0;
+  state.autoRevive2CooldownSec = 0;
+  if (!state.activeFieldEffects) state.activeFieldEffects = [];
+  if (!state.shields) state.shields = [];
   // 雙持右手/左手傷害修正：未修練時的預設值（低於Lv1）
   state.rightHandPct = 50;
   state.leftHandPct = 30;
@@ -475,6 +509,42 @@ function recomputeDerived(fullHeal) {
         case 'zenyCostReduction': {
           // 詭計的商術：目前僅套用於金錢攻擊(mammonite)，手推車終結技留待未來新職業加入後再接上
           state.zenyCostReductionPct['mammonite'] = val;
+          break;
+        }
+        case 'onHitStunProc': {
+          state.hasOnHitStunProc = true;
+          state.onHitStunChance = Array.isArray(sk.procChance) ? sk.procChance[lv - 1] : sk.procChance;
+          state.onHitStunSec = sk.stunSec || 0.5;
+          state.onHitStunCooldownSec = Array.isArray(sk.internalCooldown) ? sk.internalCooldown[lv - 1] : (sk.internalCooldown || 10);
+          break;
+        }
+        case 'zenRecovery': {
+          state.zenSpFlatBonus = val;
+          if (sk.spPctBonus) state.zenSpPctBonus = Array.isArray(sk.spPctBonus) ? sk.spPctBonus[lv - 1] : sk.spPctBonus;
+          if (sk.itemEffectBonus) state.spItemEffectBonusPct = Array.isArray(sk.itemEffectBonus) ? sk.itemEffectBonus[lv - 1] : sk.itemEffectBonus;
+          break;
+        }
+        case 'aspdFlat': {
+          state.hasAspdFlatPassive = true;
+          state.passiveAspdFlat += val;
+          break;
+        }
+        case 'angelusProc': {
+          state.hasAngelusProc = true;
+          state.angelusCooldownSec = sk.angelusCooldownSec || 10;
+          break;
+        }
+        case 'onDeathRevive1': {
+          state.hasAutoRevive1 = true;
+          state.autoRevive1HpPct = Array.isArray(sk.revivePct) ? sk.revivePct[lv - 1] : sk.revivePct;
+          state.autoRevive1CooldownSec = Array.isArray(sk.internalCooldown) ? sk.internalCooldown[lv - 1] : sk.internalCooldown;
+          state.autoRevive1SpCost = Array.isArray(sk.reviveSpCost) ? sk.reviveSpCost[lv - 1] : (sk.reviveSpCost || 0);
+          break;
+        }
+        case 'onDeathRevive2': {
+          state.hasAutoRevive2 = true;
+          state.autoRevive2HpPct = Array.isArray(sk.revivePct) ? sk.revivePct[lv - 1] : sk.revivePct;
+          state.autoRevive2CooldownSec = Array.isArray(sk.internalCooldown) ? sk.internalCooldown[lv - 1] : sk.internalCooldown;
           break;
         }
       }
@@ -694,6 +764,35 @@ function gameTick() {
         }
       }
     }
+    // 場域持續效果：光耀之堂(自身補血)、十字驅魔攻擊(範圍聖屬性傷害)等每隔一段時間觸發一次
+    if (state.activeFieldEffects && state.activeFieldEffects.length > 0) {
+      const now = Date.now();
+      state.activeFieldEffects = state.activeFieldEffects.filter(f => now < f.endsAt);
+      state.activeFieldEffects.forEach(f => {
+        if (now < f.nextTickAt) return;
+        f.nextTickAt = now + f.tickIntervalSec * 1000;
+        if (f.kind === 'selfheal') {
+          const before = state.hp;
+          state.hp = Math.min(state.maxHp, state.hp + f.amount);
+          if (state.hp > before) logMsg(`💚 「${f.name}」持續恢復了 ${state.hp - before} 點HP。`);
+        } else if (f.kind === 'aoe_holydmg') {
+          if (state.monsters && state.monsters.length > 0) {
+            state.monsters.forEach(mon => {
+              const monDef = MONSTERS[mon.defId];
+              const elemMult = getElementMultiplier('holy', monDef.element || 'none');
+              const dmg = mitigateDamage(state.matk * f.mult * elemMult, monDef.def);
+              mon.hp -= dmg;
+              combatLogBuf.push(`  → 「${f.name}」對 ${monDef.name} 造成 ${dmg} 點傷害！`);
+            });
+            for (let i = state.monsters.length - 1; i >= 0; i--) {
+              const mon = state.monsters[i];
+              if (mon.hp <= 0) killMonster(MONSTERS[mon.defId], mon);
+            }
+            if (typeof renderLog === 'function') renderLog();
+          }
+        }
+      });
+    }
   }
 
   // 每10秒：移動時恢復HP（戰鬥中也有效）
@@ -751,7 +850,12 @@ function gameTick() {
 function passiveRegen() {
   const regenMult = state.hpRegenMult || 1;
   const hpRegen = Math.max(1, Math.ceil((state.maxHp * 0.015 + state.stats.vit * 0.15) * regenMult));
-  const spRegen = Math.max(1, Math.ceil(state.maxSp * 0.02 + state.stats.int * 0.15) * (state.spRegenMult || 1));
+  // 禪心：SP恢復量固定+3~30，並額外+0.2%~2%（以最大SP計）
+  const zenFlat = state.zenSpFlatBonus || 0;
+  const zenPct = state.maxSp * ((state.zenSpPctBonus || 0) / 100);
+  // 聖母之頌歌buff：SP恢復速度倍率
+  const sprateMult = buffMult('sprate').mult;
+  const spRegen = Math.max(1, Math.ceil((state.maxSp * 0.02 + state.stats.int * 0.15 + zenFlat + zenPct) * (state.spRegenMult || 1) * sprateMult));
   if (state.hp < state.maxHp) state.hp = Math.min(state.maxHp, state.hp + hpRegen);
   if (state.sp < state.maxSp) state.sp = Math.min(state.maxSp, state.sp + spRegen);
 }
@@ -810,6 +914,20 @@ function setAutoPotionTier(tier) { state.autoPotion.primary = tier; saveGame(); 
 function setAutoPotionFallback(tier) { state.autoPotion.fallback = tier; saveGame(); }
 function setAutoPotionEnabled(v) { state.autoPotion.enabled = !!v; saveGame(); }
 function setAutoPotionThreshold(v) { state.autoPotion.hpThreshold = Math.max(10, Math.min(90, parseInt(v) || 50)); saveGame(); }
+
+// 技能補血：HP%觸發門檻 / SP%下限保護（依技能各自設定）
+function setAutoHealHpThreshold(skillId, v) {
+  if (!state.autoHealConfig) state.autoHealConfig = {};
+  if (!state.autoHealConfig[skillId]) state.autoHealConfig[skillId] = { hpThreshold: 70, spThreshold: 0 };
+  state.autoHealConfig[skillId].hpThreshold = Math.max(1, Math.min(99, parseInt(v) || 70));
+  saveGame();
+}
+function setAutoHealSpThreshold(skillId, v) {
+  if (!state.autoHealConfig) state.autoHealConfig = {};
+  if (!state.autoHealConfig[skillId]) state.autoHealConfig[skillId] = { hpThreshold: 70, spThreshold: 0 };
+  state.autoHealConfig[skillId].spThreshold = Math.max(0, Math.min(100, parseInt(v) || 0));
+  saveGame();
+}
 function setAutoBuyPotion(v) { state.autoBuyPotion = !!v; saveGame(); }
 
 function tickCooldowns() {
@@ -902,6 +1020,11 @@ function buffMult(type) {
   return { mult, flatBonus };
 }
 
+// HIT類buff（例如速度激發、光獵）先前只推進state.buffs卻沒有任何地方讀取，此處統一補上消耗端
+function effectiveHitWithBuff() {
+  return state.hit + buffMult('hit').flatBonus;
+}
+
 /* ---------------- 怪物 ---------------- */
 function currentMap() { return MAPS.find(m => m.id === state.mapId); }
 
@@ -977,7 +1100,7 @@ function playerAttack() {
   const effectiveCritRate = Math.min(100, state.critRate * critBuff.mult + critBuff.flatBonus);
   const isCrit = Math.random() * 100 < effectiveCritRate;
   if (!isCrit) {
-    const hitPct = hitChancePct(state.hit, monsterFleeOf(monDef));
+    const hitPct = hitChancePct(effectiveHitWithBuff(), monsterFleeOf(monDef));
     if (Math.random() * 100 > hitPct) {
       logMsg(`你的攻擊被 ${monDef.name} 閃避了！`);
       // 攻擊 MISS 飄字（玩家頭上）
@@ -997,9 +1120,18 @@ function playerAttack() {
   const hasMaxRoll = state.buffs.some(b => b.type === 'maxroll');
   raw *= hasMaxRoll ? 1.15 : (0.85 + Math.random() * 0.3);
 
+  // 天使之怒被動：冷卻好時下一次攻擊必定雙倍傷害
+  if (state.hasAngelusProc && Date.now() >= (state.angelusReadyAt || 0)) {
+    raw *= 2;
+    state.angelusReadyAt = Date.now() + (state.angelusCooldownSec || 10) * 1000;
+    logMsg('😠 天使之怒發動！本次傷害雙倍！');
+  }
+
   // 屬性相剋：武器屬性 vs 怪物屬性
   const weapon = state.equip.weapon ? ITEMS[state.equip.weapon] : null;
-  const atkElement = (weapon && weapon.element) ? weapon.element : 'none';
+  let atkElement = (weapon && weapon.element) ? weapon.element : 'none';
+  // 聖之祈福buff：暫時附加聖屬性
+  if (state.buffs.some(b => b.type === 'holyweapon')) atkElement = 'holy';
   const elemMult = getElementMultiplier(atkElement, monDef.element || 'none');
   if (elemMult !== 1) {
     const pctStr = Math.round(elemMult * 100);
@@ -1217,13 +1349,42 @@ function monsterAttackSingle(mon) {
     playerDef = Math.round(state.def * 0.45);
   }
 
-  const dmg = mitigateDamage(raw, playerDef);
+  let dmg = mitigateDamage(raw, playerDef);
+  // 護盾（霸邪之陣/暗之障壁）：吸收近距離物理傷害，直到耐久或次數耗盡
+  if (state.shields && state.shields.length > 0) {
+    const now = Date.now();
+    state.shields = state.shields.filter(sh => now < sh.expiresAt && sh.remainingCharges > 0 && sh.remainingHp > 0);
+    if (state.shields.length > 0) {
+      const sh = state.shields[0];
+      const absorbed = Math.min(dmg, sh.remainingHp);
+      sh.remainingHp -= absorbed;
+      sh.remainingCharges -= 1;
+      dmg -= absorbed;
+      logMsg(`🛡️ 護盾抵擋了 ${absorbed} 點傷害！`);
+      if (sh.remainingCharges <= 0 || sh.remainingHp <= 0) {
+        state.shields.shift();
+        logMsg('🛡️ 護盾已破裂！');
+      }
+    }
+  }
   state.hp -= dmg;
   const berserkMsg = (state.hasBerserk && state.hp < state.maxHp * 0.25) ? '（狂暴中：ATK+32% DEF-55%）' : '';
   logMsg(`${monDef.name} 對你造成 ${dmg} 點傷害。${berserkMsg}`);
   // 怪物傷害飄字（玩家頭上）
   if (typeof showPlayerFloat === 'function') showPlayerFloat('-' + dmg, 'element-bad');
-  if (state.hp <= 0) { state.hp = 0; onPlayerDown(); return; }
+  if (state.hp <= 0) {
+    state.hp = 0;
+    if (tryAutoRevive()) return;
+    onPlayerDown();
+    return;
+  }
+
+  // 緩速術被動：被攻擊時機率反制暈眩攻擊者
+  if (state.hasOnHitStunProc && Date.now() >= (state.onHitStunReadyAt || 0) && Math.random() * 100 < state.onHitStunChance) {
+    state.onHitStunReadyAt = Date.now() + state.onHitStunCooldownSec * 1000;
+    applyStun(mon, state.onHitStunSec, true);
+    logMsg(`💫 緩速術發動！${monDef.name} 暈眩了！`);
+  }
 }
 
 function killMonster(def, monObj) {
@@ -1270,6 +1431,25 @@ function killMonster(def, monObj) {
   }
   // 更新 state.monster 相容性
   state.monster = state.monsters && state.monsters.length > 0 ? state.monsters[0] : null;
+}
+
+// 死亡自動復活：復活術優先，若冷卻中或SP不足才輪到捨身取義
+function tryAutoRevive() {
+  const now = Date.now();
+  if (state.hasAutoRevive1 && now >= (state.autoRevive1ReadyAt || 0) && state.sp >= (state.autoRevive1SpCost || 0)) {
+    state.sp -= (state.autoRevive1SpCost || 0);
+    state.autoRevive1ReadyAt = now + state.autoRevive1CooldownSec * 1000;
+    state.hp = Math.max(1, Math.round(state.maxHp * state.autoRevive1HpPct / 100));
+    logMsg(`✨ 復活術發動！原地復活，恢復了${state.autoRevive1HpPct}% HP！`);
+    return true;
+  }
+  if (state.hasAutoRevive2 && now >= (state.autoRevive2ReadyAt || 0)) {
+    state.autoRevive2ReadyAt = now + state.autoRevive2CooldownSec * 1000;
+    state.hp = Math.max(1, Math.round(state.maxHp * state.autoRevive2HpPct / 100));
+    logMsg(`✨ 捨身取義發動！原地復活，恢復了${state.autoRevive2HpPct}% HP！`);
+    return true;
+  }
+  return false;
 }
 
 function onPlayerDown() {
@@ -1462,12 +1642,23 @@ function castSkill(skillId) {
     }
   }
 
+  // 加速術：消耗固定HP才能施放
+  let hpCost = 0;
+  if (sk.hpCost) {
+    hpCost = Array.isArray(sk.hpCost) ? sk.hpCost[lv - 1] : sk.hpCost;
+    if (state.hp <= hpCost) {
+      logMsg(`⚠️ HP不足，無法施放「${sk.name}」！`);
+      return false;
+    }
+  }
+
   const isHeal = sk.type === 'heal' || sk.type === 'heal_over_time';
-  const isBuff = ['buff_atk', 'buff_def', 'buff_aspd', 'buff_flee', 'buff_gold', 'buff_crit', 'buff_maxroll', 'debuff_def', 'debuff'].includes(sk.type);
-  const needsMonster = ['damage', 'magic', 'dot', 'damage_multihit', 'damage_multi', 'debuff_def', 'debuff', 'special_charge', 'poison_proc'].includes(sk.type);
+  const isBuff = ['buff_atk', 'buff_def', 'buff_aspd', 'buff_flee', 'buff_gold', 'buff_crit', 'buff_maxroll', 'buff_blessing', 'buff_shield', 'buff_sprate', 'buff_lukflat', 'buff_holyweapon', 'debuff_def', 'debuff'].includes(sk.type);
+  const needsMonster = ['damage', 'magic', 'dot', 'damage_multihit', 'damage_multi', 'debuff_def', 'debuff', 'special_charge', 'poison_proc', 'stun_field'].includes(sk.type);
   if (needsMonster && (!state.monsters || state.monsters.length === 0)) return false;
 
   state.sp -= spCost;
+  if (hpCost > 0) state.hp -= hpCost;
   if (zenyCost > 0) state.gold -= zenyCost;
   const cd = Array.isArray(sk.cooldown) ? sk.cooldown[lv - 1] : sk.cooldown;
   state.cooldowns[skillId] = cd * 1000;
@@ -1488,7 +1679,7 @@ function castSkill(skillId) {
       // 命中判定：物理技能才需要，法術類技能無視閃避
       if (sk.type !== 'magic') {
         // 超音速投擲被動：音速投擲命中率修正+90%
-        let effectiveHit = state.hit;
+        let effectiveHit = effectiveHitWithBuff();
         if (sk.id === 'sonicblow' && state.hasSonicblowBoost) effectiveHit += 90;
         const hitPct = hitChancePct(effectiveHit, monsterFleeOf(def));
         if (Math.random() * 100 > hitPct) {
@@ -1509,6 +1700,12 @@ function castSkill(skillId) {
       // 超音速投擲被動：音速投擲傷害+90%
       if (sk.id === 'sonicblow' && state.hasSonicblowBoost) {
         skillMult *= 1.9;
+      }
+      // 轉生術：依基本等級與INT增加傷害（各自封頂99）
+      if (sk.id === 'turnundead') {
+        const lvlBonusPct = (state.baseLevel / 99) * (sk.levelScaleMax || 100);
+        const intBonusPct = (state.stats.int / 99) * (sk.intScaleMax || 50);
+        skillMult *= (1 + lvlBonusPct / 100 + intBonusPct / 100);
       }
       // 低血量加成（例如音速投擲：目標HP低於門檻時傷害加成）
       if (sk.lowHpThreshold && target.hp < target.maxHp * sk.lowHpThreshold) {
@@ -1550,7 +1747,7 @@ function castSkill(skillId) {
         const monDef = MONSTERS[mon.defId];
         // 命中判定：物理範圍技能對每隻怪物個別判定，法術範圍技能無視閃避
         if (sk.type !== 'magic_aoe') {
-          const hitPct = hitChancePct(state.hit, monsterFleeOf(monDef));
+          const hitPct = hitChancePct(effectiveHitWithBuff(), monsterFleeOf(monDef));
           if (Math.random() * 100 > hitPct) {
             combatLogBuf.push(`  → ${monDef.name} 閃避了！`);
             continue;
@@ -1583,7 +1780,82 @@ function castSkill(skillId) {
         }
         if (mon.hp <= 0) killMonster(monDef, mon);
       }
+      // 光獵：額外附加HIT加成buff
+      if (sk.bonusHitBuff) {
+        const hitBonus = Array.isArray(sk.bonusHitBuff) ? sk.bonusHitBuff[lv - 1] : sk.bonusHitBuff;
+        const hitDur = Array.isArray(sk.bonusHitDuration) ? sk.bonusHitDuration[lv - 1] : sk.bonusHitDuration;
+        state.buffs.push({ type: 'hit', mult: 1, flatBonus: hitBonus, msRemaining: hitDur * 1000 });
+      }
       if (typeof renderLog === 'function') renderLog();
+      break;
+    }
+    case 'stun_field': {
+      if (!state.monsters || state.monsters.length === 0) break;
+      const stunSec = sk.stunSec || 1;
+      if (sk.aoeFromLv && lv >= sk.aoeFromLv) {
+        state.monsters.forEach(m => applyStun(m, stunSec, true));
+        logMsg(`💫 「${sk.name}」Lv${lv} 發動，全體敵人暈眩了！`);
+      } else {
+        applyStun(state.monsters[0], stunSec, true);
+        logMsg(`💫 「${sk.name}」Lv${lv} 發動，${MONSTERS[state.monsters[0].defId].name} 暈眩了！`);
+      }
+      break;
+    }
+    case 'buff_blessing': {
+      const dur = Array.isArray(sk.duration) ? sk.duration[lv - 1] : sk.duration;
+      const statBonus = Array.isArray(sk.statBonus) ? sk.statBonus[lv - 1] : sk.statBonus;
+      const hitBonus = Array.isArray(sk.hitBonus) ? sk.hitBonus[lv - 1] : sk.hitBonus;
+      state.buffs.push({ type: 'blessing', strBonus: statBonus, intBonus: statBonus, dexBonus: statBonus, msRemaining: dur * 1000 });
+      state.buffs.push({ type: 'hit', mult: 1, flatBonus: hitBonus, msRemaining: dur * 1000 });
+      logMsg(`✨ 「${sk.name}」Lv${lv} 發動，STR/INT/DEX與HIT上升！`);
+      break;
+    }
+    case 'buff_sprate': {
+      const dur = Array.isArray(sk.duration) ? sk.duration[lv - 1] : sk.duration;
+      state.buffs.push({ type: 'sprate', mult, msRemaining: dur * 1000 });
+      logMsg(`✨ 「${sk.name}」Lv${lv} 發動，SP自然恢復速度上升！`);
+      break;
+    }
+    case 'buff_lukflat': {
+      const dur = Array.isArray(sk.duration) ? sk.duration[lv - 1] : sk.duration;
+      const lukBonus = Array.isArray(sk.lukBonus) ? sk.lukBonus[lv - 1] : sk.lukBonus;
+      state.buffs.push({ type: 'lukflat', mult: 1, flatBonus: lukBonus, msRemaining: dur * 1000 });
+      logMsg(`🍀 「${sk.name}」Lv${lv} 發動，LUK上升！`);
+      break;
+    }
+    case 'buff_holyweapon': {
+      const dur = Array.isArray(sk.duration) ? sk.duration[lv - 1] : sk.duration;
+      state.buffs.push({ type: 'holyweapon', mult: 1, msRemaining: dur * 1000 });
+      logMsg(`✨ 「${sk.name}」Lv${lv} 發動，武器暫時附加聖屬性！`);
+      break;
+    }
+    case 'buff_shield': {
+      const dur = Array.isArray(sk.duration) ? sk.duration[lv - 1] : sk.duration;
+      const capacityPct = Array.isArray(sk.shieldCapacityPct) ? sk.shieldCapacityPct[lv - 1] : sk.shieldCapacityPct;
+      const capacityFlat = Array.isArray(sk.shieldCapacityFlat) ? sk.shieldCapacityFlat[lv - 1] : sk.shieldCapacityFlat;
+      const capacity = capacityFlat != null ? capacityFlat : Math.round(state.maxHp * ((capacityPct || 0) / 100));
+      const charges = Array.isArray(sk.shieldCharges) ? sk.shieldCharges[lv - 1] : sk.shieldCharges;
+      if (!state.shields) state.shields = [];
+      state.shields.push({ id: sk.id, remainingHp: capacity, remainingCharges: charges, expiresAt: Date.now() + dur * 1000 });
+      logMsg(`🛡️ 「${sk.name}」Lv${lv} 發動，護盾展開！（耐久${capacity}，可擋${charges}次）`);
+      break;
+    }
+    case 'field_heal': {
+      const dur = Array.isArray(sk.duration) ? sk.duration[lv - 1] : sk.duration;
+      const healAmt = Array.isArray(sk.healPerTick) ? sk.healPerTick[lv - 1] : sk.healPerTick;
+      const tickSec = sk.fieldTickIntervalSec || 1;
+      if (!state.activeFieldEffects) state.activeFieldEffects = [];
+      state.activeFieldEffects.push({ kind: 'selfheal', name: sk.name, amount: healAmt, tickIntervalSec: tickSec, nextTickAt: Date.now(), endsAt: Date.now() + dur * 1000 });
+      logMsg(`✨ 「${sk.name}」Lv${lv} 發動！`);
+      break;
+    }
+    case 'field_aoe_magic': {
+      if (!state.monsters || state.monsters.length === 0) break;
+      const dur = Array.isArray(sk.duration) ? sk.duration[lv - 1] : sk.duration;
+      const tickSec = sk.fieldTickIntervalSec || 3;
+      if (!state.activeFieldEffects) state.activeFieldEffects = [];
+      state.activeFieldEffects.push({ kind: 'aoe_holydmg', name: sk.name, mult, tickIntervalSec: tickSec, nextTickAt: Date.now(), endsAt: Date.now() + dur * 1000 });
+      logMsg(`✨ 「${sk.name}」Lv${lv} 發動！`);
       break;
     }
     case 'dot': {
@@ -1591,7 +1863,7 @@ function castSkill(skillId) {
       const target = state.monsters[0];
       const def = MONSTERS[target.defId];
       // 命中判定：中毒類技能屬於物理技能
-      const dotHitPct = hitChancePct(state.hit, monsterFleeOf(def));
+      const dotHitPct = hitChancePct(effectiveHitWithBuff(), monsterFleeOf(def));
       if (Math.random() * 100 > dotHitPct) {
         logMsg(`「${sk.name}」被 ${def.name} 閃避了！`);
         if (typeof showPlayerFloat === 'function') showPlayerFloat('MISS', 'miss');
@@ -1610,7 +1882,7 @@ function castSkill(skillId) {
       if (!state.monsters || state.monsters.length === 0) break;
       const target = state.monsters[0];
       const def = MONSTERS[target.defId];
-      const hitPct = hitChancePct(state.hit, monsterFleeOf(def));
+      const hitPct = hitChancePct(effectiveHitWithBuff(), monsterFleeOf(def));
       if (Math.random() * 100 > hitPct) {
         logMsg(`「${sk.name}」被 ${def.name} 閃避了！`);
         if (typeof showPlayerFloat === 'function') showPlayerFloat('MISS', 'miss');
@@ -1668,6 +1940,11 @@ function castSkill(skillId) {
         const hitBonus = Array.isArray(sk.bonusHit) ? sk.bonusHit[lv - 1] : sk.bonusHit;
         state.buffs.push({ type: 'hit', mult: 1, flatBonus: hitBonus, msRemaining: dur * 1000 });
       }
+      // 加速術：附加AGI固定加成
+      if (sk.agiFlatBonus) {
+        const agiBonus = Array.isArray(sk.agiFlatBonus) ? sk.agiFlatBonus[lv - 1] : sk.agiFlatBonus;
+        state.buffs.push({ type: 'agiflat', mult: 1, flatBonus: agiBonus, msRemaining: dur * 1000 });
+      }
       logMsg(`💨 「${sk.name}」Lv${lv} 發動，攻速上升！`);
       break;
     }
@@ -1683,7 +1960,7 @@ function castSkill(skillId) {
       const target = state.monsters[0];
       const def = MONSTERS[target.defId];
       // 命中判定：整招視為一次判定，miss 時兩段都不生效
-      const mhHitPct = hitChancePct(state.hit, monsterFleeOf(def));
+      const mhHitPct = hitChancePct(effectiveHitWithBuff(), monsterFleeOf(def));
       if (Math.random() * 100 > mhHitPct) {
         logMsg(`「${sk.name}」被 ${def.name} 閃避了！`);
         if (typeof showPlayerFloat === 'function') showPlayerFloat('MISS', 'miss');
@@ -1734,7 +2011,7 @@ function castSkill(skillId) {
       const target = state.monsters[0];
       const def = MONSTERS[target.defId];
       // 命中判定：整招視為一次判定
-      const dmHitPct = hitChancePct(state.hit, monsterFleeOf(def));
+      const dmHitPct = hitChancePct(effectiveHitWithBuff(), monsterFleeOf(def));
       if (Math.random() * 100 > dmHitPct) {
         logMsg(`「${sk.name}」被 ${def.name} 閃避了！`);
         if (typeof showPlayerFloat === 'function') showPlayerFloat('MISS', 'miss');
@@ -1760,7 +2037,7 @@ function castSkill(skillId) {
       const target = state.monsters[0];
       const def = MONSTERS[target.defId];
       // 命中判定：miss 時不造成傷害，但衝鋒生怪效果仍然發動
-      const scHitPct = hitChancePct(state.hit, monsterFleeOf(def));
+      const scHitPct = hitChancePct(effectiveHitWithBuff(), monsterFleeOf(def));
       if (Math.random() * 100 <= scHitPct) {
         const elemMult = getElementMultiplier(skElement, def.element || 'none');
         const scEleDmgBonus = (state.cardEleDmgBonus && state.cardEleDmgBonus[def.element || 'none']) || 0;
@@ -1920,8 +2197,12 @@ function tryAutoCastSupportSkills() {
       }
       // Debuff 類：需要有怪物
       if (['debuff_def', 'debuff'].includes(sk.type) && (!state.monsters || state.monsters.length === 0)) continue;
-      // Heal 類：HP > 70% 跳過
-      if (sk.type === 'heal' && state.hp > state.maxHp * 0.7) continue;
+      // Heal 類：依技能自訂的HP%門檻觸發，並可設SP%下限保護
+      if (sk.type === 'heal') {
+        const healCfg = (state.autoHealConfig && state.autoHealConfig[sk.id]) || { hpThreshold: 70, spThreshold: 0 };
+        if (state.hp > state.maxHp * ((healCfg.hpThreshold ?? 70) / 100)) continue;
+        if (healCfg.spThreshold > 0 && state.sp < state.maxSp * (healCfg.spThreshold / 100)) continue;
+      }
 
       castSkill(sk.id);
     }
@@ -2165,7 +2446,11 @@ function useItem(itemId) {
   if (!def || !row) return false;
   if (def.type === 'consumable' || def.type === 'material') {
     if (def.heal) state.hp = Math.min(state.maxHp, state.hp + def.heal);
-    else if (def.restoreSp) state.sp = Math.min(state.maxSp, state.sp + def.restoreSp);
+    else if (def.restoreSp) {
+      // 禪心：SP恢復道具效果+10%~100%
+      const boosted = Math.round(def.restoreSp * (1 + (state.spItemEffectBonusPct || 0) / 100));
+      state.sp = Math.min(state.maxSp, state.sp + boosted);
+    }
     else {
       // 從描述中推斷回復量（背包道具/食材類）
       const desc = def.desc || '';
@@ -2681,6 +2966,7 @@ function loadGame() {
     if (!state.autoSkillConfig.spThreshold2) state.autoSkillConfig.spThreshold2 = 50;
     if (!state.autoSkillConfig.monsterCount2) state.autoSkillConfig.monsterCount2 = 2;
     if (!state.autoSupportSkills) state.autoSupportSkills = {};
+    if (!state.autoHealConfig) state.autoHealConfig = {};
     // 多怪物系統遷移
     if (!state.monsters) state.monsters = [];
     if (!state.maxMonsters) state.maxMonsters = 5;
@@ -2795,7 +3081,7 @@ function computeOfflineProgress() {
   const hasDmgSkill = currentJob().skills.some(sk => state.learnedSkills[sk.id] && ['damage', 'magic', 'dot'].includes(sk.type));
   const skillFactor = hasDmgSkill ? 1.15 : 1.0; // 有主動傷害技能時，離線效率略為提升
   const avgFlee = 80 + avgLevel * 4; // 對應 monsterFleeOf 的平均值
-  const avgHitPct = hitChancePct(state.hit, avgFlee) / 100;
+  const avgHitPct = hitChancePct(effectiveHitWithBuff(), avgFlee) / 100;
   const dmgPerAttack = mitigateDamage(raw * critFactor * skillFactor, avgDef) * avgHitPct;
 
   const killsPerSec = dmgPerAttack / avgHp;
