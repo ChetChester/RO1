@@ -80,7 +80,7 @@ function withdrawGoldFromWarehouse(amount) {
   logMsg(`📦 從倉庫領出 ${amount} 鋅幣。`);
   return true;
 }
-const OFFLINE_CAP_MS = 12 * 60 * 60 * 1000; // 離線掛機最多累積 12 小時
+const OFFLINE_CAP_MS = 24 * 60 * 60 * 1000; // 離線掛機最多累積 24 小時
 const OFFLINE_MIN_MS = 30 * 1000;            // 離線超過 30 秒才顯示結算
 
 /* ---------------- ASPD 攻擊間隔計算 ----------------
@@ -183,6 +183,30 @@ function hasSpearEquipped() {
   return !!(w && w.weaponType === 'spear');
 }
 
+function equippedWeaponType() {
+  const w = state.equip.weapon ? ITEMS[state.equip.weapon] : null;
+  return w ? w.weaponType : null;
+}
+// 體型傷害修正：只影響物理傷害，怪物沒有size資料（尚未套用新資料）時視為無修正
+function getSizeMultiplier(monDef) {
+  if (!monDef || !monDef.size) return 1;
+  const table = SIZE_MODIFIER[equippedWeaponType()] || SIZE_MODIFIER.default;
+  const pct = table[monDef.size];
+  return pct !== undefined ? pct / 100 : 1;
+}
+// 種族固定傷害加成，不受DEF削減：動物殺手（動物/昆蟲）、天使之擊（惡魔/不死）
+function raceFlatBonus(monDef) {
+  if (!monDef || !monDef.race) return 0;
+  let bonus = 0;
+  if ((monDef.race === 'brute' || monDef.race === 'insect') && state.animalDamageFlat) {
+    bonus += state.animalDamageFlat;
+  }
+  if ((monDef.race === 'demon' || monDef.race === 'undead') && state.angelicAtkBonus) {
+    bonus += state.angelicAtkBonus;
+  }
+  return bonus;
+}
+
 function equippedAtk() {
   const w = state.equip.weapon ? ITEMS[state.equip.weapon] : null;
   const baseAtk = w && w.atk ? w.atk : 0;
@@ -216,6 +240,20 @@ function equippedDef() {
     def += baseDef + getRefinementDefBonus(refLevel);
   });
   return def;
+}
+// 裝備本體（武器/防具/飾品）自帶的加成數值加總：許多防具本身就有寫str/agi/vit/int/dex/luk/atk/flee/hit/critRate/perfectDodge/hp/sp等欄位，
+// 但過去只有equippedDef()把def讀出來，其餘欄位全部沒有實際套用，等於裝了也沒效果（純UI顯示用），這裡統一補上
+const EQUIP_SLOTS_ALL = ['weapon', 'head_top', 'head_mid', 'head_bottom', 'armor', 'shield', 'garment', 'footgear', 'accessory1', 'accessory2'];
+// atk/matk已由equippedAtk()/equippedMatk()從武器欄位讀取（含精煉加成），這裡加總其餘欄位時排除武器欄，避免武器ATK被重複計算兩次
+const EQUIP_SLOTS_NO_WEAPON = EQUIP_SLOTS_ALL.filter(s => s !== 'weapon');
+function equippedStatBonus(stat) {
+  const slots = (stat === 'atk' || stat === 'matk') ? EQUIP_SLOTS_NO_WEAPON : EQUIP_SLOTS_ALL;
+  let total = 0;
+  slots.forEach(slot => {
+    const it = state.equip[slot] ? ITEMS[state.equip[slot]] : null;
+    if (it && typeof it[stat] === 'number') total += it[stat];
+  });
+  return total;
 }
 
 function recomputeDerived(fullHeal) {
@@ -303,12 +341,12 @@ function recomputeDerived(fullHeal) {
   state.buffs.forEach(b => { if (b.type === 'lukflat') buffLukBonus += b.flatBonus || 0; });
 
   // ATK：StatusATK = STR + (STR/10)² + DEX/5 + LUK/5（含職業加成與卡片加成）
-  const cStr = s.str + jobBonus.str + getCardBonus('str') + passiveStrBonus;
-  const cDex = Math.round((s.dex + jobBonus.dex + getCardBonus('dex') + passiveDexBonus) * (1 + buffStatPct));
-  const cLuk = s.luk + jobBonus.luk + getCardBonus('luk') + buffLukBonus;
-  const cAgi = Math.round((s.agi + jobBonus.agi + getCardBonus('agi') + buffAgiBonus) * (1 + buffStatPct));
-  const cVit = s.vit + jobBonus.vit + getCardBonus('vit');
-  const cInt = s.int + jobBonus.int + getCardBonus('int') + passiveIntBonus;
+  const cStr = s.str + jobBonus.str + getCardBonus('str') + equippedStatBonus('str') + passiveStrBonus;
+  const cDex = Math.round((s.dex + jobBonus.dex + getCardBonus('dex') + equippedStatBonus('dex') + passiveDexBonus) * (1 + buffStatPct));
+  const cLuk = s.luk + jobBonus.luk + getCardBonus('luk') + equippedStatBonus('luk') + buffLukBonus;
+  const cAgi = Math.round((s.agi + jobBonus.agi + getCardBonus('agi') + equippedStatBonus('agi') + buffAgiBonus) * (1 + buffStatPct));
+  const cVit = s.vit + jobBonus.vit + getCardBonus('vit') + equippedStatBonus('vit');
+  const cInt = s.int + jobBonus.int + getCardBonus('int') + equippedStatBonus('int') + passiveIntBonus;
   const statusAtk = cStr + Math.floor((cStr / 10) ** 2) + Math.floor(cDex / 5) + Math.floor(cLuk / 5);
   state.atk = Math.round(statusAtk * job.atkMod) + equippedAtk();
   // 大聲吶喊buff：ATK 固定加成（於狀態ATK算完後直接加）
@@ -349,6 +387,8 @@ function recomputeDerived(fullHeal) {
   state.passiveAspdFlat = 0;
   state.falconFlatBonus = 0;
   state.animalDamageFlat = 0;
+  state.angelicAtkBonus = 0;
+  state.divineDefBonus = 0;
   state.trapCdReductionSec = 0;
   state.trapChanceBonusPct = 0;
   state.shopDiscountMult = 1;
@@ -454,6 +494,8 @@ function recomputeDerived(fullHeal) {
         case 'atkFlat': {
           // 長矛熟練：必須裝備矛類武器才生效
           if (sk.id === 'spearmastery' && !hasSpearEquipped()) break;
+          // 天使之擊：官方效果限定對惡魔/不死種族生效，改成攻擊時依目標種族判定，不再全體適用
+          if (sk.id === 'angelic') { state.angelicAtkBonus = Math.round(val); break; }
           state.atk += Math.round(val);
           // 武器修理：附加固定暴擊率加成
           if (sk.critBonus) {
@@ -499,7 +541,12 @@ function recomputeDerived(fullHeal) {
           break;
         }
         // dexFlat 已在 recomputeDerived 開頭計算並加入 cDex，不再修改 state.stats.dex
-        case 'defFlat': state.def += Math.round(val); break;
+        case 'defFlat': {
+          // 天使之護：官方效果限定對惡魔/不死種族生效，改成被攻擊時依攻擊者種族判定，不再全體適用
+          if (sk.id === 'divineprotection') { state.divineDefBonus = Math.round(val); break; }
+          state.def += Math.round(val);
+          break;
+        }
         case 'spRegen': state.spRegenMult = (state.spRegenMult || 1) * val; break;
         case 'hpRegenMult': {
           state.hpRegenMult = (state.hpRegenMult || 1) * val;
@@ -733,17 +780,17 @@ function recomputeDerived(fullHeal) {
   }
 
   // 卡片加成 — 固定值（僅影響衍生數值，不修改 base stats 避免累加）
-  state.atk += getCardBonus('atk');
-  state.matk += getCardBonus('matk');
-  state.matkMin += getCardBonus('matk');
-  state.matkMax += getCardBonus('matk');
+  state.atk += getCardBonus('atk') + equippedStatBonus('atk');
+  state.matk += getCardBonus('matk') + equippedStatBonus('matk');
+  state.matkMin += getCardBonus('matk') + equippedStatBonus('matk');
+  state.matkMax += getCardBonus('matk') + equippedStatBonus('matk');
   state.def += getCardBonus('def');
-  state.hit += getCardBonus('hit');
-  state.flee += getCardBonus('flee');
-  state.critRate = Math.min(100, state.critRate + getCardBonus('critRate'));
-  state.perfectDodge += getCardBonus('perfectDodge');
-  state.maxHp += getCardBonus('hp');
-  state.maxSp += getCardBonus('sp');
+  state.hit += getCardBonus('hit') + equippedStatBonus('hit');
+  state.flee += getCardBonus('flee') + equippedStatBonus('flee');
+  state.critRate = Math.min(100, state.critRate + getCardBonus('critRate') + equippedStatBonus('critRate'));
+  state.perfectDodge += getCardBonus('perfectDodge') + equippedStatBonus('perfectDodge');
+  state.maxHp += getCardBonus('hp') + equippedStatBonus('hp');
+  state.maxSp += getCardBonus('sp') + equippedStatBonus('sp');
 
   // 卡片加成 — 百分比
   const hpPctBonus = getCardBonus('hpPct') / 100;
@@ -755,8 +802,9 @@ function recomputeDerived(fullHeal) {
     state.maxSp = Math.round(state.maxSp * (1 + spPctBonus));
   }
 
-  // 卡片加成 — 屬性傷害加成（存入 state 供戰鬥使用）
+  // 卡片加成 — 屬性傷害加成、種族減傷（存入 state 供戰鬥使用）
   state.cardEleDmgBonus = {};
+  state.cardRaceDmgReduce = {};
   Object.values(state.equippedCards || {}).forEach(cardId => {
     const card = CARDS[cardId];
     if (!card || !card.bonus) return;
@@ -764,6 +812,9 @@ function recomputeDerived(fullHeal) {
       if (k.startsWith('eleDmg_')) {
         const ele = k.replace('eleDmg_', '');
         state.cardEleDmgBonus[ele] = (state.cardEleDmgBonus[ele] || 0) + v / 100;
+      } else if (k.startsWith('raceDmgReduce_')) {
+        const race = k.replace('raceDmgReduce_', '');
+        state.cardRaceDmgReduce[race] = (state.cardRaceDmgReduce[race] || 0) + v / 100;
       }
     }
   });
@@ -790,10 +841,25 @@ function mitigateDamage(rawDmg, def) {
 function monsterHitOf(def) { return def.hit || (90 + def.level * 2.5); }
 function monsterFleeOf(def) { return def.flee || (80 + def.level * 4); }
 
+/* ---------------- 命中/迴避（依怪物資料 hitReq/fleeReq 換算）----------------
+   hitReq：玩家HIT要達到這個值，攻擊這隻怪就是100%命中；比例=玩家HIT/hitReq*100%（不到100%時等比例下降），下限5%
+   fleeReq：玩家FLEE要達到這個值，迴避這隻怪的攻擊就是95%（RO迴避上限95%）；比例=玩家FLEE/fleeReq*100%，上限95%、下限5%
+   沒有hitReq/fleeReq資料的怪物（尚未套用新資料）退回舊制monDef.hit/monDef.flee當作門檻值，維持相容
+------------------------------------------------- */
+function hitChancePctVsMonster(playerHit, monDef) {
+  const threshold = monDef.hitReq || monsterFleeOf(monDef);
+  return Math.min(100, Math.max(5, Math.round(100 * playerHit / threshold)));
+}
+function dodgeChancePctFromMonster(playerFlee, monDef, hitDebuff) {
+  let threshold = monDef.fleeReq || monsterHitOf(monDef);
+  if (hitDebuff) threshold = Math.max(1, threshold - hitDebuff);
+  return Math.min(95, Math.max(5, Math.round(100 * playerFlee / threshold)));
+}
+
 /* ---------------- 中毒（施毒/塗毒共用）----------------
    固定持續3秒、不疊加（同一隻怪再次中毒直接覆蓋刷新）、毒屬性怪物免疫 */
 function applyPoisonDot(mon, monDef, rawDmgPerTick) {
-  const elemMult = getElementMultiplier('poison', monDef.element || 'none');
+  const elemMult = getElementMultiplierVsMonster('poison', monDef);
   if (elemMult === 0) {
     logMsg(`🚫 ${monDef.name} 對毒免疫！`);
     return;
@@ -875,7 +941,7 @@ function tryTrapProcs(target, monDef) {
       logMsg(`💥 「${sk.name}」觸發！${monDef.name} 的命中下降了！`);
     } else if (sk.trapEffect === 'damage') {
       const mult = Array.isArray(sk.mult) ? sk.mult[lv - 1] : sk.mult;
-      const elemMult = getElementMultiplier(sk.element || 'none', monDef.element || 'none');
+      const elemMult = getElementMultiplierVsMonster(sk.element || 'none', monDef);
       const dmg = mitigateDamage(state.atk * mult * elemMult, monDef.def);
       target.hp -= dmg;
       logMsg(`💥 「${sk.name}」觸發！對 ${monDef.name} 造成 ${dmg} 點傷害！`);
@@ -886,7 +952,7 @@ function tryTrapProcs(target, monDef) {
       for (let i = state.monsters.length - 1; i >= 0; i--) {
         const mon = state.monsters[i];
         const mDef = MONSTERS[mon.defId];
-        const elemMult = getElementMultiplier(sk.element || 'none', mDef.element || 'none');
+        const elemMult = getElementMultiplierVsMonster(sk.element || 'none', mDef);
         const dmg = mitigateDamage(state.atk * mult * elemMult, mDef.def);
         mon.hp -= dmg;
         logMsg(`  → 對 ${mDef.name} 造成 ${dmg} 點傷害！`);
@@ -918,7 +984,7 @@ function tryMagicStunProcs(mon, monDef) {
     applyStun(mon, stunSec, true);
     mon.frozenByProc = true;
     const dmgMult = Array.isArray(sk.mult) ? sk.mult[lv - 1] : sk.mult;
-    const elemMult = getElementMultiplier(sk.element || 'none', monDef.element || 'none');
+    const elemMult = getElementMultiplierVsMonster(sk.element || 'none', monDef);
     const dmg = mitigateDamage(state.matk * dmgMult * elemMult, monDef.def);
     mon.hp -= dmg;
     logMsg(`❄️ 「${sk.name}」觸發！${monDef.name} 暈眩了，並受到 ${dmg} 點魔法傷害！`);
@@ -977,7 +1043,7 @@ function tryOnHitAoeProc() {
   for (let i = state.monsters.length - 1; i >= 0; i--) {
     const mon = state.monsters[i];
     const monDef = MONSTERS[mon.defId];
-    const elemMult = getElementMultiplier(state.onHitAoeProcElement, monDef.element || 'none');
+    const elemMult = getElementMultiplierVsMonster(state.onHitAoeProcElement, monDef);
     const dmg = mitigateDamage(state.matk * state.onHitAoeProcMult * elemMult, monDef.def);
     mon.hp -= dmg;
     wakeIfFrozen(mon);
@@ -997,7 +1063,7 @@ function tryOnAttackAoeProc() {
   for (let i = state.monsters.length - 1; i >= 0; i--) {
     const mon = state.monsters[i];
     const monDef = MONSTERS[mon.defId];
-    const elemMult = getElementMultiplier(state.onAttackAoeElement, monDef.element || 'none');
+    const elemMult = getElementMultiplierVsMonster(state.onAttackAoeElement, monDef);
     const dmg = mitigateDamage((state.onAttackAoeFlatDmg + state.matk * state.onAttackAoeMult) * elemMult, monDef.def);
     mon.hp -= dmg;
     wakeIfFrozen(mon);
@@ -1028,7 +1094,7 @@ function tryOnHitAoeStunProc() {
   for (let i = state.monsters.length - 1; i >= 0; i--) {
     const mon = state.monsters[i];
     const monDef = MONSTERS[mon.defId];
-    const elemMult = getElementMultiplier(state.onHitAoeStunElement, monDef.element || 'none');
+    const elemMult = getElementMultiplierVsMonster(state.onHitAoeStunElement, monDef);
     const dmg = mitigateDamage(state.matk * state.onHitAoeStunMult * elemMult, monDef.def);
     mon.hp -= dmg;
     wakeIfFrozen(mon);
@@ -1134,7 +1200,7 @@ function gameTick() {
           if (state.monsters && state.monsters.length > 0) {
             state.monsters.forEach(mon => {
               const monDef = MONSTERS[mon.defId];
-              const elemMult = getElementMultiplier(f.element || 'holy', monDef.element || 'none');
+              const elemMult = getElementMultiplierVsMonster(f.element || 'holy', monDef);
               const dmg = mitigateDamage(state.matk * f.mult * elemMult, monDef.def);
               mon.hp -= dmg;
               wakeIfFrozen(mon);
@@ -1152,7 +1218,7 @@ function gameTick() {
             const targets = state.monsters.filter(m => f.targetIds.includes(m.id));
             targets.forEach(mon => {
               const monDef = MONSTERS[mon.defId];
-              const elemMult = getElementMultiplier(f.element || 'none', monDef.element || 'none');
+              const elemMult = getElementMultiplierVsMonster(f.element || 'none', monDef);
               const dmg = mitigateDamage(state.matk * f.mult * elemMult, monDef.def);
               mon.hp -= dmg;
               wakeIfFrozen(mon);
@@ -1479,7 +1545,7 @@ function playerAttack() {
   const effectiveCritRate = Math.min(100, state.critRate * critBuff.mult + critBuff.flatBonus);
   const isCrit = Math.random() * 100 < effectiveCritRate;
   if (!isCrit) {
-    const hitPct = hitChancePct(effectiveHitWithBuff(), monsterFleeOf(monDef));
+    const hitPct = hitChancePctVsMonster(effectiveHitWithBuff(), monDef);
     if (Math.random() * 100 > hitPct) {
       logMsg(`你的攻擊被 ${monDef.name} 閃避了！`);
       // 攻擊 MISS 飄字（玩家頭上）
@@ -1511,7 +1577,7 @@ function playerAttack() {
   let atkElement = (weapon && weapon.element) ? weapon.element : 'none';
   // 聖之祈福buff：暫時附加聖屬性
   if (state.buffs.some(b => b.type === 'holyweapon')) atkElement = 'holy';
-  const elemMult = getElementMultiplier(atkElement, monDef.element || 'none');
+  const elemMult = getElementMultiplierVsMonster(atkElement, monDef);
   if (elemMult !== 1) {
     const pctStr = Math.round(elemMult * 100);
     const tag = elemMult > 1 ? '💚 屬性克制！' : (elemMult < 1 && elemMult > 0 ? '💜 屬性被克…' : (elemMult === 0 ? '🚫 屬性免疫！' : ''));
@@ -1526,6 +1592,9 @@ function playerAttack() {
     raw *= (1 + bonus);
   }
 
+  // 體型傷害修正（依武器類型 vs 怪物體型）
+  raw *= getSizeMultiplier(monDef);
+
   // Apply monster debuff (provoke reduces defense)
   let monDefVal = monDef.def;
   if (target.debuffDef && target.debuffDefEnd && Date.now() < target.debuffDefEnd) {
@@ -1535,7 +1604,7 @@ function playerAttack() {
     delete target.debuffDefEnd;
   }
 
-  const dmg = mitigateDamage(raw, monDefVal);
+  const dmg = mitigateDamage(raw, monDefVal) + raceFlatBonus(monDef);
   target.hp -= dmg;
   logMsg(`你對 ${monDef.name} 造成 ${dmg} 點傷害${isCrit ? '（暴擊！無視閃避）' : ''}`);
   // 命中音效
@@ -1549,7 +1618,7 @@ function playerAttack() {
   // 怒爆之火：普攻期間額外附加一段火屬性傷害
   const magnumBuff = state.buffs.find(b => b.type === 'magnumfire');
   if (magnumBuff) {
-    const fireMult = getElementMultiplier('fire', monDef.element || 'none');
+    const fireMult = getElementMultiplierVsMonster('fire', monDef);
     const bonusDmg = mitigateDamage(state.atk * magnumBuff.flatBonus * fireMult, monDefVal);
     target.hp -= bonusDmg;
     logMsg(`🔥 怒爆之火附加了 ${bonusDmg} 點火屬性傷害！`);
@@ -1631,7 +1700,7 @@ function playerAttack() {
     for (let i = state.monsters.length - 1; i >= 0; i--) {
       const mon = state.monsters[i];
       const mDef = MONSTERS[mon.defId];
-      const elemMult = getElementMultiplier('poison', mDef.element || 'none');
+      const elemMult = getElementMultiplierVsMonster('poison', mDef);
       const dmg = mitigateDamage(state.atk * state.venominfusionDmgMult * elemMult, mDef.def);
       mon.hp -= dmg;
       logMsg(`  → 對 ${mDef.name} 造成 ${dmg} 點傷害！`);
@@ -1652,7 +1721,7 @@ function playerAttack() {
     if (Math.random() * 100 < bbChance) {
       const bbSkill = findSkillById('blitzbeat');
       const passiveMultVal = bbSkill.passiveMult[bbLv - 1];
-      const bbElemMult = getElementMultiplier(bbSkill.element || 'none', monDef.element || 'none');
+      const bbElemMult = getElementMultiplierVsMonster(bbSkill.element || 'none', monDef);
       let bbDmg = mitigateDamage(state.atk * passiveMultVal * bbElemMult, monDef.def);
       if (state.falconFlatBonus) bbDmg += state.falconFlatBonus;
       target.hp -= bbDmg;
@@ -1677,16 +1746,16 @@ function monsterAttackSingle(mon) {
     if (typeof showPlayerFloat === 'function') showPlayerFloat('MISS', 'miss');
     return;
   }
-  // 噴砂被動造成的命中下降
-  let monHitVal = monsterHitOf(monDef);
+  // 噴砂被動造成的命中下降：等同降低這隻怪的fleeReq門檻，玩家更容易迴避
+  let hitDebuff = 0;
   if (mon.debuffHit && mon.debuffHitEnd && Date.now() < mon.debuffHitEnd) {
-    monHitVal = Math.max(0, monHitVal - mon.debuffHit);
+    hitDebuff = mon.debuffHit;
   } else {
     delete mon.debuffHit;
     delete mon.debuffHitEnd;
   }
-  const hitPct = hitChancePct(monHitVal, state.flee);
-  if (Math.random() * 100 > hitPct) {
+  const dodgePct = dodgeChancePctFromMonster(state.flee, monDef, hitDebuff);
+  if (Math.random() * 100 < dodgePct) {
     logMsg(`你迴避了 ${monDef.name} 的攻擊！`);
     if (typeof showPlayerFloat === 'function') showPlayerFloat('MISS', 'miss');
     return;
@@ -1738,8 +1807,17 @@ function monsterAttackSingle(mon) {
   if (monAtkElement === 'fire' && state.fireResistPct) raw *= (1 - state.fireResistPct / 100);
   if (monAtkElement === 'none' && state.neutralResistPct) raw *= (1 - state.neutralResistPct / 100);
 
+  // 卡片種族減傷（例如畢帝特飛龍卡片：受到龍族傷害-30%）
+  if (monDef.race && state.cardRaceDmgReduce && state.cardRaceDmgReduce[monDef.race]) {
+    raw *= (1 - state.cardRaceDmgReduce[monDef.race]);
+  }
+
   // 狂暴狀態：DEF -55%
   let playerDef = state.def;
+  // 天使之護：官方效果限定對惡魔/不死種族攻擊者生效
+  if (state.divineDefBonus && (monDef.race === 'demon' || monDef.race === 'undead')) {
+    playerDef += state.divineDefBonus;
+  }
   if (state.hasBerserk && state.hp < state.maxHp * 0.25) {
     playerDef = Math.round(state.def * 0.45);
   }
@@ -2106,14 +2184,14 @@ function castSkill(skillId) {
         if (sk.id === 'bash' && sk.hitBonus) {
           effectiveHit += Array.isArray(sk.hitBonus) ? sk.hitBonus[lv - 1] : sk.hitBonus;
         }
-        const hitPct = hitChancePct(effectiveHit, monsterFleeOf(def));
+        const hitPct = hitChancePctVsMonster(effectiveHit, def);
         if (Math.random() * 100 > hitPct) {
           logMsg(`「${sk.name}」被 ${def.name} 閃避了！`);
           if (typeof showPlayerFloat === 'function') showPlayerFloat('MISS', 'miss');
           break;
         }
       }
-      const elemMult = getElementMultiplier(skElement, def.element || 'none');
+      const elemMult = getElementMultiplierVsMonster(skElement, def);
       if (elemMult !== 1) {
         const pctStr = Math.round(elemMult * 100);
         const tag = elemMult > 1 ? '💚 屬性克制！' : (elemMult < 1 && elemMult > 0 ? '💜 屬性被克…' : (elemMult === 0 ? '🚫 屬性免疫！' : ''));
@@ -2132,6 +2210,11 @@ function castSkill(skillId) {
         const intBonusPct = (state.stats.int / 99) * (sk.intScaleMax || 50);
         skillMult *= (1 + lvlBonusPct / 100 + intBonusPct / 100);
       }
+      // 聖靈召喚：對不死種族額外加成
+      if (sk.id === 'soulstrike' && def.race === 'undead' && sk.undeadBonusPct) {
+        const undeadPct = Array.isArray(sk.undeadBonusPct) ? sk.undeadBonusPct[lv - 1] : sk.undeadBonusPct;
+        skillMult *= (1 + undeadPct / 100);
+      }
       // 低血量加成（例如音速投擲：目標HP低於門檻時傷害加成）
       if (sk.lowHpThreshold && target.hp < target.maxHp * sk.lowHpThreshold) {
         skillMult *= sk.lowHpMult;
@@ -2140,7 +2223,8 @@ function castSkill(skillId) {
       if ((sk.id === 'mammonite' || sk.id === 'cartattack') && state.cartDmgBonusMult) {
         skillMult *= (1 + state.cartDmgBonusMult);
       }
-      const dmg = mitigateDamage(baseDmgStat * skillMult * elemMult * (1 + skEleDmgBonus), def.def);
+      const sizeMult = useMag ? 1 : getSizeMultiplier(def);
+      const dmg = mitigateDamage(baseDmgStat * skillMult * elemMult * sizeMult * (1 + skEleDmgBonus), def.def) + raceFlatBonus(def);
       target.hp -= dmg;
       logMsg(`⚡ 「${sk.name}」Lv${lv} 造成 ${dmg} 點傷害！`);
       // 冰凍術/石化術：魔法傷害命中會提前喚醒被反制暈眩的目標
@@ -2175,13 +2259,13 @@ function castSkill(skillId) {
         const monDef = MONSTERS[mon.defId];
         // 命中判定：物理範圍技能對每隻怪物個別判定，法術範圍技能無視閃避
         if (sk.type !== 'magic_aoe') {
-          const hitPct = hitChancePct(effectiveHitWithBuff(), monsterFleeOf(monDef));
+          const hitPct = hitChancePctVsMonster(effectiveHitWithBuff(), monDef);
           if (Math.random() * 100 > hitPct) {
             combatLogBuf.push(`  → ${monDef.name} 閃避了！`);
             continue;
           }
         }
-        const monElemMult = getElementMultiplier(skElement, monDef.element || 'none');
+        const monElemMult = getElementMultiplierVsMonster(skElement, monDef);
         const monEleDmgBonus = (state.cardEleDmgBonus && state.cardEleDmgBonus[monDef.element || 'none']) || 0;
         // 負重量上升：加成手推車攻擊傷害
         let aoeMult = mult;
@@ -2192,7 +2276,8 @@ function castSkill(skillId) {
           const strBonusPct = Math.min(1, state.stats.str / 120) * (strScaleMax / 100);
           aoeMult *= (1 + strBonusPct);
         }
-        let dmg = mitigateDamage(baseDmgStat * aoeMult * monElemMult * (1 + monEleDmgBonus), monDef.def);
+        const aoeSizeMult = useMag ? 1 : getSizeMultiplier(monDef);
+        let dmg = mitigateDamage(baseDmgStat * aoeMult * monElemMult * aoeSizeMult * (1 + monEleDmgBonus), monDef.def) + raceFlatBonus(monDef);
         // 鋼製喙：閃電衝擊額外固定傷害（不受倍率影響）
         if (sk.id === 'blitzbeat' && state.falconFlatBonus) dmg += state.falconFlatBonus;
         mon.hp -= dmg;
@@ -2331,13 +2416,13 @@ function castSkill(skillId) {
       const target = state.monsters[0];
       const def = MONSTERS[target.defId];
       // 命中判定：中毒類技能屬於物理技能
-      const dotHitPct = hitChancePct(effectiveHitWithBuff(), monsterFleeOf(def));
+      const dotHitPct = hitChancePctVsMonster(effectiveHitWithBuff(), def);
       if (Math.random() * 100 > dotHitPct) {
         logMsg(`「${sk.name}」被 ${def.name} 閃避了！`);
         if (typeof showPlayerFloat === 'function') showPlayerFloat('MISS', 'miss');
         break;
       }
-      const elemMult = getElementMultiplier(skElement, def.element || 'none');
+      const elemMult = getElementMultiplierVsMonster(skElement, def);
       const dotEleDmgBonus = (state.cardEleDmgBonus && state.cardEleDmgBonus[def.element || 'none']) || 0;
       const dmg = mitigateDamage(baseDmgStat * mult * elemMult * (1 + dotEleDmgBonus), def.def * 0.6);
       target.hp -= dmg;
@@ -2350,13 +2435,13 @@ function castSkill(skillId) {
       if (!state.monsters || state.monsters.length === 0) break;
       const target = state.monsters[0];
       const def = MONSTERS[target.defId];
-      const hitPct = hitChancePct(effectiveHitWithBuff(), monsterFleeOf(def));
+      const hitPct = hitChancePctVsMonster(effectiveHitWithBuff(), def);
       if (Math.random() * 100 > hitPct) {
         logMsg(`「${sk.name}」被 ${def.name} 閃避了！`);
         if (typeof showPlayerFloat === 'function') showPlayerFloat('MISS', 'miss');
         break;
       }
-      const elemMult = getElementMultiplier(skElement, def.element || 'none');
+      const elemMult = getElementMultiplierVsMonster(skElement, def);
       const dmg = mitigateDamage(baseDmgStat * mult * elemMult, def.def);
       target.hp -= dmg;
       logMsg(`⚡ 「${sk.name}」Lv${lv} 造成 ${dmg} 點傷害！`);
@@ -2428,16 +2513,16 @@ function castSkill(skillId) {
       const target = state.monsters[0];
       const def = MONSTERS[target.defId];
       // 命中判定：整招視為一次判定，miss 時兩段都不生效
-      const mhHitPct = hitChancePct(effectiveHitWithBuff(), monsterFleeOf(def));
+      const mhHitPct = hitChancePctVsMonster(effectiveHitWithBuff(), def);
       if (Math.random() * 100 > mhHitPct) {
         logMsg(`「${sk.name}」被 ${def.name} 閃避了！`);
         if (typeof showPlayerFloat === 'function') showPlayerFloat('MISS', 'miss');
         break;
       }
-      const elemMult = getElementMultiplier(skElement, def.element || 'none');
+      const elemMult = getElementMultiplierVsMonster(skElement, def);
       const mhEleDmgBonus = (state.cardEleDmgBonus && state.cardEleDmgBonus[def.element || 'none']) || 0;
       // 第一段：單體傷害
-      const dmg1 = mitigateDamage(baseDmgStat * mult * elemMult * (1 + mhEleDmgBonus), def.def);
+      const dmg1 = mitigateDamage(baseDmgStat * mult * elemMult * getSizeMultiplier(def) * (1 + mhEleDmgBonus), def.def) + raceFlatBonus(def);
       target.hp -= dmg1;
       pendingFloatTargetId = target.id;
       logMsg(`⚡ 「${sk.name}」Lv${lv} 第一段對 ${def.name} 造成 ${dmg1} 點傷害！`);
@@ -2449,9 +2534,9 @@ function castSkill(skillId) {
       for (let i = state.monsters.length - 1; i >= 0; i--) {
         const mon = state.monsters[i];
         const monDef = MONSTERS[mon.defId];
-        const monElemMult = getElementMultiplier(skElement, monDef.element || 'none');
+        const monElemMult = getElementMultiplierVsMonster(skElement, monDef);
         const mon2EleDmgBonus = (state.cardEleDmgBonus && state.cardEleDmgBonus[monDef.element || 'none']) || 0;
-        const dmg2 = mitigateDamage(baseDmgStat * mult2 * monElemMult * (1 + mon2EleDmgBonus), monDef.def);
+        const dmg2 = mitigateDamage(baseDmgStat * mult2 * monElemMult * getSizeMultiplier(monDef) * (1 + mon2EleDmgBonus), monDef.def) + raceFlatBonus(monDef);
         mon.hp -= dmg2;
         combatLogBuf.push(`  → 對 ${monDef.name} 造成 ${dmg2} 點範圍傷害！`);
         // AoE 飄字：直接找怪物 DOM 元素
@@ -2479,18 +2564,18 @@ function castSkill(skillId) {
       const target = state.monsters[0];
       const def = MONSTERS[target.defId];
       // 命中判定：整招視為一次判定
-      const dmHitPct = hitChancePct(effectiveHitWithBuff(), monsterFleeOf(def));
+      const dmHitPct = hitChancePctVsMonster(effectiveHitWithBuff(), def);
       if (Math.random() * 100 > dmHitPct) {
         logMsg(`「${sk.name}」被 ${def.name} 閃避了！`);
         if (typeof showPlayerFloat === 'function') showPlayerFloat('MISS', 'miss');
         break;
       }
-      const elemMult = getElementMultiplier(skElement, def.element || 'none');
+      const elemMult = getElementMultiplierVsMonster(skElement, def);
       const multiEleDmgBonus = (state.cardEleDmgBonus && state.cardEleDmgBonus[def.element || 'none']) || 0;
       const hits = Array.isArray(sk.hits) ? sk.hits[lv - 1] : (sk.hits || 1);
       let totalDmg = 0;
       for (let i = 0; i < hits; i++) {
-        const dmg = mitigateDamage(baseDmgStat * mult * elemMult * (1 + multiEleDmgBonus), def.def);
+        const dmg = mitigateDamage(baseDmgStat * mult * elemMult * getSizeMultiplier(def) * (1 + multiEleDmgBonus), def.def) + raceFlatBonus(def);
         totalDmg += dmg;
         target.hp -= dmg;
         if (target.hp <= 0) break;
@@ -2505,9 +2590,9 @@ function castSkill(skillId) {
       const target = state.monsters[0];
       const def = MONSTERS[target.defId];
       // 命中判定：miss 時不造成傷害，但衝鋒生怪效果仍然發動
-      const scHitPct = hitChancePct(effectiveHitWithBuff(), monsterFleeOf(def));
+      const scHitPct = hitChancePctVsMonster(effectiveHitWithBuff(), def);
       if (Math.random() * 100 <= scHitPct) {
-        const elemMult = getElementMultiplier(skElement, def.element || 'none');
+        const elemMult = getElementMultiplierVsMonster(skElement, def);
         const scEleDmgBonus = (state.cardEleDmgBonus && state.cardEleDmgBonus[def.element || 'none']) || 0;
         const dmg = mitigateDamage(baseDmgStat * mult * elemMult * (1 + scEleDmgBonus), def.def);
         target.hp -= dmg;
