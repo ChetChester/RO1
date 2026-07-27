@@ -1287,12 +1287,16 @@ function renderInventoryTab() {
       const canUse = def.type === 'consumable' || def.type === 'weapon' || def.type === 'armor';
       const elemTag = def.element ? ` ${ELEMENT_ICONS[def.element]}${ELEMENT_NAMES[def.element]}` : '';
       return `<div class="inv-row">
-        <div class="inv-icon"><img src="${itemImgSrc(row.item)}" alt="${displayName}" onerror="this.onerror=null;this.src='${placeholderImgSrc(itemPlaceholderKind(def))}'"></div>
-        <div class="inv-info"><div class="inv-name">${displayName} x${row.qty}${elemTag}</div><div class="inv-desc">${def.desc}</div></div>
+        <div class="inv-row-main">
+          <div class="inv-icon"><img src="${itemImgSrc(row.item)}" alt="${displayName}" onerror="this.onerror=null;this.src='${placeholderImgSrc(itemPlaceholderKind(def))}'"></div>
+          <div class="inv-info"><div class="inv-name">${displayName} x${row.qty}${elemTag}</div><div class="inv-desc">${def.desc}</div></div>
+        </div>
         <div class="inv-actions">
           ${canUse ? `<button class="btn-small" onclick="useItem('${row.item}');renderInventoryTab();">${def.type === 'consumable' ? '使用' : '裝備'}</button>` : ''}
           <button class="btn-small ghost" onclick="sellItem('${row.item}',1);renderInventoryTab();renderTopBar();">賣出(${def.sell})</button>
+          ${row.qty > 1 ? `<button class="btn-small ghost" onclick="sellItemAll('${row.item}');renderInventoryTab();renderTopBar();">全部賣出</button>` : ''}
           <button class="btn-small ghost" onclick="depositToWarehouse('${row.item}',1);renderInventoryTab();renderTopBar();">存倉庫</button>
+          ${row.qty > 1 ? `<button class="btn-small ghost" onclick="depositToWarehouseAll('${row.item}');renderInventoryTab();renderTopBar();">全部存倉</button>` : ''}
         </div>
       </div>`;
     }).filter(html => html).join('');
@@ -1328,7 +1332,15 @@ function renderInventoryTab() {
       <button class="btn-small" onclick="showWarehousePanel()">開啟倉庫</button>
     </div>`;
 
-    el.innerHTML = `<h3 class="panel-title">裝備欄</h3>${equipHtml}${vendingHtml}${craftingHtml}${warehouseHtml}<h3 class="panel-title">背包（${state.inventory.length}）</h3><div class="inv-list">${items || '<div class="empty-hint">背包空空如也，去打怪蒐集素材吧！</div>'}</div><div id="ro-equip-tooltip" class="ro-equip-tooltip"></div>`;
+    // 自動販賣（任何職業都可使用）
+    const autoSellCfg = state.autoSellConfig || { enabled: false, items: [] };
+    const autoSellHtml = `<div class="autosell-panel">
+      <h3 class="panel-title">🏷️ 自動販賣</h3>
+      <div class="empty-hint">${autoSellCfg.enabled ? `已啟用，已選 ${autoSellCfg.items.length} 種道具，每30秒自動賣出` : '尚未啟用'}</div>
+      <button class="btn-small" onclick="showAutoSellPanel()">設定自動販賣</button>
+    </div>`;
+
+    el.innerHTML = `<h3 class="panel-title">裝備欄</h3>${equipHtml}${vendingHtml}${craftingHtml}${warehouseHtml}${autoSellHtml}<h3 class="panel-title">背包（${state.inventory.length}）</h3><div class="inv-list">${items || '<div class="empty-hint">背包空空如也，去打怪蒐集素材吧！</div>'}</div><div id="ro-equip-tooltip" class="ro-equip-tooltip"></div>`;
   } catch (e) {
     el.innerHTML = `<div class="empty-hint">背包載入錯誤：${e.message}</div>`;
     console.error('renderInventoryTab error:', e);
@@ -1893,6 +1905,22 @@ function showWarehousePanel() {
   let html = `<h3 class="panel-title">📦 倉庫（跨角色共用）</h3>`;
   html += `<button class="btn-small" onclick="renderInventoryTab()">← 返回</button>`;
 
+  html += `<h3 class="panel-title">鋅幣</h3>`;
+  html += `<div class="card-row">
+    <div class="card-info">
+      <div class="card-details">
+        <span class="card-name">背包 ${state.gold} 鋅幣　／　倉庫 ${wh.gold || 0} 鋅幣</span>
+      </div>
+    </div>
+  </div>
+  <div class="card-row">
+    <input type="number" id="wh-gold-amount" min="1" placeholder="輸入金額" style="width:8em">
+    <button class="btn-small" onclick="depositGoldToWarehouse(document.getElementById('wh-gold-amount').value);showWarehousePanel();renderTopBar();">存入</button>
+    <button class="btn-small" onclick="withdrawGoldFromWarehouse(document.getElementById('wh-gold-amount').value);showWarehousePanel();renderTopBar();">領出</button>
+    <button class="btn-small ghost" onclick="depositGoldToWarehouse(state.gold);showWarehousePanel();renderTopBar();">全部存入</button>
+    <button class="btn-small ghost" onclick="withdrawGoldFromWarehouse((loadWarehouse().gold||0));showWarehousePanel();renderTopBar();">全部領出</button>
+  </div>`;
+
   html += `<h3 class="panel-title">背包 → 存入倉庫</h3>`;
   const invRows = state.inventory.filter(row => ITEMS[row.item]);
   if (invRows.length === 0) {
@@ -1907,6 +1935,7 @@ function showWarehousePanel() {
           <div class="card-details"><span class="card-name">${name} x${row.qty}</span></div>
         </div>
         <button class="btn-small" onclick="depositToWarehouse('${row.item}',1);showWarehousePanel();">存入</button>
+        ${row.qty > 1 ? `<button class="btn-small ghost" onclick="depositToWarehouseAll('${row.item}');showWarehousePanel();">全部存入</button>` : ''}
       </div>`;
     });
     html += '</div>';
@@ -1927,6 +1956,52 @@ function showWarehousePanel() {
           <div class="card-details"><span class="card-name">${name} x${row.qty}</span></div>
         </div>
         <button class="btn-small" onclick="withdrawFromWarehouse('${row.item}',1);showWarehousePanel();renderTopBar();">領出</button>
+        ${row.qty > 1 ? `<button class="btn-small ghost" onclick="withdrawFromWarehouseAll('${row.item}');showWarehousePanel();renderTopBar();">全部領出</button>` : ''}
+      </div>`;
+    });
+    html += '</div>';
+  }
+  el.innerHTML = html;
+}
+
+/* ---------------- 自動販賣 UI ---------------- */
+function showAutoSellPanel() {
+  const el = document.getElementById('tab-inventory');
+  if (!el) return;
+  if (!state.autoSellConfig) state.autoSellConfig = { enabled: false, items: [] };
+  const cfg = state.autoSellConfig;
+
+  let html = `<h3 class="panel-title">🏷️ 自動販賣</h3>`;
+  html += `<button class="btn-small" onclick="renderInventoryTab()">← 返回</button>`;
+
+  const readyIn = Math.max(0, Math.ceil(((state.autoSellReadyAt || 0) - Date.now()) / 1000));
+  html += `<div class="empty-hint">
+    勾選要自動販賣的道具，啟用後每30秒自動賣出背包內所有已勾選道具（依原價）。
+    ${cfg.enabled ? `目前已啟用，下次自動販賣倒數 ${readyIn}s。` : '目前尚未啟用。'}
+  </div>`;
+  html += `<div class="card-row">
+    <label><input type="checkbox" ${cfg.enabled ? 'checked' : ''} onchange="setAutoSellEnabled(this.checked);showAutoSellPanel();"> 啟用自動販賣（每30秒）</label>
+  </div>`;
+  html += `<div class="card-row">
+    <button class="btn-small" onclick="runAutoSellNow();showAutoSellPanel();renderTopBar();">立即手動販賣已選道具</button>
+  </div>`;
+
+  html += `<h3 class="panel-title">選擇要自動販賣的道具</h3>`;
+  const invRows = state.inventory.filter(row => ITEMS[row.item] && ITEMS[row.item].sell > 0);
+  if (invRows.length === 0) {
+    html += `<div class="empty-hint">背包內沒有可販賣的道具。</div>`;
+  } else {
+    html += '<div class="card-list">';
+    invRows.forEach(row => {
+      const def = ITEMS[row.item];
+      const name = getItemDisplayName(row.item);
+      const checked = cfg.items.includes(row.item);
+      html += `<div class="card-row">
+        <label style="flex:1;display:flex;align-items:center;gap:6px">
+          <input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleAutoSellItem('${row.item}');showAutoSellPanel();">
+          <span class="card-icon">${def.icon || '📦'}</span>
+          <span class="card-name">${name} x${row.qty}（單價 ${def.sell}）</span>
+        </label>
       </div>`;
     });
     html += '</div>';

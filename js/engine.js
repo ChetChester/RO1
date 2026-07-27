@@ -14,8 +14,11 @@ const WAREHOUSE_KEY = 'ro_idle_warehouse';
 function loadWarehouse() {
   try {
     const raw = localStorage.getItem(WAREHOUSE_KEY);
-    return raw ? JSON.parse(raw) : { items: [] };
-  } catch (e) { return { items: [] }; }
+    const wh = raw ? JSON.parse(raw) : { items: [] };
+    if (!wh.items) wh.items = [];
+    if (typeof wh.gold !== 'number') wh.gold = 0;
+    return wh;
+  } catch (e) { return { items: [], gold: 0 }; }
 }
 function saveWarehouse(wh) {
   try { localStorage.setItem(WAREHOUSE_KEY, JSON.stringify(wh)); } catch (e) { /* 忽略儲存失敗 */ }
@@ -32,6 +35,11 @@ function depositToWarehouse(itemId, qty) {
   logMsg(`📦 將 ${getItemDisplayName(itemId)} x${qty} 存入倉庫。`);
   return true;
 }
+function depositToWarehouseAll(itemId) {
+  const row = state.inventory.find(r => r.item === itemId);
+  if (!row || row.qty < 1) return false;
+  return depositToWarehouse(itemId, row.qty);
+}
 function withdrawFromWarehouse(itemId, qty) {
   const wh = loadWarehouse();
   const whRow = wh.items.find(r => r.item === itemId);
@@ -42,6 +50,34 @@ function withdrawFromWarehouse(itemId, qty) {
   addItem(itemId, qty);
   saveGame();
   logMsg(`📦 從倉庫領出 ${getItemDisplayName(itemId)} x${qty}。`);
+  return true;
+}
+function withdrawFromWarehouseAll(itemId) {
+  const wh = loadWarehouse();
+  const whRow = wh.items.find(r => r.item === itemId);
+  if (!whRow || whRow.qty < 1) return false;
+  return withdrawFromWarehouse(itemId, whRow.qty);
+}
+function depositGoldToWarehouse(amount) {
+  amount = Math.floor(Number(amount));
+  if (!amount || amount < 1 || state.gold < amount) return false;
+  state.gold -= amount;
+  const wh = loadWarehouse();
+  wh.gold += amount;
+  saveWarehouse(wh);
+  saveGame();
+  logMsg(`📦 將 ${amount} 鋅幣存入倉庫。`);
+  return true;
+}
+function withdrawGoldFromWarehouse(amount) {
+  amount = Math.floor(Number(amount));
+  const wh = loadWarehouse();
+  if (!amount || amount < 1 || wh.gold < amount) return false;
+  wh.gold -= amount;
+  saveWarehouse(wh);
+  state.gold += amount;
+  saveGame();
+  logMsg(`📦 從倉庫領出 ${amount} 鋅幣。`);
   return true;
 }
 const OFFLINE_CAP_MS = 12 * 60 * 60 * 1000; // 離線掛機最多累積 12 小時
@@ -106,6 +142,8 @@ function createCharacter(name, statAlloc, gender) {
     autoSkillConfig: { skillId: null, mode: 'once', spThreshold: 30, skillId2: null, spThreshold2: 50, monsterCount2: 2 }, // skillId2=第二招, spThreshold2=SP%門檻, monsterCount2=怪物數門檻
     autoPotion: { enabled: true, primary: '', fallback: 'red_potion', hpThreshold: 50 },
     autoBuyPotion: true,
+    autoSellConfig: { enabled: false, items: [] }, // 自動販賣：每30秒自動賣出背包內已選擇的道具
+    autoSellReadyAt: 0,
     cardEleDmgBonus: {}, // 屬性傷害加成（由卡片提供）
     muted: false,
     lastAttackTime: Date.now(),
@@ -138,6 +176,12 @@ function currentJob() { return JOB_TREE[state.jobId]; }
 
 // 可雙持單手武器的職業（左手欄位可放武器而非盾牌）
 function canDualWield(jobId) { return jobId === 'assassin'; }
+
+// 長矛類武器判定（矛限定技能共用）：道具資料的weaponType欄位對矛類武器標示很乾淨，直接用它判斷
+function hasSpearEquipped() {
+  const w = state.equip.weapon ? ITEMS[state.equip.weapon] : null;
+  return !!(w && w.weaponType === 'spear');
+}
 
 function equippedAtk() {
   const w = state.equip.weapon ? ITEMS[state.equip.weapon] : null;
@@ -197,8 +241,9 @@ function recomputeDerived(fullHeal) {
 
   state.maxHp = newMaxHp;
   state.maxSp = newMaxSp;
-  if (fullHeal) { state.hp = newMaxHp; state.sp = newMaxSp; }
-  else { state.hp = Math.min(state.hp, newMaxHp); state.sp = Math.min(state.sp, newMaxSp); }
+  // 注意：這裡先不夾住hp/sp！體能強化(maxHpMult)、卡片HP%/SP%加成等都會在後面才疊加到
+  // state.maxHp/maxSp 上，若在此處就用未套用加成的newMaxHp夾住hp，會在每次呼叫(tickBuffs每100ms
+  // 都會呼叫一次)把hp錯誤地砍回未加成的較低數值——夾住的動作統一移到函式最後，用最終數值執行。
 
   // 被動技能 STR/INT/DEX 固定加成（必須在衍生數值計算之前，避免直接修改 state.stats 導致膨脹）
   let passiveStrBonus = 0, passiveIntBonus = 0, passiveDexBonus = 0;
@@ -379,6 +424,21 @@ function recomputeDerived(fullHeal) {
   state.onHitStunChance2 = 0;
   state.onHitStunSec2 = 0.5;
   state.onHitStunCooldownSec2 = 10;
+  state.hpItemEffectBonusPct = 0;
+  state.hasBashStunProc = false;
+  state.bashStunProcChance = 0;
+  state.bashStunProcSec = 1;
+  state.hasSpearCounterProc = false;
+  state.spearCounterChance = 0;
+  state.spearCounterMult = 0;
+  state.spearCounterStunSec = 2;
+  state.spearCounterCooldownSec = 10;
+  state.hasSpearBoomerangProc = false;
+  state.spearBoomerangMult = 0;
+  state.spearBoomerangCooldownSec = 5;
+  state.hasChargeRandomProc = false;
+  state.chargeRandomMult = 0;
+  state.chargeRandomCooldownSec = 5;
   // 雙持右手/左手傷害修正：未修練時的預設值（低於Lv1）
   state.rightHandPct = 50;
   state.leftHandPct = 30;
@@ -392,6 +452,8 @@ function recomputeDerived(fullHeal) {
       const val = Array.isArray(sk.mult) ? sk.mult[lv - 1] : sk.mult;
       switch (sk.passiveStat) {
         case 'atkFlat': {
+          // 長矛熟練：必須裝備矛類武器才生效
+          if (sk.id === 'spearmastery' && !hasSpearEquipped()) break;
           state.atk += Math.round(val);
           // 武器修理：附加固定暴擊率加成
           if (sk.critBonus) {
@@ -415,8 +477,8 @@ function recomputeDerived(fullHeal) {
           break;
         }
         case 'matkFlat': state.matk += Math.round(val); break;
-        case 'maxHpMult': state.maxHp = Math.round(state.maxHp * val); state.hp = Math.min(state.hp, state.maxHp); break;
-        case 'maxSpMult': state.maxSp = Math.round(state.maxSp * val); state.sp = Math.min(state.sp, state.maxSp); break;
+        case 'maxHpMult': state.maxHp = Math.round(state.maxHp * val); break;
+        case 'maxSpMult': state.maxSp = Math.round(state.maxSp * val); break;
         case 'critRate': state.critRate = Math.min(100, state.critRate + val); break;
         case 'hitFlat': {
           state.hit += Math.round(val);
@@ -439,12 +501,48 @@ function recomputeDerived(fullHeal) {
         // dexFlat 已在 recomputeDerived 開頭計算並加入 cDex，不再修改 state.stats.dex
         case 'defFlat': state.def += Math.round(val); break;
         case 'spRegen': state.spRegenMult = (state.spRegenMult || 1) * val; break;
-        case 'hpRegenMult': state.hpRegenMult = (state.hpRegenMult || 1) * val; break;
+        case 'hpRegenMult': {
+          state.hpRegenMult = (state.hpRegenMult || 1) * val;
+          // 快速恢復：附加HP恢復道具效果加成
+          if (sk.itemEffectBonus) state.hpItemEffectBonusPct = Array.isArray(sk.itemEffectBonus) ? sk.itemEffectBonus[lv - 1] : sk.itemEffectBonus;
+          break;
+        }
         case 'hpMoveRegen': state.hpMoveRegen = true; break;
         case 'berserk': state.hasBerserk = true; break;
-        case 'bashStun': state.hasBashStun = true; break;
+        case 'bashStunProc': {
+          state.hasBashStunProc = true;
+          state.bashStunProcChance = Array.isArray(sk.procChance) ? sk.procChance[lv - 1] : sk.procChance;
+          state.bashStunProcSec = Array.isArray(sk.stunSec) ? sk.stunSec[lv - 1] : (sk.stunSec || 1);
+          break;
+        }
         case 'riding': state.maxMonsters = Math.max(state.maxMonsters || 1, 1); state.hasRiding = true; break;
+        case 'cavalierBonus': {
+          state.flee += Math.round(val);
+          if (sk.atkBonus) { const ab = Array.isArray(sk.atkBonus) ? sk.atkBonus[lv - 1] : sk.atkBonus; state.atk += Math.round(ab); }
+          if (sk.critBonus) { const cb = Array.isArray(sk.critBonus) ? sk.critBonus[lv - 1] : sk.critBonus; state.critRate = Math.min(100, state.critRate + cb); }
+          break;
+        }
         case 'counterAttack': state.hasCounterAttack = true; state.counterAttackChance = val; break;
+        case 'spearCounterProc': {
+          state.hasSpearCounterProc = true;
+          state.spearCounterChance = Array.isArray(sk.procChance) ? sk.procChance[lv - 1] : sk.procChance;
+          state.spearCounterMult = val;
+          state.spearCounterStunSec = Array.isArray(sk.stunSec) ? sk.stunSec[lv - 1] : (sk.stunSec || 2);
+          state.spearCounterCooldownSec = Array.isArray(sk.internalCooldown) ? sk.internalCooldown[lv - 1] : (sk.internalCooldown || 10);
+          break;
+        }
+        case 'spearBoomerangProc': {
+          state.hasSpearBoomerangProc = true;
+          state.spearBoomerangMult = val;
+          state.spearBoomerangCooldownSec = Array.isArray(sk.internalCooldown) ? sk.internalCooldown[lv - 1] : (sk.internalCooldown || 5);
+          break;
+        }
+        case 'chargeRandomProc': {
+          state.hasChargeRandomProc = true;
+          state.chargeRandomMult = val;
+          state.chargeRandomCooldownSec = Array.isArray(sk.internalCooldown) ? sk.internalCooldown[lv - 1] : (sk.internalCooldown || 5);
+          break;
+        }
         case 'steal': state.stealChance = val; break;
         case 'doubleAttack': {
           // 二刀連擊：額外附帶永久命中加成
@@ -651,12 +749,10 @@ function recomputeDerived(fullHeal) {
   const hpPctBonus = getCardBonus('hpPct') / 100;
   if (hpPctBonus > 0) {
     state.maxHp = Math.round(state.maxHp * (1 + hpPctBonus));
-    state.hp = Math.min(state.hp, state.maxHp);
   }
   const spPctBonus = getCardBonus('spPct') / 100;
   if (spPctBonus > 0) {
     state.maxSp = Math.round(state.maxSp * (1 + spPctBonus));
-    state.sp = Math.min(state.sp, state.maxSp);
   }
 
   // 卡片加成 — 屬性傷害加成（存入 state 供戰鬥使用）
@@ -671,6 +767,13 @@ function recomputeDerived(fullHeal) {
       }
     }
   });
+
+  // HP/SP 夾住動作統一放在這裡執行，此時state.maxHp/maxSp已經是套用完所有被動技能與卡片加成後的最終值
+  // 防止HP/SP因過去任何一次NaN污染而永久卡死（NaN < 任何數都是false，一旦中毒就無法自然回滿/回復）
+  if (Number.isNaN(state.hp)) state.hp = state.maxHp;
+  if (Number.isNaN(state.sp)) state.sp = state.maxSp;
+  if (fullHeal) { state.hp = state.maxHp; state.sp = state.maxSp; }
+  else { state.hp = Math.min(state.hp, state.maxHp); state.sp = Math.min(state.sp, state.maxSp); }
 }
 
 /* ---------------- 戰鬥公式輔助 ----------------
@@ -823,6 +926,47 @@ function tryMagicStunProcs(mon, monDef) {
   });
 }
 
+// 長矛刺擊：被攻擊時機率反制，對攻擊者造成傷害並使其暈眩（需裝備矛類武器，不影響原本受到的傷害）
+function trySpearCounterProc(mon, monDef) {
+  if (!state.hasSpearCounterProc || !hasSpearEquipped()) return;
+  if (Date.now() < (state.spearCounterReadyAt || 0)) return;
+  if (Math.random() * 100 >= state.spearCounterChance) return;
+  state.spearCounterReadyAt = Date.now() + (state.spearCounterCooldownSec || 10) * 1000;
+  const dmg = mitigateDamage(state.atk * state.spearCounterMult, monDef.def);
+  mon.hp -= dmg;
+  applyStun(mon, state.spearCounterStunSec || 2, true);
+  logMsg(`🔱 長矛刺擊發動！對 ${monDef.name} 造成 ${dmg} 點反擊傷害，並使其暈眩了！`);
+  if (mon.hp <= 0) killMonster(monDef, mon);
+}
+
+// 投擲長矛：敵人數≥2時，定時隨機對一隻造成傷害（需裝備矛類武器）
+function trySpearBoomerangProc() {
+  if (!state.hasSpearBoomerangProc || !hasSpearEquipped()) return;
+  if (!state.monsters || state.monsters.length < 2) return;
+  if (Date.now() < (state.spearBoomerangReadyAt || 0)) return;
+  state.spearBoomerangReadyAt = Date.now() + (state.spearBoomerangCooldownSec || 5) * 1000;
+  const mon = state.monsters[Math.floor(Math.random() * state.monsters.length)];
+  const monDef = MONSTERS[mon.defId];
+  const dmg = mitigateDamage(state.atk * state.spearBoomerangMult, monDef.def);
+  mon.hp -= dmg;
+  logMsg(`🔱 投擲長矛發動！對 ${monDef.name} 造成 ${dmg} 點傷害！`);
+  if (mon.hp <= 0) killMonster(monDef, mon);
+}
+
+// 衝鋒攻擊：敵人數≥2時，定時隨機對一隻造成傷害（不限武器）
+function tryChargeRandomProc() {
+  if (!state.hasChargeRandomProc) return;
+  if (!state.monsters || state.monsters.length < 2) return;
+  if (Date.now() < (state.chargeRandomReadyAt || 0)) return;
+  state.chargeRandomReadyAt = Date.now() + (state.chargeRandomCooldownSec || 5) * 1000;
+  const mon = state.monsters[Math.floor(Math.random() * state.monsters.length)];
+  const monDef = MONSTERS[mon.defId];
+  const dmg = mitigateDamage(state.atk * state.chargeRandomMult, monDef.def);
+  mon.hp -= dmg;
+  logMsg(`🐎 衝鋒攻擊發動！對 ${monDef.name} 造成 ${dmg} 點傷害！`);
+  if (mon.hp <= 0) killMonster(monDef, mon);
+}
+
 // 火之獵殺：被攻擊時觸發，對全體造成範圍魔法傷害
 function tryOnHitAoeProc() {
   if (!state.hasOnHitAoeProc || !state.monsters || state.monsters.length === 0) return;
@@ -954,8 +1098,14 @@ function gameTick() {
     }
     // 露天商店被動：定時自動以10倍價格販售已選擇的道具
     tryAutoVending();
+    // 自動販賣：玩家勾選的道具，每30秒自動以原價賣出全部
+    tryAutoSell();
     // 冰刃之牆被動：自動補上護盾
     tryAutoShield();
+    // 投擲長矛：敵人數≥2時定時隨機攻擊
+    trySpearBoomerangProc();
+    // 衝鋒攻擊：敵人數≥2時定時隨機攻擊
+    tryChargeRandomProc();
     // 屬性石製造被動：定時機率隨機獲得一顆屬性石
     if (state.hasElementalStoneProc) {
       const readyAt = state.elementalStoneReadyAt || 0;
@@ -1241,7 +1391,7 @@ function buffMult(type) {
   let flatBonus = 0;
   state.buffs.forEach(b => {
     if (b.type === type) {
-      mult *= b.mult;
+      if (typeof b.mult === 'number' && !Number.isNaN(b.mult)) mult *= b.mult;
       if (b.flatBonus) flatBonus += b.flatBonus;
     }
   });
@@ -1321,7 +1471,8 @@ function playerAttack() {
   if (typeof playAttackAnim === 'function') playAttackAnim();
   const target = state.monsters[0]; // 攻擊第一隻怪物
   const monDef = MONSTERS[target.defId];
-  const useMag = currentJob().matkMod > currentJob().atkMod;
+  // 官方RO規則：普通攻擊一律使用物理ATK（不看職業），只有主動施放的技能才會用MATK
+  // 之前用 job.matkMod > job.atkMod 判斷，導致法師/巫師/見習修女/祭司的普通攻擊誤用MATK計算
 
   // Calculate effective crit rate with buff
   const critBuff = buffMult('crit');
@@ -1337,7 +1488,7 @@ function playerAttack() {
     }
   }
 
-  let raw = useMag ? state.matk : state.atk;
+  let raw = state.atk;
   raw *= buffMult('atk').mult;
   // 狂暴狀態：HP < 25% 時 ATK +32%
   if (state.hasBerserk && state.hp < state.maxHp * 0.25) {
@@ -1387,14 +1538,25 @@ function playerAttack() {
   const dmg = mitigateDamage(raw, monDefVal);
   target.hp -= dmg;
   logMsg(`你對 ${monDef.name} 造成 ${dmg} 點傷害${isCrit ? '（暴擊！無視閃避）' : ''}`);
-  // 冰凍術/石化術：魔法傷害命中會提前喚醒被反制暈眩的目標
-  if (useMag) wakeIfFrozen(target);
   // 命中音效
   if (typeof playHitSound === 'function') playHitSound();
 
   if (target.hp <= 0) {
     killMonster(monDef, target);
     return;
+  }
+
+  // 怒爆之火：普攻期間額外附加一段火屬性傷害
+  const magnumBuff = state.buffs.find(b => b.type === 'magnumfire');
+  if (magnumBuff) {
+    const fireMult = getElementMultiplier('fire', monDef.element || 'none');
+    const bonusDmg = mitigateDamage(state.atk * magnumBuff.flatBonus * fireMult, monDefVal);
+    target.hp -= bonusDmg;
+    logMsg(`🔥 怒爆之火附加了 ${bonusDmg} 點火屬性傷害！`);
+    if (target.hp <= 0) {
+      killMonster(monDef, target);
+      return;
+    }
   }
 
   // 二刀連擊：被動技能，有機率發動第二段攻擊
@@ -1635,6 +1797,8 @@ function monsterAttackSingle(mon) {
   tryOnHitAoeStunProc();
   // 泥沼地：被攻擊時反制暈眩攻擊者
   tryOnHitStunProc2(mon, monDef);
+  // 長矛刺擊：被攻擊時機率反擊
+  trySpearCounterProc(mon, monDef);
 }
 
 function killMonster(def, monObj) {
@@ -1876,7 +2040,13 @@ function castSkill(skillId) {
   if (!lv) return false;
   if (!skillReady(skillId)) return false;
 
-  const spCost = Array.isArray(sk.spCost) ? sk.spCost[lv - 1] : sk.spCost;
+  // 武器類型限定技能（例如長矛專用技）：未裝備對應武器時無法施放
+  if (sk.requiresWeapon === 'spear' && !hasSpearEquipped()) {
+    logMsg(`⚠️ 「${sk.name}」需要裝備矛類武器才能施放！`);
+    return false;
+  }
+
+  const spCost = Array.isArray(sk.spCost) ? (sk.spCost[lv - 1] ?? sk.spCost[sk.spCost.length - 1] ?? 0) : (sk.spCost || 0);
   if (state.sp < spCost) return false;
 
   // 金錢攻擊：消耗鋅幣才能施放
@@ -1914,7 +2084,8 @@ function castSkill(skillId) {
   state.cooldowns[skillId] = cd * 1000;
 
   const mult = Array.isArray(sk.mult) ? sk.mult[lv - 1] : sk.mult;
-  const useMag = sk.type === 'magic';
+  // 'magic_aoe'（例如火球術、雷爆術、光獵、怒雷強擊）先前漏判，導致誤用ATK而非MATK計算傷害
+  const useMag = sk.type === 'magic' || sk.type === 'magic_aoe';
   const baseDmgStat = useMag ? state.matk : state.atk;
 
   // 屬性相剋：技能屬性 vs 怪物屬性
@@ -1931,6 +2102,10 @@ function castSkill(skillId) {
         // 超音速投擲被動：音速投擲命中率修正+90%
         let effectiveHit = effectiveHitWithBuff();
         if (sk.id === 'sonicblow' && state.hasSonicblowBoost) effectiveHit += 90;
+        // 狂擊：本次攻擊額外命中加成
+        if (sk.id === 'bash' && sk.hitBonus) {
+          effectiveHit += Array.isArray(sk.hitBonus) ? sk.hitBonus[lv - 1] : sk.hitBonus;
+        }
         const hitPct = hitChancePct(effectiveHit, monsterFleeOf(def));
         if (Math.random() * 100 > hitPct) {
           logMsg(`「${sk.name}」被 ${def.name} 閃避了！`);
@@ -1976,15 +2151,10 @@ function castSkill(skillId) {
         applyStun(target, stunSecHit, true);
         logMsg(`💫 ${def.name} 被暈眩了！`);
       }
-      // 攻擊弱點：狂擊Lv6以上有機率暈眩
-      if (sk.id === 'bash' && state.hasBashStun && lv >= 6 && Math.random() < 0.5) {
-        logMsg(`💫 ${def.name} 被暈眩了！`);
-      }
-      // 怒爆自傷：自身受10%HP傷害
-      if (sk.id === 'magnumbreak') {
-        const selfDmg = Math.round(state.maxHp * 0.1);
-        state.hp = Math.max(1, state.hp - selfDmg);
-        logMsg(`🔥 怒爆的反噬對你造成 ${selfDmg} 點傷害！`);
+      // 攻擊弱點：狂擊命中時有機率使目標暈眩
+      if (sk.id === 'bash' && state.hasBashStunProc && target.hp > 0 && Math.random() * 100 < state.bashStunProcChance) {
+        applyStun(target, state.bashStunProcSec || 1, true);
+        logMsg(`💫 攻擊弱點發動！${def.name} 暈眩了！`);
       }
       // 衝鋒箭：命中時使敵人暈眩1~3秒（代表擊退）
       if (sk.id === 'chargearrow' && target.hp > 0) {
@@ -2016,6 +2186,12 @@ function castSkill(skillId) {
         // 負重量上升：加成手推車攻擊傷害
         let aoeMult = mult;
         if (sk.id === 'cartattack' && state.cartDmgBonusMult) aoeMult *= (1 + state.cartDmgBonusMult);
+        // 騎乘攻擊：依STR增加傷害（STR120封頂）
+        if (sk.id === 'brandishspear') {
+          const strScaleMax = Array.isArray(sk.strScaleMax) ? sk.strScaleMax[lv - 1] : (sk.strScaleMax || 100);
+          const strBonusPct = Math.min(1, state.stats.str / 120) * (strScaleMax / 100);
+          aoeMult *= (1 + strBonusPct);
+        }
         let dmg = mitigateDamage(baseDmgStat * aoeMult * monElemMult * (1 + monEleDmgBonus), monDef.def);
         // 鋼製喙：閃電衝擊額外固定傷害（不受倍率影響）
         if (sk.id === 'blitzbeat' && state.falconFlatBonus) dmg += state.falconFlatBonus;
@@ -2053,6 +2229,14 @@ function castSkill(skillId) {
         const hitBonus = Array.isArray(sk.bonusHitBuff) ? sk.bonusHitBuff[lv - 1] : sk.bonusHitBuff;
         const hitDur = Array.isArray(sk.bonusHitDuration) ? sk.bonusHitDuration[lv - 1] : sk.bonusHitDuration;
         state.buffs.push({ type: 'hit', mult: 1, flatBonus: hitBonus, msRemaining: hitDur * 1000 });
+      }
+      // 怒爆：附加一段時間內普攻額外火屬性傷害buff（重複施放時重新整理，不疊加）
+      if (sk.buffPct) {
+        const buffPct = Array.isArray(sk.buffPct) ? sk.buffPct[lv - 1] : sk.buffPct;
+        const buffDur = Array.isArray(sk.buffDurationSec) ? sk.buffDurationSec[lv - 1] : sk.buffDurationSec;
+        state.buffs = state.buffs.filter(b => b.type !== 'magnumfire');
+        state.buffs.push({ type: 'magnumfire', flatBonus: buffPct / 100, msRemaining: buffDur * 1000 });
+        logMsg(`🔥 「${sk.name}」發動，接下來${buffDur}秒內普攻附加額外火屬性傷害！`);
       }
       if (typeof renderLog === 'function') renderLog();
       break;
@@ -2397,6 +2581,16 @@ function castSkill(skillId) {
   return true;
 }
 
+// 在城鎮安全區休息時，HP/SP每秒都會被townRestore()自動補滿：
+// 此時自動施放會消耗HP的技能，或只對治療/場域/戰鬥才有意義的技能，
+// 只會造成「扣了又馬上補回」的無謂消耗與畫面閃爍，故休息時應跳過
+function wastesResourceInTown(sk, lv) {
+  if (!isInTown()) return false;
+  const hpCostCheck = Array.isArray(sk.hpCost) ? sk.hpCost[lv - 1] : sk.hpCost;
+  if (hpCostCheck > 0) return true;
+  return ['heal', 'heal_over_time', 'field_heal', 'field_aoe_magic', 'stun_field', 'multi_dot_stun', 'debuff_def', 'debuff'].includes(sk.type);
+}
+
 function tryAutoCastSkill() {
   if (!state.autoSkillConfig) state.autoSkillConfig = { skillId: null, mode: 'once', spThreshold: 30, skillId2: null, spThreshold2: 50, monsterCount2: 2 };
 
@@ -2418,6 +2612,7 @@ function tryAutoCastSkill() {
         if (state.sp < spCost) continue;
         const isAttack = ['damage', 'magic', 'dot', 'damage_multihit', 'damage_multi', 'damage_aoe', 'magic_aoe', 'poison_proc'].includes(sk.type);
         if (isAttack && monsterCount === 0) continue;
+        if (wastesResourceInTown(sk, lv)) continue;
         castSkill(sk.id);
         return;
       }
@@ -2433,7 +2628,7 @@ function tryAutoCastSkill() {
       if (lv && skillReady(sk.id)) {
         const spCost = Array.isArray(sk.spCost) ? sk.spCost[lv - 1] : sk.spCost;
         const isAttack = ['damage', 'magic', 'dot', 'damage_multihit', 'damage_multi', 'damage_aoe', 'magic_aoe', 'poison_proc'].includes(sk.type);
-        if (state.sp >= spCost && spPct >= config.spThreshold) {
+        if (state.sp >= spCost && spPct >= config.spThreshold && !wastesResourceInTown(sk, lv)) {
           if (!isAttack || monsterCount > 0) {
             castSkill(sk.id);
             return;
@@ -2450,7 +2645,7 @@ function tryAutoCastSkill() {
       const lv2 = state.learnedSkills[sk2.id];
       if (lv2 && skillReady(sk2.id)) {
         const spCost2 = Array.isArray(sk2.spCost) ? sk2.spCost[lv2 - 1] : sk2.spCost;
-        if (state.sp >= spCost2 && spPct >= config.spThreshold2 && monsterCount >= config.monsterCount2) {
+        if (state.sp >= spCost2 && spPct >= config.spThreshold2 && monsterCount >= config.monsterCount2 && !wastesResourceInTown(sk2, lv2)) {
           castSkill(sk2.id);
           return;
         }
@@ -2471,6 +2666,8 @@ function tryAutoCastSupportSkills() {
       const lv = state.learnedSkills[sk.id];
       if (!lv) continue;
       if (!skillReady(sk.id)) continue;
+      if (wastesResourceInTown(sk, lv)) continue;
+
       const spCost = Array.isArray(sk.spCost) ? sk.spCost[lv - 1] : sk.spCost;
       if (state.sp < spCost) continue;
 
@@ -2580,9 +2777,7 @@ function doJobChange(targetId) {
   state.jobLevel = 1;
   state.jobExp = 0;
 
-  // 轉職獎勵：新職業獲得 3 點技能點
   if (!state.jobSkillPoints[targetId]) state.jobSkillPoints[targetId] = 0;
-  state.jobSkillPoints[targetId] += 3;
   state.skillPoints = Object.values(state.jobSkillPoints).reduce((a, b) => a + b, 0);
 
   // 自動習得新職業的任務技能
@@ -2601,7 +2796,7 @@ function doJobChange(targetId) {
   });
 
   recomputeDerived(true);
-  logMsg(`🎊 恭喜！你轉職成為「${target.icon} ${target.name}」！獲得 3 點技能點！`);
+  logMsg(`🎊 恭喜！你轉職成為「${target.icon} ${target.name}」！`);
   if (typeof updatePlayerSprite === 'function') updatePlayerSprite();
   saveGame();
   return true;
@@ -2731,7 +2926,11 @@ function useItem(itemId) {
   const row = state.inventory.find(r => r.item === itemId);
   if (!def || !row) return false;
   if (def.type === 'consumable' || def.type === 'material') {
-    if (def.heal) state.hp = Math.min(state.maxHp, state.hp + def.heal);
+    if (def.heal) {
+      // 快速恢復：HP恢復道具效果加成
+      const boostedHeal = Math.round(def.heal * (1 + (state.hpItemEffectBonusPct || 0) / 100));
+      state.hp = Math.min(state.maxHp, state.hp + boostedHeal);
+    }
     else if (def.restoreSp) {
       // 禪心：SP恢復道具效果+10%~100%
       const boosted = Math.round(def.restoreSp * (1 + (state.spItemEffectBonusPct || 0) / 100));
@@ -3030,6 +3229,60 @@ function sellItem(itemId, qty) {
   logMsg(`賣出 ${def.name} x${qty}，獲得 ${total} 鋅幣。`);
   saveGame();
   return true;
+}
+function sellItemAll(itemId) {
+  const row = state.inventory.find(r => r.item === itemId);
+  if (!row || row.qty < 1) return false;
+  return sellItem(itemId, row.qty);
+}
+
+/* ---------------- 自動販賣：玩家勾選的道具，每30秒(或手動)自動以原價賣出全部 ---------------- */
+const AUTO_SELL_INTERVAL_MS = 30 * 1000;
+function toggleAutoSellItem(itemId) {
+  if (!state.autoSellConfig) state.autoSellConfig = { enabled: false, items: [] };
+  const idx = state.autoSellConfig.items.indexOf(itemId);
+  if (idx >= 0) state.autoSellConfig.items.splice(idx, 1);
+  else state.autoSellConfig.items.push(itemId);
+  saveGame();
+}
+function setAutoSellEnabled(v) {
+  if (!state.autoSellConfig) state.autoSellConfig = { enabled: false, items: [] };
+  state.autoSellConfig.enabled = !!v;
+  state.autoSellReadyAt = Date.now() + AUTO_SELL_INTERVAL_MS;
+  saveGame();
+}
+// 立即執行一次自動販賣（不受30秒週期限制，並重新計時）
+function runAutoSellNow() {
+  const sold = autoSellSelectedItems();
+  state.autoSellReadyAt = Date.now() + AUTO_SELL_INTERVAL_MS;
+  saveGame();
+  return sold;
+}
+function autoSellSelectedItems() {
+  if (!state.autoSellConfig || !state.autoSellConfig.items || state.autoSellConfig.items.length === 0) return false;
+  let soldAny = false;
+  let totalGold = 0;
+  state.autoSellConfig.items.forEach(itemId => {
+    const def = ITEMS[itemId];
+    const row = state.inventory.find(r => r.item === itemId);
+    if (!def || !row || row.qty < 1) return;
+    const qty = row.qty;
+    removeItem(itemId, qty);
+    const price = Math.round(def.sell * (state.shopOverchargeMult || 1)) * qty;
+    state.gold += price;
+    totalGold += price;
+    soldAny = true;
+  });
+  if (soldAny) logMsg(`🏷️ 自動販賣賣出了選定道具，獲得 ${totalGold} 鋅幣！`);
+  return soldAny;
+}
+function tryAutoSell() {
+  if (!state.autoSellConfig) state.autoSellConfig = { enabled: false, items: [] };
+  if (!state.autoSellConfig.enabled) return;
+  const readyAt = state.autoSellReadyAt || 0;
+  if (Date.now() < readyAt) return;
+  state.autoSellReadyAt = Date.now() + AUTO_SELL_INTERVAL_MS;
+  if (autoSellSelectedItems()) saveGame();
 }
 
 /* ---------------- 露天商店：選定道具後自動定時以倍率販售 ---------------- */
@@ -3361,8 +3614,8 @@ function computeOfflineProgress() {
   const avgJobExp = wAvg(m => m.jobExp || 1);
   const avgLevel = wAvg(m => m.level || 1);
 
-  const useMag = currentJob().matkMod > currentJob().atkMod;
-  const raw = useMag ? state.matk : state.atk;
+  // 離線掛機估算的是普通攻擊傷害，官方規則普通攻擊一律用物理ATK（同playerAttack()的修正）
+  const raw = state.atk;
   const critFactor = 1 + (state.critRate / 100) * 0.5;
   const hasDmgSkill = currentJob().skills.some(sk => state.learnedSkills[sk.id] && ['damage', 'magic', 'dot'].includes(sk.type));
   const skillFactor = hasDmgSkill ? 1.15 : 1.0; // 有主動傷害技能時，離線效率略為提升
