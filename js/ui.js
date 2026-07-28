@@ -241,10 +241,12 @@ function switchTab(name) {
   if (name === 'map') renderMapTab();
   if (name === 'autobattle') renderAutoBattleTab();
   if (name === 'skills') renderSkillsTab();
+  if (name === 'equip') renderEquipTab();
   if (name === 'inventory') renderInventoryTab();
   if (name === 'jobtree') renderJobTree();
   if (name === 'character') renderCharacterTab();
-  if (name === 'npc') renderNpcTab();
+  if (name === 'codex') renderCodexTab();
+  if (name === 'achievements') renderAchievementsTab();
 }
 
 function pct(a, b) { return Math.max(0, Math.min(100, (a / b) * 100)); }
@@ -744,12 +746,12 @@ function renderMapTab() {
     <div class="town-npcs">
       <h4 class="town-npc-title">🏪 城鎮 NPC</h4>
       <div class="town-npc-list">
-        <div class="town-npc-card" onclick="switchTab('npc');openNpcShop('weapon');">
+        <div class="town-npc-card" onclick="openNpcShop('weapon');">
           <div class="town-npc-icon">⚔️</div>
           <div class="town-npc-name">武器商人</div>
           <div class="town-npc-hint">購買各種武器</div>
         </div>
-        <div class="town-npc-card" onclick="switchTab('npc');openNpcShop('armor');">
+        <div class="town-npc-card" onclick="openNpcShop('armor');">
           <div class="town-npc-icon">🛡️</div>
           <div class="town-npc-name">防具商人</div>
           <div class="town-npc-hint">購買各種防具</div>
@@ -821,6 +823,7 @@ function renderAutoBattleTab() {
 
   // 下拉1：背包回復道具（消耗品/材料中可回復HP/SP的）
   const invHealItems = state.inventory.filter(row => {
+    if (row.instanceId) return false;
     const d = ITEMS[row.item];
     if (!d) return false;
     if (d.heal || d.restoreSp) return true;
@@ -1183,43 +1186,519 @@ function renderSkillBar() {
   }).join('');
 }
 
-/* ---------------- NPC 商店分頁 ---------------- */
-function renderNpcTab() {
-  const el = document.getElementById('tab-npc');
-  if (!isInTown()) {
-    el.innerHTML = '<div class="empty-hint">🏪 請先前往城鎮才能使用 NPC 商店。</div>';
-    return;
-  }
+/* ---------------- 成就分頁 ---------------- */
+let acvCat = 'all';
+let acvHideDone = false;
 
-  let html = '<h3 class="panel-title">🏪 NPC 商店</h3>';
-  html += '<div class="npc-shop-list">';
+function setAcvCat(c) { acvCat = c; renderAchievementsTab(); }
+function setAcvHideDone(v) { acvHideDone = v; renderAchievementsTab(); }
 
-  Object.keys(NPC_SHOPS).forEach(shopId => {
-    const shop = NPC_SHOPS[shopId];
-    const itemCount = shop.getItems().length;
-    html += `<div class="npc-shop-card" onclick="openNpcShop('${shopId}')">
-      <div class="npc-shop-icon">${shop.icon}</div>
-      <div class="npc-shop-info">
-        <div class="npc-shop-name">${shop.name}</div>
-        <div class="npc-shop-count">${itemCount} 項商品</div>
-      </div>
-      <div class="npc-shop-arrow">▶</div>
-    </div>`;
+// 由 checkAchievements() 解鎖時回呼
+function onAchievementUnlocked(list) {
+  const first = list[0];
+  const extra = list.length > 1 ? `（+${list.length - 1}）` : '';
+  showToast(`🏆 達成成就「${first.name}」${extra}`);
+  const btn = document.querySelector('.tab-btn[data-tab="achievements"]');
+  if (btn && activeTab !== 'achievements') btn.classList.add('has-new');
+  if (activeTab === 'achievements') renderAchievementsTab();
+  renderTopBar();
+}
+
+function renderAchievementsTab() {
+  const el = document.getElementById('tab-achievements');
+  if (!el || !state) return;
+
+  const btn = document.querySelector('.tab-btn[data-tab="achievements"]');
+  if (btn) btn.classList.remove('has-new');
+
+  const sum = getAchievementSummary();
+  const done = ensureAchievements().done;
+
+  let list = ACHIEVEMENTS.filter(a => acvCat === 'all' || a.cat === acvCat);
+  if (acvHideDone) list = list.filter(a => !done[a.id]);
+
+  // 未完成的排前面，並且「差最少就達成」的排最前——玩家一打開就看到下一個目標
+  const rows = list.map(a => {
+    const cur = achievementProgress(a);
+    return { a, cur, done: !!done[a.id], ratio: Math.min(1, cur / a.goal) };
+  });
+  rows.sort((x, y) => {
+    if (x.done !== y.done) return x.done ? 1 : -1;
+    if (x.done) return (done[y.a.id] || 0) - (done[x.a.id] || 0); // 已完成：最近解鎖的在前
+    return y.ratio - x.ratio;
   });
 
-  html += '</div>';
+  const catBtns = ['all'].concat(Object.keys(ACHIEVEMENT_CATEGORIES)).map(c => {
+    const label = c === 'all' ? '全部' : `${ACHIEVEMENT_CATEGORIES[c].icon} ${ACHIEVEMENT_CATEGORIES[c].name}`;
+    const n = c === 'all' ? `${sum.done}/${sum.total}` : `${sum.byCat[c].done}/${sum.byCat[c].total}`;
+    return `<button class="btn-small ${acvCat === c ? 'active' : ''}" onclick="setAcvCat('${c}')">${label} <span class="acv-cat-n">${n}</span></button>`;
+  }).join('');
+
+  const pctDone = sum.total ? (sum.done / sum.total * 100) : 0;
+
+  let html = `<h3 class="panel-title">🏆 成就</h3>
+    <div class="acv-summary">
+      <div class="acv-points"><span class="acv-points-num">${sum.points}</span><span class="acv-points-label">成就點數</span></div>
+      <div class="acv-summary-bar">
+        <div class="codex-prog-head"><span>總進度</span><span>${sum.done} / ${sum.total}　${pctDone.toFixed(1)}%</span></div>
+        <div class="bar-track"><div class="bar-fill acv-prog-fill" style="width:${pctDone}%"></div></div>
+      </div>
+    </div>
+    <div class="acv-cats">${catBtns}</div>
+    <label class="auto-toggle acv-hide"><input type="checkbox" ${acvHideDone ? 'checked' : ''} onchange="setAcvHideDone(this.checked)"> 隱藏已完成</label>`;
+
+  if (!rows.length) {
+    html += '<div class="empty-hint">這個分類已經全部完成了！</div>';
+  } else {
+    html += '<div class="acv-list">';
+    rows.forEach(r => {
+      const a = r.a;
+      const p = r.ratio * 100;
+      const goalTxt = a.goal.toLocaleString();
+      const curTxt = Math.min(r.cur, a.goal).toLocaleString();
+      const rewardTxt = `${a.reward.gold ? `💰 ${a.reward.gold.toLocaleString()}　` : ''}🏆 ${a.reward.point}`;
+      html += `<div class="acv-row ${r.done ? 'done' : ''} tier-${Math.min(a.tier || 1, 5)}">
+        <div class="acv-icon">${a.icon}</div>
+        <div class="acv-body">
+          <div class="acv-name">${a.name}${r.done ? ' <span class="acv-check">✔</span>' : ''}</div>
+          <div class="acv-desc">${a.desc}</div>
+          <div class="acv-bar"><div class="acv-bar-fill" style="width:${p}%"></div></div>
+        </div>
+        <div class="acv-side">
+          <div class="acv-count">${curTxt} / ${goalTxt}</div>
+          <div class="acv-reward">${rewardTxt}</div>
+        </div>
+      </div>`;
+    });
+    html += '</div>';
+  }
+
   el.innerHTML = html;
 }
 
-/* ---------------- 背包分頁 ---------------- */
-function renderInventoryTab() {
-  const el = document.getElementById('tab-inventory');
-  if (!el) return;
+/* ---------------- 圖鑑分頁 ---------------- */
+const CODEX_PAGE_SIZE = 60;
+const RACE_LABELS = {
+  plant: '植物', insect: '昆蟲', brute: '動物', formless: '無形', fish: '魚貝',
+  undead: '不死', humanoid: '人型', demon: '惡魔', dragon: '龍族', angel: '天使'
+};
+const SIZE_LABELS = { small: '小型', medium: '中型', large: '大型' };
+const ITEM_TYPE_LABELS = {
+  weapon: '武器', armor: '防具', consumable: '消耗品', material: '素材', etc: '雜物', card: '卡片'
+};
+let codexView = 'mon';      // mon | card | item
+let codexFilter = 'all';    // all | found | missing
+let codexSearch = '';
+let codexPage = 0;
+let codexOpenId = null;
 
-  hideEquipTooltip();
+function setCodexView(v) { codexView = v; codexPage = 0; codexOpenId = null; renderCodexTab(); }
+function setCodexFilter(f) { codexFilter = f; codexPage = 0; renderCodexTab(); }
+function setCodexPage(p) { codexPage = p; renderCodexTab(); }
+function onCodexSearch(v) {
+  codexSearch = (v || '').trim().toLowerCase();
+  codexPage = 0;
+  renderCodexTab();
+  // 重繪會讓輸入框失焦，手動把游標接回去，不然每打一個字就要重點一次
+  const box = document.getElementById('codex-search');
+  if (box) { box.focus(); box.setSelectionRange(box.value.length, box.value.length); }
+}
+function toggleCodexDetail(id) {
+  codexOpenId = (codexOpenId === id) ? null : id;
+  renderCodexTab();
+}
 
-  try {
-    // 10 格裝備視窗
+function codexBar(label, found, total) {
+  const p = total ? (found / total * 100) : 0;
+  return `<div class="codex-prog">
+    <div class="codex-prog-head"><span>${label}</span><span>${found} / ${total}　${p.toFixed(1)}%</span></div>
+    <div class="bar-track"><div class="bar-fill codex-prog-fill" style="width:${p}%"></div></div>
+  </div>`;
+}
+
+function renderCodexTab() {
+  const el = document.getElementById('tab-codex');
+  if (!el || !state) return;
+
+  const pool = getCodexPool();
+  const book = ensureCodex();
+  const prog = getCodexProgress();
+
+  // 依目前分頁組出清單，並套用搜尋/篩選
+  let rows;
+  if (codexView === 'mon') {
+    rows = pool.monsters.map(id => ({ id, name: MONSTERS[id].name, found: !!book.seen[id] }));
+  } else if (codexView === 'card') {
+    rows = pool.cards.map(id => ({ id, name: (CARDS[id] || ITEMS[id]).name, found: !!book.item[id] }));
+  } else {
+    rows = pool.items.map(id => ({ id, name: ITEMS[id].name, found: !!book.item[id] }));
+  }
+  if (codexFilter === 'found') rows = rows.filter(r => r.found);
+  else if (codexFilter === 'missing') rows = rows.filter(r => !r.found);
+  // 未發現的東西不給搜尋，不然可以直接用搜尋框把還沒發現的內容查出來
+  if (codexSearch) rows = rows.filter(r => r.found && (r.name || '').toLowerCase().includes(codexSearch));
+
+  const totalPages = Math.max(1, Math.ceil(rows.length / CODEX_PAGE_SIZE));
+  if (codexPage >= totalPages) codexPage = totalPages - 1;
+  const pageRows = rows.slice(codexPage * CODEX_PAGE_SIZE, (codexPage + 1) * CODEX_PAGE_SIZE);
+
+  let html = `<h3 class="panel-title">📕 圖鑑</h3>
+    <div class="codex-progress">
+      ${codexBar('👾 怪物', prog.monsters.found, prog.monsters.total)}
+      ${codexBar('🃏 卡片', prog.cards.found, prog.cards.total)}
+      ${codexBar('🎒 道具', prog.items.found, prog.items.total)}
+    </div>
+    <div class="codex-tabs">
+      <button class="btn-small ${codexView === 'mon' ? 'active' : ''}" onclick="setCodexView('mon')">👾 怪物</button>
+      <button class="btn-small ${codexView === 'card' ? 'active' : ''}" onclick="setCodexView('card')">🃏 卡片</button>
+      <button class="btn-small ${codexView === 'item' ? 'active' : ''}" onclick="setCodexView('item')">🎒 道具</button>
+    </div>
+    <div class="codex-controls">
+      <input id="codex-search" class="codex-search" type="text" placeholder="搜尋已發現的名稱…"
+        value="${codexSearch.replace(/"/g, '&quot;')}" oninput="onCodexSearch(this.value)">
+      <div class="codex-filters">
+        <button class="btn-small ${codexFilter === 'all' ? 'active' : ''}" onclick="setCodexFilter('all')">全部</button>
+        <button class="btn-small ${codexFilter === 'found' ? 'active' : ''}" onclick="setCodexFilter('found')">已發現</button>
+        <button class="btn-small ${codexFilter === 'missing' ? 'active' : ''}" onclick="setCodexFilter('missing')">未發現</button>
+      </div>
+    </div>`;
+
+  if (codexOpenId) html += renderCodexDetail(codexOpenId);
+
+  if (!pageRows.length) {
+    html += '<div class="empty-hint">沒有符合條件的項目。</div>';
+  } else {
+    html += '<div class="codex-grid">';
+    pageRows.forEach(r => {
+      html += (codexView === 'mon') ? codexMonCell(r, book) : codexItemCell(r, book);
+    });
+    html += '</div>';
+  }
+
+  if (totalPages > 1) {
+    html += '<div class="codex-pager">';
+    html += `<button class="btn-small" ${codexPage === 0 ? 'disabled' : ''} onclick="setCodexPage(${codexPage - 1})">‹ 上一頁</button>`;
+    html += `<span class="codex-pager-info">${codexPage + 1} / ${totalPages}　（共 ${rows.length} 筆）</span>`;
+    html += `<button class="btn-small" ${codexPage >= totalPages - 1 ? 'disabled' : ''} onclick="setCodexPage(${codexPage + 1})">下一頁 ›</button>`;
+    html += '</div>';
+  }
+
+  el.innerHTML = html;
+}
+
+function codexMonCell(r, book) {
+  const d = MONSTERS[r.id];
+  const kills = book.mon[r.id] || 0;
+  if (!r.found) {
+    return `<div class="codex-cell locked" title="尚未發現">
+      <img class="codex-icon silhouette" src="${monsterImgSrc(r.id)}" alt="" onerror="this.style.visibility='hidden'">
+      <div class="codex-cell-name">？？？</div>
+      <div class="codex-cell-sub">Lv.${d.level || '?'}</div>
+    </div>`;
+  }
+  const elemIcon = ELEMENT_ICONS[d.element] || '⚪';
+  return `<div class="codex-cell ${codexOpenId === r.id ? 'open' : ''}" onclick="toggleCodexDetail('${r.id}')">
+    <img class="codex-icon" src="${monsterImgSrc(r.id)}" alt="${d.name}" onerror="this.onerror=null;this.src='${placeholderImgSrc('monster')}'">
+    <div class="codex-cell-name">${d.name}</div>
+    <div class="codex-cell-sub">Lv.${d.level || '?'} ${elemIcon}</div>
+    <div class="codex-cell-count ${kills ? '' : 'zero'}">☠ ${kills}</div>
+  </div>`;
+}
+
+function codexItemCell(r, book) {
+  const d = ITEMS[r.id];
+  const got = book.item[r.id] || 0;
+  if (!r.found) {
+    return `<div class="codex-cell locked" title="尚未取得">
+      <div class="codex-icon silhouette-box">？</div>
+      <div class="codex-cell-name">？？？</div>
+      <div class="codex-cell-sub">未取得</div>
+    </div>`;
+  }
+  const sub = CARDS[r.id] ? (CARDS[r.id].slot === 'weapon' ? '武器卡' : CARDS[r.id].slot === 'armor' ? '防具卡' : '卡片')
+                          : (ITEM_TYPE_LABELS[d.type] || d.type || '');
+  return `<div class="codex-cell ${codexOpenId === r.id ? 'open' : ''}" onclick="toggleCodexDetail('${r.id}')">
+    <img class="codex-icon" src="${itemImgSrc(r.id)}" alt="${d.name}" onerror="this.onerror=null;this.src='${placeholderImgSrc(itemPlaceholderKind(d))}'">
+    <div class="codex-cell-name">${d.name}</div>
+    <div class="codex-cell-sub">${sub}</div>
+    <div class="codex-cell-count">×${got}</div>
+  </div>`;
+}
+
+function renderCodexDetail(id) {
+  const book = ensureCodex();
+  if (codexView === 'mon') {
+    const d = MONSTERS[id];
+    if (!d) return '';
+    const kills = book.mon[id] || 0;
+    const maps = getMonsterMaps(id);
+    const drops = (d.drops || []).slice().sort((a, b) => b.chance - a.chance);
+    const cd = (typeof MONSTER_CARD_DROPS !== 'undefined') ? MONSTER_CARD_DROPS[id] : null;
+    const dropRows = drops.map(x => {
+      const it = ITEMS[x.item];
+      if (!it) return '';
+      const got = book.item[x.item] || 0;
+      return `<div class="codex-drop ${got ? 'got' : ''}">
+        <img src="${itemImgSrc(x.item)}" onerror="this.onerror=null;this.src='${placeholderImgSrc(itemPlaceholderKind(it))}'">
+        <span class="codex-drop-name">${it.name}</span>
+        <span class="codex-drop-rate">${(x.chance * 100).toFixed(2)}%</span>
+        <span class="codex-drop-got">${got ? '✔ ×' + got : '—'}</span>
+      </div>`;
+    }).join('');
+    let cardRow = '';
+    if (cd && (CARDS[cd.card] || ITEMS[cd.card])) {
+      const cname = (CARDS[cd.card] || ITEMS[cd.card]).name;
+      const got = book.item[cd.card] || 0;
+      cardRow = `<div class="codex-drop card ${got ? 'got' : ''}">
+        <img src="${itemImgSrc(cd.card)}" onerror="this.onerror=null;this.src='${placeholderImgSrc('item')}'">
+        <span class="codex-drop-name">🃏 ${cname}</span>
+        <span class="codex-drop-rate">${(cd.chance * 100).toFixed(2)}%</span>
+        <span class="codex-drop-got">${got ? '✔ ×' + got : '—'}</span>
+      </div>`;
+    }
+    return `<div class="codex-detail">
+      <button class="codex-detail-close" onclick="toggleCodexDetail('${id}')">✕</button>
+      <div class="codex-detail-head">
+        <img class="codex-detail-icon" src="${monsterImgSrc(id)}" onerror="this.onerror=null;this.src='${placeholderImgSrc('monster')}'">
+        <div>
+          <div class="codex-detail-name">${d.name} <span class="codex-detail-lv">Lv.${d.level || '?'}</span></div>
+          <div class="codex-detail-tags">
+            <span>${ELEMENT_ICONS[d.element] || '⚪'} ${ELEMENT_NAMES[d.element] || d.element || '無'}</span>
+            ${d.race ? `<span>${RACE_LABELS[d.race] || d.race}</span>` : ''}
+            ${d.size ? `<span>${SIZE_LABELS[d.size] || d.size}</span>` : ''}
+            ${d.isBoss ? '<span class="codex-mvp">MVP</span>' : ''}
+          </div>
+          <div class="codex-detail-kills">累計擊殺 <b>${kills}</b></div>
+        </div>
+      </div>
+      <div class="codex-detail-stats">
+        <span>HP ${d.hp}</span><span>ATK ${d.atk}</span><span>DEF ${d.def}</span>
+        <span>EXP ${d.exp}</span><span>JOB ${d.jobExp}</span>
+      </div>
+      <div class="codex-detail-sec">出沒地圖</div>
+      <div class="codex-maps">${maps.length ? maps.map(m => `<span>${m}</span>`).join('') : '<span class="dim">無（MVP 專屬）</span>'}</div>
+      <div class="codex-detail-sec">掉落物</div>
+      <div class="codex-drops">${cardRow}${dropRows || (cardRow ? '' : '<div class="dim">沒有掉落物</div>')}</div>
+    </div>`;
+  }
+
+  // 道具 / 卡片
+  const d = ITEMS[id];
+  if (!d) return '';
+  const card = CARDS[id];
+  const got = book.item[id] || 0;
+  const sources = getItemSources(id).slice(0, 12);
+  const srcRows = sources.map(s => {
+    const m = MONSTERS[s.mon];
+    if (!m) return '';
+    const seen = book.seen[s.mon];
+    return `<div class="codex-src">
+      <img src="${monsterImgSrc(s.mon)}" onerror="this.onerror=null;this.src='${placeholderImgSrc('monster')}'">
+      <span class="codex-src-name">${seen ? m.name : '？？？'}</span>
+      <span class="codex-src-lv">Lv.${m.level || '?'}</span>
+      <span class="codex-drop-rate">${(s.chance * 100).toFixed(2)}%</span>
+    </div>`;
+  }).join('');
+  const statBits = [];
+  ['atk', 'matk', 'def', 'hp', 'sp', 'str', 'agi', 'vit', 'int', 'dex', 'luk', 'hit', 'flee', 'critRate'].forEach(k => {
+    if (typeof d[k] === 'number' && d[k] !== 0) statBits.push(`${k.toUpperCase()} ${d[k] > 0 ? '+' : ''}${d[k]}`);
+  });
+  if (d.heal) statBits.push(`回復 ${d.heal} HP`);
+  if (d.restoreSp) statBits.push(`回復 ${d.restoreSp} SP`);
+
+  // 卡片插圖：只在詳情展開時才出現在 DOM，等同延遲載入，一次也只會抓一張
+  const illustration = card
+    ? `<div class="codex-card-art">
+         <img src="${cardArtSrc(id)}" alt="${d.name}" loading="lazy"
+              onerror="this.closest('.codex-card-art').style.display='none'">
+       </div>`
+    : '';
+  // 解析不出來的原始效果文字：老實標成未實裝，不讓玩家誤以為有作用
+  const unimpl = (card && card.unimplemented && card.unimplemented.length)
+    ? `<div class="codex-detail-sec">尚未實裝的效果</div>
+       <div class="codex-unimpl">${card.unimplemented.map(u => `<div>• ${u}</div>`).join('')}</div>`
+    : '';
+
+  // 卡片的機制效果直接從 bonus 欄位列出，才是引擎真正吃到的數值
+  const bonusBits = [];
+  if (card && card.bonus) {
+    for (const [k, v] of Object.entries(card.bonus)) bonusBits.push(formatCardBonus(k, v));
+  }
+
+  return `<div class="codex-detail">
+    <button class="codex-detail-close" onclick="toggleCodexDetail('${id}')">✕</button>
+    <div class="codex-detail-head">
+      <img class="codex-detail-icon" src="${itemImgSrc(id)}" onerror="this.onerror=null;this.src='${placeholderImgSrc(itemPlaceholderKind(d))}'">
+      <div>
+        <div class="codex-detail-name">${d.name}</div>
+        <div class="codex-detail-tags">
+          <span>${card ? '卡片' : (ITEM_TYPE_LABELS[d.type] || d.type || '')}</span>
+          ${card ? `<span>${CARD_SLOT_LABELS[card.slot] || card.slot}</span>` : ''}
+          ${d.sell ? `<span>售價 ${d.sell}</span>` : ''}
+        </div>
+        <div class="codex-detail-kills">累計取得 <b>${got}</b></div>
+      </div>
+    </div>
+    ${illustration}
+    ${bonusBits.length ? `<div class="codex-detail-stats">${bonusBits.map(s => `<span>${s}</span>`).join('')}</div>` : ''}
+    ${!card && statBits.length ? `<div class="codex-detail-stats">${statBits.map(s => `<span>${s}</span>`).join('')}</div>` : ''}
+    ${(card && card.desc) || d.desc ? `<div class="codex-detail-desc">${(card && card.desc) || d.desc}</div>` : ''}
+    ${unimpl}
+    <div class="codex-detail-sec">取得來源</div>
+    <div class="codex-srcs">${srcRows || '<div class="dim">商店販售或任務取得</div>'}</div>
+  </div>`;
+}
+
+const CARD_SLOT_LABELS = {
+  weapon: '武器插槽', armor: '鎧甲插槽', shield: '盾牌插槽', headgear: '頭飾插槽',
+  garment: '披風插槽', footgear: '鞋子插槽', accessory: '飾品插槽', any: '任意插槽'
+};
+const CARD_BONUS_LABELS = {
+  str: 'STR', agi: 'AGI', vit: 'VIT', int: 'INT', dex: 'DEX', luk: 'LUK',
+  atk: 'ATK', matk: 'MATK', def: 'DEF', hit: 'HIT', flee: 'FLEE',
+  critRate: '暴擊率', perfectDodge: '完全迴避', hp: 'MaxHP', sp: 'MaxSP',
+  hpPct: 'MaxHP', spPct: 'MaxSP', hpRegenPct: 'HP恢復力', spRegenPct: 'SP恢復力'
+};
+function cardArtSrc(cardId) {
+  const it = ITEMS[cardId];
+  return `images/cards/${it ? it.imgId : cardId}.jpg`;
+}
+function formatCardBonus(k, v) {
+  const pctKeys = ['hpPct', 'spPct', 'hpRegenPct', 'spRegenPct'];
+  if (CARD_BONUS_LABELS[k]) return `${CARD_BONUS_LABELS[k]} +${v}${pctKeys.includes(k) ? '%' : ''}`;
+  if (k.startsWith('eleDmg_')) return `對${ELEMENT_NAMES[k.slice(7)] || k.slice(7)}屬性傷害 +${v}%`;
+  if (k.startsWith('eleReduce_')) return `受${ELEMENT_NAMES[k.slice(10)] || k.slice(10)}屬性傷害 -${v}%`;
+  if (k.startsWith('raceDmgReduce_')) return `受${RACE_LABELS[k.slice(14)] || k.slice(14)}傷害 -${v}%`;
+  if (k.startsWith('raceDmg_')) return `對${RACE_LABELS[k.slice(8)] || k.slice(8)}傷害 +${v}%`;
+  if (k.startsWith('sizeDmg_')) return `對${SIZE_LABELS[k.slice(8)] || k.slice(8)}傷害 +${v}%`;
+  return `${k} +${v}`;
+}
+
+/* ---------------- NPC 商店分頁 ---------------- */
+/* ---------------- 背包分頁 ----------------
+   背包分成 武器／防具／卡片／道具 四類。卡片獨立成一類是因為它在資料上
+   type 是 material，跟 900 多個素材混在一起會完全找不到。
+   分類與子分類全部讀既有欄位（type / weaponType / armorType / CARDS.slot），不需要改資料。
+------------------------------------------------- */
+const INV_CATEGORIES = [
+  { key: 'weapon', name: '武器', icon: '⚔️' },
+  { key: 'armor',  name: '防具', icon: '🛡️' },
+  { key: 'card',   name: '卡片', icon: '🃏' },
+  { key: 'item',   name: '道具', icon: '🎒' }
+];
+const WEAPON_TYPE_LABELS = {
+  dagger: '匕首', sword: '單手劍', tsword: '雙手劍', spear: '矛',
+  mace: '鈍器', bow: '弓', knuckle: '拳刃'
+};
+const ARMOR_TYPE_LABELS = {
+  headgear: '頭飾', leather: '鎧甲', shield: '盾牌',
+  garment: '披風', footgear: '鞋子', accessory: '飾品'
+};
+const ITEM_SUBTYPE_LABELS = { consumable: '消耗品', material: '素材', etc: '雜物' };
+
+let invCategory = 'weapon';
+let invSub = 'all';
+let invSearch = '';        // 四個分類共用同一個搜尋字串
+let invSort = 'name';      // name | qty | value
+
+function invCategoryOf(itemId) {
+  if (CARDS[itemId]) return 'card';
+  const d = ITEMS[itemId];
+  if (!d) return 'item';
+  if (d.type === 'weapon') return 'weapon';
+  if (d.type === 'armor') return 'armor';
+  return 'item';
+}
+// 子分類的值與顯示名稱
+function invSubOf(itemId) {
+  const cat = invCategoryOf(itemId);
+  const d = ITEMS[itemId];
+  if (cat === 'weapon') return d.weaponType || 'other';
+  if (cat === 'armor') return d.armorType || 'other';
+  if (cat === 'card') return (CARDS[itemId].slot || 'any');
+  return d.type || 'etc';
+}
+function invSubLabel(cat, sub) {
+  if (cat === 'weapon') return WEAPON_TYPE_LABELS[sub] || '其他';
+  if (cat === 'armor') return ARMOR_TYPE_LABELS[sub] || '其他';
+  if (cat === 'card') return CARD_SLOT_LABELS[sub] || sub;
+  return ITEM_SUBTYPE_LABELS[sub] || sub;
+}
+
+/* 裝備比較：算出「換上這件」相對於「目前穿的那件」的數值差。
+   只比裝備本身的欄位（含精煉加成），不含卡片——卡片是插在裝備上的，
+   換裝時不會跟著走，把它算進去會讓比較結果誤導。 */
+const COMPARE_STATS = [
+  ['atk', 'ATK'], ['matk', 'MATK'], ['def', 'DEF'], ['mdef', 'MDEF'],
+  ['hit', 'HIT'], ['flee', 'FLEE'], ['critRate', '暴擊'], ['perfectDodge', '完全迴避'],
+  ['hp', 'MaxHP'], ['sp', 'MaxSP'],
+  ['str', 'STR'], ['agi', 'AGI'], ['vit', 'VIT'], ['int', 'INT'], ['dex', 'DEX'], ['luk', 'LUK']
+];
+// 這件裝備會佔用哪個欄位（用來決定跟誰比）
+function targetSlotOf(itemId) {
+  const d = ITEMS[itemId];
+  if (!d) return null;
+  if (d.type === 'weapon') return 'weapon';
+  if (d.type !== 'armor') return null;
+  switch (d.armorType) {
+    case 'headgear': return 'head_top';
+    case 'shield': return 'shield';
+    case 'garment': return 'garment';
+    case 'footgear': return 'footgear';
+    case 'accessory': return 'accessory1';
+    default: return 'armor';
+  }
+}
+// 精煉度現在是跟著「那一件」走，不能從 itemId 反查，必須由呼叫端傳進來
+function statWithRefine(itemId, key, ref) {
+  const d = ITEMS[itemId];
+  if (!d) return 0;
+  let v = typeof d[key] === 'number' ? d[key] : 0;
+  // 精煉只加成武器 ATK 與防具 DEF，跟 equippedAtk()/equippedDef() 的算法一致
+  ref = ref || 0;
+  if (ref > 0 && key === 'atk' && d.type === 'weapon') v += getRefinementAtkBonus(ref, d.weaponLv || 1);
+  if (ref > 0 && key === 'def' && d.type === 'armor') v += ref;
+  return v;
+}
+function compareEquip(itemId, newRefine) {
+  const slot = targetSlotOf(itemId);
+  if (!slot) return null;
+  const curId = getEquipBaseItemId(slot);
+  const curRef = getRefinementLevel(slot);
+  const rows = [];
+  COMPARE_STATS.forEach(([key, label]) => {
+    const nv = statWithRefine(itemId, key, newRefine);
+    const cv = curId ? statWithRefine(curId, key, curRef) : 0;
+    if (nv === 0 && cv === 0) return;
+    rows.push({ label, cur: cv, next: nv, diff: nv - cv });
+  });
+  return { slot, curId, curRef, rows };
+}
+function renderCompareBadge(itemId, newRefine) {
+  const cmp = compareEquip(itemId, newRefine);
+  if (!cmp || !cmp.rows.length) return '';
+  const parts = cmp.rows.filter(r => r.diff !== 0).map(r =>
+    `<span class="cmp-${r.diff > 0 ? 'up' : 'down'}">${r.label} ${r.diff > 0 ? '▲+' : '▼'}${r.diff}</span>`
+  );
+  if (!parts.length) return `<div class="inv-compare same">與目前裝備數值相同</div>`;
+  const curName = cmp.curId ? `${cmp.curRef > 0 ? '+' + cmp.curRef + ' ' : ''}${getItemDisplayName(cmp.curId)}` : '（空欄位）';
+  return `<div class="inv-compare">對比 ${curName}：${parts.join('')}</div>`;
+}
+
+function setInvCategory(c) { invCategory = c; invSub = 'all'; renderInventoryTab(); }
+function setInvSub(s) { invSub = s; renderInventoryTab(); }
+function setInvSort(s) { invSort = s; renderInventoryTab(); }
+function onInvSearch(v) {
+  invSearch = (v || '').trim().toLowerCase();
+  renderInventoryTab();
+  // 重繪會讓輸入框失焦，把游標接回去，不然每打一個字都要重點一次
+  const box = document.getElementById('inv-search');
+  if (box) { box.focus(); box.setSelectionRange(box.value.length, box.value.length); }
+}
+
+/* 10 格裝備視窗的 HTML；背包分頁已不再顯示它，改由「裝備」分頁使用 */
+function buildEquipGridHtml() {
+  {
     const equipSlotDefs = [
       { key: 'head_top',   name: '頭上', icon: '👑' },
       { key: 'head_mid',   name: '頭中', icon: '🎭' },
@@ -1234,7 +1713,7 @@ function renderInventoryTab() {
     ];
 
     // 檢查是否為雙手武器
-    const weaponId = state.equip.weapon;
+    const weaponId = getEquipBaseItemId('weapon');
     const isWeaponTwoHanded = isTwoHanded(weaponId);
 
     let equipHtml = '<div class="ro-equip-grid">';
@@ -1251,15 +1730,30 @@ function renderInventoryTab() {
         return;
       }
 
-      const itemId = state.equip[slot.key];
+      const itemId = getEquipBaseItemId(slot.key);
       const item = itemId ? ITEMS[itemId] : null;
-      const refLevel = itemId ? getRefinementLevel(itemId) : 0;
+      const refLevel = getRefinementLevel(slot.key);
       const hasItem = !!item;
       const iconHtml = item
         ? `<img class="slot-icon" src="${itemImgSrc(itemId)}" onerror="this.onerror=null;this.src='${placeholderImgSrc('armor')}'">`
         : `<div class="slot-empty">${slot.icon}</div>`;
       const nameHtml = hasItem ? `<div class="slot-name">${getItemDisplayName(itemId)}</div>` : '';
       const refHtml = refLevel > 0 ? `<div class="slot-refine">+${refLevel}</div>` : '';
+
+      // 卡片插槽：顯示 ●（已插）/ ○（空孔），並提供插卡／取出的入口
+      let cardHtml = '';
+      if (hasItem) {
+        const maxSlots = getEquipCardSlots(slot.key);
+        if (maxSlots > 0) {
+          const inserted = getEquippedCards(slot.key);
+          const pips = '●'.repeat(inserted.length) + '○'.repeat(Math.max(0, maxSlots - inserted.length));
+          cardHtml = `<div class="slot-cards" title="卡片插槽 ${inserted.length}/${maxSlots}">
+            <span class="slot-pips">${pips}</span>
+            ${inserted.length < maxSlots ? `<button class="btn-pip" onclick="event.stopPropagation();showCardSelect('${slot.key}')">插卡</button>` : ''}
+            ${inserted.length ? `<button class="btn-pip danger" onclick="event.stopPropagation();doRemoveCard('${slot.key}')">取出</button>` : ''}
+          </div>`;
+        }
+      }
 
       // 雙手武器讓武器欄看起來更寬
       const spanStyle = (slot.key === 'weapon' && isWeaponTwoHanded) ? 'grid-column: span 2;' : '';
@@ -1275,31 +1769,235 @@ function renderInventoryTab() {
         ${refHtml}
         ${iconHtml}
         ${nameHtml}
+        ${cardHtml}
       </div>`;
     });
     equipHtml += '</div>';
+    return equipHtml;
+  }
+}
 
-    // 背包列表
-    const items = state.inventory.map(row => {
+/* ---------------- 裝備分頁 ----------------
+   上半是裝備欄（sticky 釘住不動），下半列出背包裡「本職業穿得上」的武器／防具，
+   直接點就換裝。個體裝備（精煉／插卡過的）跟普通那疊分開列，各自是一件。
+------------------------------------------------- */
+let equipPickCat = 'weapon';   // 'weapon' | 'armor'
+function setEquipPickCat(c) { equipPickCat = c; renderEquipTab(); }
+
+/* 裝備欄現在住在「裝備」分頁，但背包分頁也會顯示個體裝備列，
+   兩邊都可能因為換裝／精煉／插卡而需要重畫——重畫目前看得到的那個就好 */
+function refreshEquipViews() {
+  if (activeTab === 'inventory') renderInventoryTab();
+  else renderEquipTab();
+}
+
+/* 這件裝備目前這個職業穿不穿得上。
+   reqJob 寫的是「本職」名稱（例：日本刀是 swordsman/merchant/thief），
+   而二轉職業穿得下一轉的裝備，所以要比對整條職業鏈（騎士＝novice→swordsman→knight）。
+   沒寫 reqJob 的視為全職業通用。 */
+function canJobEquip(def) {
+  if (!def || !def.reqJob || !def.reqJob.length) return true;
+  return getAllLearnedJobs().some(j => def.reqJob.includes(j));
+}
+
+function renderEquipTab() {
+  const el = document.getElementById('tab-equip');
+  if (!el) return;
+  hideEquipTooltip();
+
+  try {
+    const rows = state.inventory.filter(r => {
+      const d = ITEMS[r.item];
+      return d && d.type === equipPickCat && canJobEquip(d);
+    }).sort((a, b) => {
+      // 個體（精煉/插卡）排前面，其次照名稱
+      const ai = a.instanceId ? 0 : 1, bi = b.instanceId ? 0 : 1;
+      if (ai !== bi) return ai - bi;
+      return (ITEMS[a.item].name || '').localeCompare(ITEMS[b.item].name || '', 'zh-Hant');
+    });
+
+    const listHtml = rows.length ? rows.map(r => {
+      const d = ITEMS[r.item];
+      const inst = r.instanceId ? (state.instances || {})[r.instanceId] : null;
+      if (r.instanceId && !inst) return '';
+      const refine = inst ? (inst.refine || 0) : 0;
+      const cards = inst ? (inst.cards || []) : [];
+
+      const bits = [];
+      if (d.atk) bits.push(`ATK ${statWithRefine(r.item, 'atk', refine)}`);
+      if (d.def) bits.push(`DEF ${statWithRefine(r.item, 'def', refine)}`);
+      if (d.matk) bits.push(`MATK ${d.matk}`);
+      if (d.element) bits.push(`${ELEMENT_ICONS[d.element]}${ELEMENT_NAMES[d.element]}`);
+      if (!r.instanceId && r.qty > 1) bits.push(`×${r.qty}`);
+
+      // 這份清單來源是背包，穿在身上的裝備不在裡面，所以一律是「裝備」；
+      // 要卸下請點上方裝備欄那一格（連點兩下）
+      const action = r.instanceId ? `equipInstance('${r.instanceId}')` : `equipItem('${r.item}')`;
+      return `<div class="equip-pick-row">
+        <img src="${itemImgSrc(r.item)}" onerror="this.onerror=null;this.src='${placeholderImgSrc(itemPlaceholderKind(d))}'">
+        <div class="equip-pick-info">
+          <div class="equip-pick-name">${refine > 0 ? `<span class="slot-refine">+${refine}</span> ` : ''}${getItemDisplayName(r.item)}${d.slots ? ` <span class="inv-slots">[${d.slots}]</span>` : ''}</div>
+          <div class="equip-pick-stats">${bits.join('　')}</div>
+          ${cards.length ? `<div class="equip-pick-cards">🃏 ${cards.map(id => CARDS[id] ? CARDS[id].name : id).join('、')}</div>` : ''}
+          ${renderCompareBadge(r.item, refine)}
+        </div>
+        <button class="btn-small" onclick="${action};renderEquipTab();renderTopBar();">裝備</button>
+      </div>`;
+    }).join('') : `<div class="equip-pick-empty">背包裡沒有${currentJob().name}穿得上的${equipPickCat === 'weapon' ? '武器' : '防具'}。</div>`;
+
+    el.innerHTML = `
+      <div class="equip-fixed">
+        <h3 class="panel-title">裝備欄</h3>
+        ${buildEquipGridHtml()}
+      </div>
+      <div class="equip-pick-head">
+        <button class="btn-small ${equipPickCat === 'weapon' ? 'active' : 'ghost'}" onclick="setEquipPickCat('weapon')">⚔️ 武器</button>
+        <button class="btn-small ${equipPickCat === 'armor' ? 'active' : 'ghost'}" onclick="setEquipPickCat('armor')">🛡️ 防具</button>
+        <span class="equip-pick-stats">${currentJob().name}可裝備 ${rows.length} 件</span>
+      </div>
+      ${listHtml}
+      <div id="ro-equip-tooltip" class="ro-equip-tooltip"></div>`;
+  } catch (e) {
+    el.innerHTML = `<div class="empty-hint">裝備分頁載入錯誤：${e.message}</div>`;
+    console.error('renderEquipTab error:', e);
+  }
+}
+
+function renderInventoryTab() {
+  const el = document.getElementById('tab-inventory');
+  if (!el) return;
+
+  hideEquipTooltip();
+
+  try {
+    // ---- 背包：四分類 ----
+    const known = state.inventory.filter(r => ITEMS[r.item]);
+    const catCount = {};
+    INV_CATEGORIES.forEach(c => { catCount[c.key] = 0; });
+    known.forEach(r => { catCount[invCategoryOf(r.item)]++; });
+
+    // 目前分類底下的子分類清單（只列真的持有的）
+    const inCat = known.filter(r => invCategoryOf(r.item) === invCategory);
+    const subCount = {};
+    inCat.forEach(r => { const s = invSubOf(r.item); subCount[s] = (subCount[s] || 0) + 1; });
+    const subKeys = Object.keys(subCount).sort((a, b) => subCount[b] - subCount[a]);
+
+    let rows = inCat;
+    if (invSub !== 'all') rows = rows.filter(r => invSubOf(r.item) === invSub);
+    if (invSearch) rows = rows.filter(r => (ITEMS[r.item].name || '').toLowerCase().includes(invSearch));
+
+    rows = rows.slice().sort((a, b) => {
+      if (invSort === 'qty') return b.qty - a.qty;
+      if (invSort === 'value') return (ITEMS[b.item].sell || 0) * b.qty - (ITEMS[a.item].sell || 0) * a.qty;
+      // 同名時把個體裝備（精煉/插卡過的）排在普通那疊前面，比較顯眼
+      const nameCmp = (ITEMS[a.item].name || '').localeCompare(ITEMS[b.item].name || '', 'zh-Hant');
+      if (nameCmp !== 0) return nameCmp;
+      return (b.instanceId ? 1 : 0) - (a.instanceId ? 1 : 0);
+    });
+
+    const catTabs = INV_CATEGORIES.map(c =>
+      `<button class="btn-small ${invCategory === c.key ? 'active' : ''}" onclick="setInvCategory('${c.key}')">${c.icon} ${c.name} <span class="inv-cat-n">${catCount[c.key]}</span></button>`
+    ).join('');
+
+    const subChips = subKeys.length > 1
+      ? `<div class="inv-subs">
+           <button class="btn-chip ${invSub === 'all' ? 'active' : ''}" onclick="setInvSub('all')">全部 ${inCat.length}</button>
+           ${subKeys.map(s => `<button class="btn-chip ${invSub === s ? 'active' : ''}" onclick="setInvSub('${s}')">${invSubLabel(invCategory, s)} ${subCount[s]}</button>`).join('')}
+         </div>`
+      : '';
+
+    const items = rows.map(row => {
       const def = ITEMS[row.item];
-      if (!def) return '';
       const displayName = getItemDisplayName(row.item);
+      const isCard = !!CARDS[row.item];
       const canUse = def.type === 'consumable' || def.type === 'weapon' || def.type === 'armor';
       const elemTag = def.element ? ` ${ELEMENT_ICONS[def.element]}${ELEMENT_NAMES[def.element]}` : '';
-      return `<div class="inv-row">
+
+      // ---- 個體裝備（精煉過或插過卡）：獨立一行，狀態跟著這一件走 ----
+      if (row.instanceId) {
+        const inst = state.instances ? state.instances[row.instanceId] : null;
+        if (!inst) return '';
+        const iLocked = isItemLocked(row.item);
+        const refTag = inst.refine > 0 ? `<span class="slot-refine">+${inst.refine}</span> ` : '';
+        const iCards = inst.cards || [];
+        const maxSlots = def.slots || 0;
+        const cardsHtml = iCards.length
+          ? `<div class="inv-cardslot">🃏 ${iCards.map(id => CARDS[id] ? CARDS[id].name : id).join('、')}（${iCards.length}/${maxSlots}）</div>`
+          : '';
+        return `<div class="inv-row${iLocked ? ' locked' : ''}">
+          <div class="inv-row-main">
+            <div class="inv-icon"><img src="${itemImgSrc(row.item)}" alt="${displayName}" onerror="this.onerror=null;this.src='${placeholderImgSrc(itemPlaceholderKind(def))}'"></div>
+            <div class="inv-info">
+              <div class="inv-name">${iLocked ? '<span class="inv-lock-tag">🔒</span> ' : ''}${refTag}${displayName}${def.slots ? ` <span class="inv-slots">[${def.slots}]</span>` : ''}${elemTag}</div>
+              <div class="inv-desc">${def.desc || ''}</div>
+              ${cardsHtml}
+              ${renderCompareBadge(row.item, inst.refine)}
+            </div>
+          </div>
+          <div class="inv-actions">
+            <button class="btn-small ${iLocked ? '' : 'ghost'}" title="${iLocked ? '解除鎖定' : '鎖定後不會被賣出／自動販賣'}"
+              onclick="toggleItemLock('${row.item}');renderInventoryTab();">${iLocked ? '🔒' : '🔓'}</button>
+            <button class="btn-small" onclick="equipInstance('${row.instanceId}');renderInventoryTab();renderTopBar();">裝備</button>
+            ${iLocked ? '' : `<button class="btn-small ghost" onclick="sellItemInstance('${row.instanceId}');renderInventoryTab();renderTopBar();">賣出(${def.sell})</button>`}
+            <button class="btn-small ghost" onclick="depositInstanceToWarehouse('${row.instanceId}');renderInventoryTab();renderTopBar();">存倉庫</button>
+            ${iCards.length ? `<button class="btn-small ghost danger" onclick="doDestroyInstance('${row.instanceId}')">拆卸取回卡片</button>` : ''}
+          </div>
+        </div>`;
+      }
+
+      // 卡片優先列出引擎真的吃到的加成；沒有可實裝加成時退回卡片自己的敘述，
+      // 而不是 ITEMS 的敘述——後者尾巴帶著「系列: 卡片 装备: 武器 重量: 1」這類匯入殘留
+      let cardBonus = '';
+      if (isCard) {
+        const cd = CARDS[row.item];
+        const bonusKeys = Object.keys(cd.bonus || {});
+        cardBonus = bonusKeys.length
+          ? bonusKeys.map(k => formatCardBonus(k, cd.bonus[k])).join('、')
+          : (cd.desc || '');
+      }
+      const slotTag = def.slots ? ` <span class="inv-slots">[${def.slots}]</span>` : '';
+      const locked = isItemLocked(row.item);
+      // 只有能穿的裝備才做比較，素材消耗品沒有比較的意義
+      const compareHtml = (def.type === 'weapon' || def.type === 'armor') ? renderCompareBadge(row.item) : '';
+      return `<div class="inv-row${locked ? ' locked' : ''}">
         <div class="inv-row-main">
           <div class="inv-icon"><img src="${itemImgSrc(row.item)}" alt="${displayName}" onerror="this.onerror=null;this.src='${placeholderImgSrc(itemPlaceholderKind(def))}'"></div>
-          <div class="inv-info"><div class="inv-name">${displayName} x${row.qty}${elemTag}</div><div class="inv-desc">${def.desc}</div></div>
+          <div class="inv-info">
+            <div class="inv-name">${locked ? '<span class="inv-lock-tag">🔒</span> ' : ''}${displayName} x${row.qty}${slotTag}${elemTag}</div>
+            <div class="inv-desc">${cardBonus || def.desc || ''}</div>
+            ${isCard ? `<div class="inv-cardslot">插槽：${cardSlotLabel(CARDS[row.item])}</div>` : ''}
+            ${compareHtml}
+          </div>
         </div>
         <div class="inv-actions">
+          <button class="btn-small ${locked ? '' : 'ghost'}" title="${locked ? '解除鎖定' : '鎖定後不會被賣出／自動販賣'}"
+            onclick="toggleItemLock('${row.item}');renderInventoryTab();">${locked ? '🔒' : '🔓'}</button>
           ${canUse ? `<button class="btn-small" onclick="useItem('${row.item}');renderInventoryTab();">${def.type === 'consumable' ? '使用' : '裝備'}</button>` : ''}
-          <button class="btn-small ghost" onclick="sellItem('${row.item}',1);renderInventoryTab();renderTopBar();">賣出(${def.sell})</button>
-          ${row.qty > 1 ? `<button class="btn-small ghost" onclick="sellItemAll('${row.item}');renderInventoryTab();renderTopBar();">全部賣出</button>` : ''}
+          ${locked ? '' : `<button class="btn-small ghost" onclick="sellItem('${row.item}',1);renderInventoryTab();renderTopBar();">賣出(${def.sell})</button>`}
+          ${!locked && row.qty > 1 ? `<button class="btn-small ghost" onclick="sellItemAll('${row.item}');renderInventoryTab();renderTopBar();">全部賣出</button>` : ''}
           <button class="btn-small ghost" onclick="depositToWarehouse('${row.item}',1);renderInventoryTab();renderTopBar();">存倉庫</button>
           ${row.qty > 1 ? `<button class="btn-small ghost" onclick="depositToWarehouseAll('${row.item}');renderInventoryTab();renderTopBar();">全部存倉</button>` : ''}
         </div>
       </div>`;
-    }).filter(html => html).join('');
+    }).join('');
+
+    const emptyMsg = invSearch
+      ? '沒有符合搜尋的道具。'
+      : (inCat.length === 0 ? `背包裡還沒有${INV_CATEGORIES.find(c => c.key === invCategory).name}。` : '這個子分類沒有東西。');
+
+    const invHtml = `
+      <div class="inv-cats">${catTabs}</div>
+      <div class="inv-toolbar">
+        <input id="inv-search" class="codex-search" type="text" placeholder="🔍 搜尋名稱…（四類共用）"
+          value="${invSearch.replace(/"/g, '&quot;')}" oninput="onInvSearch(this.value)">
+        <select class="ab-select inv-sort" onchange="setInvSort(this.value)">
+          <option value="name" ${invSort === 'name' ? 'selected' : ''}>依名稱</option>
+          <option value="qty" ${invSort === 'qty' ? 'selected' : ''}>依數量</option>
+          <option value="value" ${invSort === 'value' ? 'selected' : ''}>依總價值</option>
+        </select>
+      </div>
+      ${subChips}
+      <div class="inv-list">${items || `<div class="empty-hint">${emptyMsg}</div>`}</div>`;
 
     // 露天商店（僅商人職業且已學會露天商店技能時顯示）
     let vendingHtml = '';
@@ -1340,7 +2038,8 @@ function renderInventoryTab() {
       <button class="btn-small" onclick="showAutoSellPanel()">設定自動販賣</button>
     </div>`;
 
-    el.innerHTML = `<h3 class="panel-title">裝備欄</h3>${equipHtml}${vendingHtml}${craftingHtml}${warehouseHtml}${autoSellHtml}<h3 class="panel-title">背包（${state.inventory.length}）</h3><div class="inv-list">${items || '<div class="empty-hint">背包空空如也，去打怪蒐集素材吧！</div>'}</div><div id="ro-equip-tooltip" class="ro-equip-tooltip"></div>`;
+    el.innerHTML = `${vendingHtml}${craftingHtml}${warehouseHtml}${autoSellHtml}`
+      + `<h3 class="panel-title">背包（${known.length}）</h3>${invHtml}`;
   } catch (e) {
     el.innerHTML = `<div class="empty-hint">背包載入錯誤：${e.message}</div>`;
     console.error('renderInventoryTab error:', e);
@@ -1351,16 +2050,16 @@ function renderInventoryTab() {
 const _equipClickTimers = {};
 
 function showEquipTooltip(event, slotKey) {
-  const itemId = state.equip[slotKey];
+  const itemId = getEquipBaseItemId(slotKey);
   if (!itemId) return;
   const item = ITEMS[itemId];
   if (!item) return;
   const tt = document.getElementById('ro-equip-tooltip');
   if (!tt) return;
 
-  const refLevel = getRefinementLevel(itemId);
-  const cardId = getEquippedCard(slotKey);
-  const card = cardId ? CARDS[cardId] : null;
+  const refLevel = getRefinementLevel(slotKey);
+  const slotCards = getEquippedCards(slotKey);
+  const maxSlots = getEquipCardSlots(slotKey);
 
   let html = `<div class="tt-name">${getItemDisplayName(itemId)}${refLevel > 0 ? ` <span class="tt-refine">+${refLevel}</span>` : ''}</div>`;
   html += `<div class="tt-type">${item.type === 'weapon' ? '武器' : '防具'}${item.element ? ' · ' + ELEMENT_ICONS[item.element] + ELEMENT_NAMES[item.element] : ''}</div>`;
@@ -1384,7 +2083,12 @@ function showEquipTooltip(event, slotKey) {
   if (item.dex) stats.push(`<span>DEX +${item.dex}</span>`);
   if (item.luk) stats.push(`<span>LUK +${item.luk}</span>`);
   if (stats.length) html += `<div class="tt-stats">${stats.join('')}</div>`;
-  if (card) html += `<div class="tt-card">🃏 ${card.name}</div>`;
+  if (maxSlots > 0) {
+    html += `<div class="tt-slots">插槽 ${slotCards.length}/${maxSlots}</div>`;
+    slotCards.forEach(cid => {
+      if (CARDS[cid]) html += `<div class="tt-card">🃏 ${CARDS[cid].name}</div>`;
+    });
+  }
   html += `<div class="tt-hint">點擊 2 次卸下裝備</div>`;
 
   tt.innerHTML = html;
@@ -1421,14 +2125,14 @@ function onEquipSlotClick(slotKey) {
     clearTimeout(_equipClickTimers[slotKey]);
     delete _equipClickTimers[slotKey];
     unequipItem(slotKey);
-    renderInventoryTab();
+    refreshEquipViews();
     renderTopBar();
   } else {
     // 第一次點擊：提示
     _equipClickTimers[slotKey] = now;
     const tt = document.getElementById('ro-equip-tooltip');
     if (tt) {
-      const item = ITEMS[itemId];
+      const item = ITEMS[getEquipBaseItemId(slotKey)];
       const hint = tt.querySelector('.tt-hint');
       if (hint) hint.textContent = `再點一次卸下 ${item ? item.name : '裝備'}`;
       tt.classList.add('show');
@@ -1480,16 +2184,16 @@ function renderCharacterTab() {
     <div class="stat-points-left">可分配屬性點：${state.statPoints}</div>
     ${buffListHtml}
     <div class="derived-grid">
-      <div>物理攻擊 ATK：${state.atk}${(() => { const r = getRefinementLevel(state.equip.weapon); const wLv = state.equip.weapon ? (ITEMS[state.equip.weapon].weaponLv || 1) : 1; return r > 0 ? ` (+${getRefinementAtkBonus(r, wLv)}精煉)` : ''; })()}</div>
+      <div>物理攻擊 ATK：${state.atk}${(() => { const r = getRefinementLevel('weapon'); const wId = getEquipBaseItemId('weapon'); const wLv = wId ? (ITEMS[wId].weaponLv || 1) : 1; return r > 0 ? ` (+${getRefinementAtkBonus(r, wLv)}精煉)` : ''; })()}</div>
       <div>魔法攻擊 MATK：${state.matkMin}~${state.matkMax}</div>
-      <div>防禦 DEF：${state.def}${(() => { let refBonus = 0; ['head_top','head_mid','head_bottom','armor','shield','garment','footgear','accessory1','accessory2'].forEach(s => { const lv = getRefinementLevel(state.equip[s]); if (lv > 0) refBonus += getRefinementDefBonus(lv); }); return refBonus > 0 ? ` (+${refBonus}精煉)` : ''; })()}</div>
+      <div>防禦 DEF：${state.def}${(() => { let refBonus = 0; ['head_top','head_mid','head_bottom','armor','shield','garment','footgear','accessory1','accessory2'].forEach(s => { const lv = getRefinementLevel(s); if (lv > 0) refBonus += getRefinementDefBonus(lv); }); return refBonus > 0 ? ` (+${refBonus}精煉)` : ''; })()}</div>
       <div>攻擊速度 ASPD：${state.aspd}${state.buffs.some(b => b.type === 'aspd') ? ' <span class="buff-active">BUFF</span>' : ''}</div>
       <div>攻擊間隔：${(state.attackInterval / 1000).toFixed(2)} 秒</div>
       <div>命中 HIT：${effectiveHit}${effectiveHit > state.hit ? ` <span class="buff-active">(+${effectiveHit - state.hit})</span>` : ''}</div>
       <div>迴避 FLEE：${state.flee}</div>
       <div>暴擊率：${effectiveCritRate}%${effectiveCritRate > state.critRate ? ` <span class="buff-active">(+${effectiveCritRate - state.critRate})</span>` : ''}</div>
       <div>完全迴避：${state.perfectDodge}%</div>
-      <div>武器屬性：${(() => { const w = state.equip.weapon ? ITEMS[state.equip.weapon] : null; const el = w && w.element ? w.element : 'none'; return ELEMENT_ICONS[el] + ' ' + ELEMENT_NAMES[el]; })()}</div>
+      <div>武器屬性：${(() => { const wId = getEquipBaseItemId('weapon'); const w = wId ? ITEMS[wId] : null; const el = w && w.element ? w.element : 'none'; return ELEMENT_ICONS[el] + ' ' + ELEMENT_NAMES[el]; })()}</div>
     </div>
     <p class="stat-formula-hint">數值公式參考 RO 正式版邏輯調整：ATK=STR+(STR/10)²+DEX/5+LUK/5；HIT=175+等級+DEX；FLEE=100+等級+AGI；DEF 採比例減傷而非直接相減。屬性點數規則對齊官方對照表：每級獲得 floor((等級-1)/5)+3 點；加點消耗隨數值升高而增加（1~10 花2點、11~20花3點...以此類推）。</p>`;
 }
@@ -1701,10 +2405,10 @@ function isJobUnlocked(jobId) {
 
 /* ---------------- 裝備精煉 UI ---------------- */
 function doRefineSlot(slotKey) {
-  const itemId = state.equip[slotKey];
+  const itemId = getEquipBaseItemId(slotKey);
   if (!itemId) return;
   const item = ITEMS[itemId];
-  const currentLevel = getRefinementLevel(itemId);
+  const currentLevel = getRefinementLevel(slotKey);
   const isArmor = item.type === 'armor';
   const weaponLv = isArmor ? 0 : (item.weaponLv || 1);
 
@@ -1717,7 +2421,7 @@ function doRefineSlot(slotKey) {
   const availableMats = Object.entries(REFINEMENT_MATERIALS).filter(([key, mat]) => {
     if (isArmor && !mat.usableArmor) return false;
     if (!isArmor && !mat.usableWeaponLv.includes(weaponLv)) return false;
-    const invRow = state.inventory.find(r => r.item === mat.id);
+    const invRow = state.inventory.find(r => r.item === mat.id && !r.instanceId);
     return invRow && invRow.qty > 1;
   });
 
@@ -1734,7 +2438,7 @@ function doRefineSlot(slotKey) {
 
   // 顯示材料選擇
   const matList = availableMats.map(([key, mat]) => {
-    const invRow = state.inventory.find(r => r.item === mat.id);
+    const invRow = state.inventory.find(r => r.item === mat.id && !r.instanceId);
     const rate = getRefinementSuccessRate(currentLevel, weaponLv, key);
     const safe = getRefinementSafeLevel(weaponLv, isArmor);
     const penalty = getRefinementFailPenalty(key);
@@ -1747,13 +2451,13 @@ function doRefineSlot(slotKey) {
   // 簡化版：自動使用第一個可用材料
   if (confirm(msg)) {
     const matKey = availableMats[0][0];
-    const success = refineItem(itemId, matKey);
+    const success = refineItem(slotKey, matKey);
     if (success) {
       showToast(`🔨 精煉成功！${item.name} +${currentLevel + 1}`);
     } else {
       showToast(`💥 精煉失敗！${item.name} 維持 +${currentLevel}`);
     }
-    renderInventoryTab();
+    refreshEquipViews();
     renderTopBar();
   }
 }
@@ -1771,6 +2475,7 @@ function renderVendingSelectUI() {
   const sk = findSkillById('vending');
   const sellMult = sk.sellMultiplier || 10;
   const sellableItems = state.inventory.filter(row => {
+    if (row.instanceId) return false;   // 精煉/插卡過的裝備不列入自動販售，免得整件連卡帶精煉被賣掉
     const def = ITEMS[row.item];
     return def && def.sell > 0;
   });
@@ -1897,71 +2602,175 @@ function doCraftMaterial(kind) {
 }
 
 /* ---------------- 跨角色倉庫 UI ---------------- */
-function showWarehousePanel() {
-  const el = document.getElementById('tab-inventory');
-  if (!el) return;
+/* 倉庫做成「非阻斷浮動視窗」：外層鋪滿畫面但 pointer-events:none，
+   只有中間的 frame 收事件。這樣戰鬥照跑、旁邊的分頁也照樣點得到，
+   不像一般 modal 會把整個畫面鎖住。標題列可拖曳。 */
+let whCategory = 'weapon';
+let whSub = 'all';
+let whSearch = '';
+let whQty = '';          // 空字串＝整疊
+
+function setWhCategory(c) { whCategory = c; whSub = 'all'; renderWarehouse(); }
+function setWhSub(s) { whSub = s; renderWarehouse(); }
+function setWhQty(v) { whQty = (v || '').trim(); }
+function onWhSearch(v) {
+  whSearch = (v || '').trim().toLowerCase();
+  renderWarehouse();
+  const box = document.getElementById('wh-search');
+  if (box) { box.focus(); box.setSelectionRange(box.value.length, box.value.length); }
+}
+// 數量欄留空＝整疊，否則取指定數量（夾在 1~持有數之間）
+function whAmount(have) {
+  const n = parseInt(whQty, 10);
+  if (!whQty || isNaN(n) || n < 1) return have;
+  return Math.min(n, have);
+}
+function whDeposit(itemId, have) { depositToWarehouse(itemId, whAmount(have)); renderWarehouse(); renderTopBar(); }
+function whWithdraw(itemId, have) { withdrawFromWarehouse(itemId, whAmount(have)); renderWarehouse(); renderTopBar(); }
+// 個體裝備一次就是一件，沒有數量的問題
+function whDepositInstance(instanceId) { depositInstanceToWarehouse(instanceId); renderWarehouse(); renderTopBar(); }
+function whWithdrawInstance(whInstanceId) { withdrawInstanceFromWarehouse(whInstanceId); renderWarehouse(); renderTopBar(); }
+
+function showWarehousePanel() { openWarehouse(); }
+
+function openWarehouse() {
+  let win = document.getElementById('warehouse-window');
+  if (!win) {
+    win = document.createElement('div');
+    win.id = 'warehouse-window';
+    win.className = 'wh-window';
+    win.innerHTML = `<div id="warehouse-frame" class="wh-frame">
+        <header id="warehouse-drag" class="wh-header">
+          <div><h3>📦 倉庫</h3><span class="wh-sub">跨角色共用，所有存檔通用</span></div>
+          <button class="btn-small ghost" onclick="closeWarehouse()">✕ 關閉</button>
+        </header>
+        <div id="warehouse-body" class="wh-body"></div>
+      </div>`;
+    document.body.appendChild(win);
+    makeDraggable(document.getElementById('warehouse-drag'), document.getElementById('warehouse-frame'));
+  }
+  win.classList.remove('hidden');
+  renderWarehouse();
+}
+function closeWarehouse() {
+  const win = document.getElementById('warehouse-window');
+  if (win) win.classList.add('hidden');
+}
+
+// 讓 handle 可以拖曳 frame；拖曳後改用 left/top 定位，所以要先解掉置中的 transform
+function makeDraggable(handle, frame) {
+  if (!handle || !frame) return;
+  let sx = 0, sy = 0, ox = 0, oy = 0, dragging = false;
+  handle.addEventListener('mousedown', e => {
+    if (e.target.closest('button')) return;
+    dragging = true;
+    const r = frame.getBoundingClientRect();
+    frame.style.transform = 'none';
+    frame.style.left = r.left + 'px';
+    frame.style.top = r.top + 'px';
+    sx = e.clientX; sy = e.clientY; ox = r.left; oy = r.top;
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    const nx = Math.max(0, Math.min(window.innerWidth - 80, ox + e.clientX - sx));
+    const ny = Math.max(0, Math.min(window.innerHeight - 40, oy + e.clientY - sy));
+    frame.style.left = nx + 'px';
+    frame.style.top = ny + 'px';
+  });
+  document.addEventListener('mouseup', () => { dragging = false; });
+}
+
+function renderWarehouse() {
+  const body = document.getElementById('warehouse-body');
+  if (!body || !state) return;
   const wh = loadWarehouse();
 
-  let html = `<h3 class="panel-title">📦 倉庫（跨角色共用）</h3>`;
-  html += `<button class="btn-small" onclick="renderInventoryTab()">← 返回</button>`;
+  // 背包與倉庫共用同一套四分類與篩選
+  const bagAll = state.inventory.filter(r => ITEMS[r.item]);
+  const whAll = (wh.items || []).filter(r => ITEMS[r.item]);
+  const inCat = list => list.filter(r => invCategoryOf(r.item) === whCategory);
+  const applyFilters = list => {
+    let out = inCat(list);
+    if (whSub !== 'all') out = out.filter(r => invSubOf(r.item) === whSub);
+    if (whSearch) out = out.filter(r => (ITEMS[r.item].name || '').toLowerCase().includes(whSearch));
+    return out.sort((a, b) => (ITEMS[a.item].name || '').localeCompare(ITEMS[b.item].name || '', 'zh-Hant'));
+  };
+  const bagRows = applyFilters(bagAll);
+  const whRows = applyFilters(whAll);
 
-  html += `<h3 class="panel-title">鋅幣</h3>`;
-  html += `<div class="card-row">
-    <div class="card-info">
-      <div class="card-details">
-        <span class="card-name">背包 ${state.gold} 鋅幣　／　倉庫 ${wh.gold || 0} 鋅幣</span>
-      </div>
+  const catCount = {};
+  INV_CATEGORIES.forEach(c => { catCount[c.key] = 0; });
+  bagAll.concat(whAll).forEach(r => { catCount[invCategoryOf(r.item)]++; });
+
+  const subCount = {};
+  inCat(bagAll).concat(inCat(whAll)).forEach(r => { const s = invSubOf(r.item); subCount[s] = (subCount[s] || 0) + 1; });
+  const subKeys = Object.keys(subCount).sort((a, b) => subCount[b] - subCount[a]);
+
+  const listHtml = (rows, side) => rows.length
+    ? rows.map(r => {
+        const d = ITEMS[r.item];
+        const locked = side === 'bag' && isItemLocked(r.item);
+        // 個體裝備：精煉度與卡片跟著這一件進出倉庫，不能走一般堆疊那條路
+        if (r.instanceId) {
+          const inst = side === 'bag' ? (state.instances || {})[r.instanceId] : r;
+          if (!inst) return '';
+          const refine = inst.refine || 0;
+          const cards = inst.cards || [];
+          const action = side === 'bag'
+            ? `whDepositInstance('${r.instanceId}')`
+            : `whWithdrawInstance('${r.instanceId}')`;
+          return `<div class="wh-row" onclick="${action}">
+            <img src="${itemImgSrc(r.item)}" onerror="this.onerror=null;this.src='${placeholderImgSrc(itemPlaceholderKind(d))}'">
+            <span class="wh-row-name">${locked ? '🔒 ' : ''}${refine > 0 ? `+${refine} ` : ''}${getItemDisplayName(r.item)}${cards.length ? `　🃏${cards.length}` : ''}</span>
+            <span class="wh-row-qty">×1</span>
+          </div>`;
+        }
+        return `<div class="wh-row" onclick="${side === 'bag' ? `whDeposit('${r.item}',${r.qty})` : `whWithdraw('${r.item}',${r.qty})`}">
+          <img src="${itemImgSrc(r.item)}" onerror="this.onerror=null;this.src='${placeholderImgSrc(itemPlaceholderKind(d))}'">
+          <span class="wh-row-name">${locked ? '🔒 ' : ''}${getItemDisplayName(r.item)}</span>
+          <span class="wh-row-qty">×${r.qty}</span>
+        </div>`;
+      }).join('')
+    : `<div class="empty-hint">這個分類${side === 'bag' ? '背包' : '倉庫'}沒有東西。</div>`;
+
+  body.innerHTML = `
+    <div class="wh-hint">點背包物品＝存入　▶　　◀　點倉庫物品＝取出。數量欄留空＝整疊全部。</div>
+
+    <div class="wh-gold">
+      <span>鋅幣　背包 <b>${state.gold.toLocaleString()}</b>　倉庫 <b>${(wh.gold || 0).toLocaleString()}</b></span>
+      <input type="number" id="wh-gold-amount" min="1" placeholder="金額" class="wh-gold-input">
+      <button class="btn-small" onclick="depositGoldToWarehouse(document.getElementById('wh-gold-amount').value);renderWarehouse();renderTopBar();">存入 ▶</button>
+      <button class="btn-small" onclick="withdrawGoldFromWarehouse(document.getElementById('wh-gold-amount').value);renderWarehouse();renderTopBar();">◀ 取出</button>
+      <button class="btn-small ghost" onclick="depositGoldToWarehouse(state.gold);renderWarehouse();renderTopBar();">📥 全部</button>
+      <button class="btn-small ghost" onclick="withdrawGoldFromWarehouse(loadWarehouse().gold||0);renderWarehouse();renderTopBar();">📤 全部</button>
     </div>
-  </div>
-  <div class="card-row">
-    <input type="number" id="wh-gold-amount" min="1" placeholder="輸入金額" style="width:8em">
-    <button class="btn-small" onclick="depositGoldToWarehouse(document.getElementById('wh-gold-amount').value);showWarehousePanel();renderTopBar();">存入</button>
-    <button class="btn-small" onclick="withdrawGoldFromWarehouse(document.getElementById('wh-gold-amount').value);showWarehousePanel();renderTopBar();">領出</button>
-    <button class="btn-small ghost" onclick="depositGoldToWarehouse(state.gold);showWarehousePanel();renderTopBar();">全部存入</button>
-    <button class="btn-small ghost" onclick="withdrawGoldFromWarehouse((loadWarehouse().gold||0));showWarehousePanel();renderTopBar();">全部領出</button>
-  </div>`;
 
-  html += `<h3 class="panel-title">背包 → 存入倉庫</h3>`;
-  const invRows = state.inventory.filter(row => ITEMS[row.item]);
-  if (invRows.length === 0) {
-    html += `<div class="empty-hint">背包是空的。</div>`;
-  } else {
-    html += '<div class="card-list">';
-    invRows.forEach(row => {
-      const name = getItemDisplayName(row.item);
-      html += `<div class="card-row">
-        <div class="card-info">
-          <span class="card-icon">${ITEMS[row.item].icon || '📦'}</span>
-          <div class="card-details"><span class="card-name">${name} x${row.qty}</span></div>
-        </div>
-        <button class="btn-small" onclick="depositToWarehouse('${row.item}',1);showWarehousePanel();">存入</button>
-        ${row.qty > 1 ? `<button class="btn-small ghost" onclick="depositToWarehouseAll('${row.item}');showWarehousePanel();">全部存入</button>` : ''}
-      </div>`;
-    });
-    html += '</div>';
-  }
+    <div class="inv-cats">${INV_CATEGORIES.map(c =>
+      `<button class="btn-small ${whCategory === c.key ? 'active' : ''}" onclick="setWhCategory('${c.key}')">${c.icon} ${c.name} <span class="inv-cat-n">${catCount[c.key]}</span></button>`
+    ).join('')}</div>
 
-  html += `<h3 class="panel-title">倉庫 → 領出背包</h3>`;
-  if (!wh.items || wh.items.length === 0) {
-    html += `<div class="empty-hint">倉庫是空的。</div>`;
-  } else {
-    html += '<div class="card-list">';
-    wh.items.forEach(row => {
-      const def = ITEMS[row.item];
-      if (!def) return;
-      const name = getItemDisplayName(row.item);
-      html += `<div class="card-row">
-        <div class="card-info">
-          <span class="card-icon">${def.icon || '📦'}</span>
-          <div class="card-details"><span class="card-name">${name} x${row.qty}</span></div>
-        </div>
-        <button class="btn-small" onclick="withdrawFromWarehouse('${row.item}',1);showWarehousePanel();renderTopBar();">領出</button>
-        ${row.qty > 1 ? `<button class="btn-small ghost" onclick="withdrawFromWarehouseAll('${row.item}');showWarehousePanel();renderTopBar();">全部領出</button>` : ''}
-      </div>`;
-    });
-    html += '</div>';
-  }
-  el.innerHTML = html;
+    <div class="wh-toolbar">
+      <input id="wh-search" class="codex-search" type="text" placeholder="🔍 搜尋名稱…（存入取出共用）"
+        value="${whSearch.replace(/"/g, '&quot;')}" oninput="onWhSearch(this.value)">
+      <label class="wh-qty-label">數量 <input type="number" min="1" class="wh-qty" value="${whQty}" placeholder="全部" oninput="setWhQty(this.value)"></label>
+    </div>
+
+    ${subKeys.length > 1 ? `<div class="inv-subs">
+      <button class="btn-chip ${whSub === 'all' ? 'active' : ''}" onclick="setWhSub('all')">全部</button>
+      ${subKeys.map(s => `<button class="btn-chip ${whSub === s ? 'active' : ''}" onclick="setWhSub('${s}')">${invSubLabel(whCategory, s)} ${subCount[s]}</button>`).join('')}
+    </div>` : ''}
+
+    <div class="wh-cols">
+      <div class="wh-col">
+        <div class="wh-col-head">背包（點擊存入 ▶）</div>
+        <div class="wh-list">${listHtml(bagRows, 'bag')}</div>
+      </div>
+      <div class="wh-col">
+        <div class="wh-col-head">倉庫（點擊取出 ◀）　${whAll.length} 種</div>
+        <div class="wh-list">${listHtml(whRows, 'wh')}</div>
+      </div>
+    </div>`;
 }
 
 /* ---------------- 自動販賣 UI ---------------- */
@@ -1987,7 +2796,7 @@ function showAutoSellPanel() {
   </div>`;
 
   html += `<h3 class="panel-title">選擇要自動販賣的道具</h3>`;
-  const invRows = state.inventory.filter(row => ITEMS[row.item] && ITEMS[row.item].sell > 0);
+  const invRows = state.inventory.filter(row => !row.instanceId && ITEMS[row.item] && ITEMS[row.item].sell > 0);
   if (invRows.length === 0) {
     html += `<div class="empty-hint">背包內沒有可販賣的道具。</div>`;
   } else {
@@ -2010,36 +2819,82 @@ function showAutoSellPanel() {
 }
 
 /* ---------------- 卡片系統 UI ---------------- */
+// 拔卡會毀掉裝備，所以確認訊息要把代價講清楚，不能只問「確定移除嗎」
 function doRemoveCard(slotKey) {
-  if (confirm('確定要移除卡片嗎？')) {
+  const cards = getEquippedCards(slotKey);
+  if (!cards.length) return;
+  const equipId = getEquipBaseItemId(slotKey);
+  const equipName = equipId && ITEMS[equipId] ? getItemDisplayName(equipId) : '裝備';
+  const cardNames = cards.map(id => CARDS[id] ? CARDS[id].name : id).join('、');
+  const msg = `要從「${equipName}」取出卡片嗎？\n\n`
+    + `✅ 取回：${cardNames}\n`
+    + `❌ 損毀：${equipName}（含精煉度，無法復原）`;
+  if (confirm(msg)) {
     removeCard(slotKey);
-    renderInventoryTab();
+    refreshEquipViews();
     renderTopBar();
   }
 }
 
+// 背包裡那件個體裝備的拆卸，代價跟身上那件一樣：裝備銷毀換回卡片
+function doDestroyInstance(instanceId) {
+  const inst = state.instances ? state.instances[instanceId] : null;
+  if (!inst || !inst.cards || !inst.cards.length) return;
+  const equipName = ITEMS[inst.item] ? getItemDisplayName(inst.item) : '裝備';
+  const cardNames = inst.cards.map(id => CARDS[id] ? CARDS[id].name : id).join('、');
+  const msg = `要拆卸「${inst.refine > 0 ? '+' + inst.refine + ' ' : ''}${equipName}」取回卡片嗎？\n\n`
+    + `✅ 取回：${cardNames}\n`
+    + `❌ 損毀：${equipName}（含精煉度，無法復原）`;
+  if (confirm(msg)) {
+    destroyInstanceForCards(instanceId);
+    refreshEquipViews();
+    renderTopBar();
+  }
+}
+
+// 插卡入口在裝備欄上，而裝備欄住在「裝備」分頁，所以這個選單也畫在那裡
 function showCardSelect(slotKey) {
-  const el = document.getElementById('tab-inventory');
+  const el = document.getElementById('tab-equip');
   if (!el) return;
 
-  // 從背包中篩選可用的卡片
+  const equipId = getEquipBaseItemId(slotKey);
+  const equipName = equipId && ITEMS[equipId] ? getItemDisplayName(equipId) : '（無裝備）';
+  const maxSlots = getEquipCardSlots(slotKey);
+  const used = getEquippedCards(slotKey);
+
+  // 只列出這個部位真的插得進去的卡片
   const availableCards = state.inventory
-    .filter(row => CARDS[row.item] && row.qty > 0)
+    .filter(row => !row.instanceId && CARDS[row.item] && row.qty > 0)
     .map(row => ({ cardId: row.item, qty: row.qty, card: CARDS[row.item] }))
-    .filter(c => {
-      // 檢查卡槽限制
-      if (c.card.slot === 'weapon' && slotKey !== 'weapon') return false;
-      if (c.card.slot === 'armor' && !['head_top', 'head_mid', 'head_bottom', 'armor', 'shield', 'garment', 'footgear'].includes(slotKey)) return false;
-      return true;
+    .filter(c => cardFitsSlot(c.card, slotKey));
+
+  let html = `<h3 class="panel-title">🃏 ${equipName}　插槽 ${used.length}/${maxSlots}</h3>`;
+  html += `<button class="btn-small" onclick="renderEquipTab()">← 返回裝備欄</button>`;
+
+  if (used.length) {
+    html += '<div class="codex-detail-sec">已插入</div><div class="card-list">';
+    used.forEach(id => {
+      const c = CARDS[id];
+      html += `<div class="card-row inserted">
+        <div class="card-info">
+          <span class="card-icon">${c.icon}</span>
+          <div class="card-details">
+            <span class="card-name">${c.name}</span>
+            <span class="card-desc">${c.desc}</span>
+          </div>
+        </div>
+      </div>`;
     });
+    html += '</div>';
+    html += `<div class="card-warn">⚠️ 取出卡片會讓 ${equipName} 損毀。要取出請回上一頁點「取出卡片」。</div>`;
+  }
 
-  let html = `<h3 class="panel-title">🃏 選擇卡片</h3>`;
-  html += `<button class="btn-small" onclick="renderInventoryTab()">← 返回</button>`;
-
-  if (availableCards.length === 0) {
-    html += `<div class="empty-hint">背包中沒有可用的卡片。打怪有機率掉落卡片！</div>`;
+  if (used.length >= maxSlots) {
+    html += `<div class="empty-hint">插槽已滿（${maxSlots}/${maxSlots}）。</div>`;
+  } else if (availableCards.length === 0) {
+    html += `<div class="empty-hint">背包裡沒有能插在這個部位的卡片。</div>`;
   } else {
-    html += '<div class="card-list">';
+    html += '<div class="codex-detail-sec">可插入</div><div class="card-list">';
     availableCards.forEach(c => {
       html += `<div class="card-row">
         <div class="card-info">
@@ -2049,7 +2904,7 @@ function showCardSelect(slotKey) {
             <span class="card-desc">${c.card.desc}</span>
           </div>
         </div>
-        <button class="btn-small" onclick="insertCard('${slotKey}','${c.cardId}');renderInventoryTab();">插卡</button>
+        <button class="btn-small" onclick="insertCard('${slotKey}','${c.cardId}');showCardSelect('${slotKey}');">插卡</button>
       </div>`;
     });
     html += '</div>';

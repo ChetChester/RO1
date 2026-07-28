@@ -24,11 +24,11 @@ function saveWarehouse(wh) {
   try { localStorage.setItem(WAREHOUSE_KEY, JSON.stringify(wh)); } catch (e) { /* 忽略儲存失敗 */ }
 }
 function depositToWarehouse(itemId, qty) {
-  const row = state.inventory.find(r => r.item === itemId);
+  const row = state.inventory.find(r => r.item === itemId && !r.instanceId);
   if (!row || row.qty < qty) return false;
   removeItem(itemId, qty);
   const wh = loadWarehouse();
-  const whRow = wh.items.find(r => r.item === itemId);
+  const whRow = wh.items.find(r => r.item === itemId && !r.instanceId);
   if (whRow) whRow.qty += qty; else wh.items.push({ item: itemId, qty });
   saveWarehouse(wh);
   saveGame();
@@ -36,16 +36,16 @@ function depositToWarehouse(itemId, qty) {
   return true;
 }
 function depositToWarehouseAll(itemId) {
-  const row = state.inventory.find(r => r.item === itemId);
+  const row = state.inventory.find(r => r.item === itemId && !r.instanceId);
   if (!row || row.qty < 1) return false;
   return depositToWarehouse(itemId, row.qty);
 }
 function withdrawFromWarehouse(itemId, qty) {
   const wh = loadWarehouse();
-  const whRow = wh.items.find(r => r.item === itemId);
+  const whRow = wh.items.find(r => r.item === itemId && !r.instanceId);
   if (!whRow || whRow.qty < qty) return false;
   whRow.qty -= qty;
-  if (whRow.qty <= 0) wh.items = wh.items.filter(r => r.item !== itemId);
+  if (whRow.qty <= 0) wh.items = wh.items.filter(r => !(r.item === itemId && !r.instanceId));
   saveWarehouse(wh);
   addItem(itemId, qty);
   saveGame();
@@ -54,9 +54,47 @@ function withdrawFromWarehouse(itemId, qty) {
 }
 function withdrawFromWarehouseAll(itemId) {
   const wh = loadWarehouse();
-  const whRow = wh.items.find(r => r.item === itemId);
+  const whRow = wh.items.find(r => r.item === itemId && !r.instanceId);
   if (!whRow || whRow.qty < 1) return false;
   return withdrawFromWarehouse(itemId, whRow.qty);
+}
+/* 個體裝備進出倉庫：精煉度與卡片直接寫在倉庫那一行資料裡。
+   倉庫是全帳號共用的，不能引用任何角色自己的 state.instances，
+   所以存入時把個體內容攤平寫進倉庫，領出時再於當前角色重建一個新個體。 */
+function depositInstanceToWarehouse(instanceId) {
+  const idx = state.inventory.findIndex(r => r.instanceId === instanceId);
+  const inst = state.instances && state.instances[instanceId];
+  if (idx === -1 || !inst) return false;
+  const label = describeInstance(inst);
+  state.inventory.splice(idx, 1);
+  delete state.instances[instanceId];
+  const wh = loadWarehouse();
+  wh.items.push({
+    item: inst.item, qty: 1,
+    instanceId: 'wh_' + inst.item + '_' + Date.now() + '_' + Math.floor(Math.random() * 10000),
+    refine: inst.refine || 0,
+    cards: (inst.cards || []).slice()
+  });
+  saveWarehouse(wh);
+  saveGame();
+  logMsg(`📦 將 ${label} 存入倉庫。`);
+  return true;
+}
+function withdrawInstanceFromWarehouse(whInstanceId) {
+  const wh = loadWarehouse();
+  const idx = wh.items.findIndex(r => r.instanceId === whInstanceId);
+  if (idx === -1) return false;
+  const row = wh.items[idx];
+  wh.items.splice(idx, 1);
+  saveWarehouse(wh);
+  if (!state.instances) state.instances = {};
+  const id = row.item + '#' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+  state.instances[id] = { item: row.item, refine: row.refine || 0, cards: (row.cards || []).slice() };
+  state.inventory.push({ item: row.item, qty: 1, instanceId: id });
+  codexRecordItem(row.item, 1);
+  saveGame();
+  logMsg(`📦 從倉庫領出 ${describeInstance(state.instances[id])}。`);
+  return true;
 }
 function depositGoldToWarehouse(amount) {
   amount = Math.floor(Number(amount));
@@ -123,8 +161,9 @@ function createCharacter(name, statAlloc, gender) {
     jobLevelHistory: {}, // { jobId: jobLevel } 轉職歷史（職業加成跨職業繼承）
     learnedSkills: {},   // {skillId: level}
     equip: { head_top: null, head_mid: null, head_bottom: null, weapon: null, armor: null, shield: null, garment: null, footgear: null, accessory1: null, accessory2: null },
-    refinement: {},   // { itemId: refinementLevel } 例：{ sword_basic: 3 } 表示 +3
-    equippedCards: {}, // { equipSlot: cardId } 例：{ weapon: 'poring_card' }
+    refinement: {},   // 舊版精煉資料（按itemId），僅供遷移讀取，新邏輯一律用 instances
+    equippedCards: {}, // 舊版插卡資料（按欄位），僅供遷移讀取，新邏輯一律用 instances
+    instances: {},     // { instanceId: {item, refine, cards:[cardId,...]} } 精煉或插卡過的裝備會變成獨立個體，跟著那一件走
     inventory: [],        // [{item:'jellopy', qty:3}]
     gold: 50,
     mapId: 'novice_safe',
@@ -145,6 +184,10 @@ function createCharacter(name, statAlloc, gender) {
     autoSellConfig: { enabled: false, items: [] }, // 自動販賣：每30秒自動賣出背包內已選擇的道具
     autoSellReadyAt: 0,
     cardEleDmgBonus: {}, // 屬性傷害加成（由卡片提供）
+    codex: { mon: {}, seen: {}, item: {}, maps: {} }, // 圖鑑：擊殺數 / 已發現怪物 / 累計取得道具 / 造訪過的地圖
+    lockedItems: {}, // { itemId: 1 } 鎖定的道具，不會被賣出／自動販賣／露天商店處理
+    achievements: { done: {}, points: 0 },
+    deaths: 0,
     muted: false,
     lastAttackTime: Date.now(),
     attackAccumulator: 0,
@@ -179,12 +222,14 @@ function canDualWield(jobId) { return jobId === 'assassin'; }
 
 // 長矛類武器判定（矛限定技能共用）：道具資料的weaponType欄位對矛類武器標示很乾淨，直接用它判斷
 function hasSpearEquipped() {
-  const w = state.equip.weapon ? ITEMS[state.equip.weapon] : null;
+  const wId = getEquipBaseItemId('weapon');
+  const w = wId ? ITEMS[wId] : null;
   return !!(w && w.weaponType === 'spear');
 }
 
 function equippedWeaponType() {
-  const w = state.equip.weapon ? ITEMS[state.equip.weapon] : null;
+  const wId = getEquipBaseItemId('weapon');
+  const w = wId ? ITEMS[wId] : null;
   return w ? w.weaponType : null;
 }
 // 體型傷害修正：只影響物理傷害，怪物沒有size資料（尚未套用新資料）時視為無修正
@@ -207,17 +252,66 @@ function raceFlatBonus(monDef) {
   return bonus;
 }
 
+/* ---------------- 裝備個體化 ----------------
+   精煉或插卡之後，那一件裝備就變成獨立個體，狀態跟著它本身走，不再跟背包裡同名的其他份共用。
+   state.equip[slot] 存的可能是「道具id」（普通裝備）或「個體id」（個體裝備），
+   一律透過 getEquipBaseItemId() 取得真正的道具id，別直接拿 state.equip[slot] 去查 ITEMS。
+------------------------------------------------- */
+function getEquipBaseItemId(slot) {
+  const ref = state.equip[slot];
+  if (ref && state.instances && state.instances[ref]) return state.instances[ref].item;
+  return ref;
+}
+function getEquipInstance(slot) {
+  const ref = state.equip[slot];
+  if (ref && state.instances && state.instances[ref]) return state.instances[ref];
+  return null;
+}
+// 取得（或視需要建立）該欄位裝備的個體紀錄，回傳 instanceId；精煉/插卡第一次發生時把普通道具轉成個體
+function getOrCreateEquipInstance(slot) {
+  const ref = state.equip[slot];
+  if (!ref) return null;
+  if (state.instances[ref]) return ref;
+  const id = ref + '#' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+  state.instances[id] = { item: ref, refine: 0, cards: [] };
+  state.equip[slot] = id;
+  return id;
+}
+// 個體如果精煉歸零又沒卡片，還原成普通道具，免得背包留下一堆沒意義的獨立行
+function maybeDeinstanceSlot(slot) {
+  const ref = state.equip[slot];
+  if (!ref || !state.instances[ref]) return;
+  const inst = state.instances[ref];
+  if ((inst.refine || 0) === 0 && (!inst.cards || inst.cards.length === 0)) {
+    state.equip[slot] = inst.item;
+    delete state.instances[ref];
+  }
+}
+// 把某欄位目前的裝備放回背包（普通道具照樣堆疊，個體裝備獨立一行），並清空欄位
+function returnEquipToInventory(slot) {
+  const ref = state.equip[slot];
+  if (!ref) return;
+  if (state.instances && state.instances[ref]) {
+    state.inventory.push({ item: state.instances[ref].item, qty: 1, instanceId: ref });
+  } else {
+    addItem(ref, 1);
+  }
+  state.equip[slot] = null;
+}
+
 function equippedAtk() {
-  const w = state.equip.weapon ? ITEMS[state.equip.weapon] : null;
+  const wId = getEquipBaseItemId('weapon');
+  const w = wId ? ITEMS[wId] : null;
   const baseAtk = w && w.atk ? w.atk : 0;
-  const refLevel = (state.refinement && state.equip.weapon) ? (state.refinement[state.equip.weapon] || 0) : 0;
+  const refLevel = getRefinementLevel('weapon');
   const weaponLv = w ? (w.weaponLv || 1) : 1;
   let mainAtk = baseAtk + getRefinementAtkBonus(refLevel, weaponLv);
 
   // 雙持：左手欄位裝備的是單手武器而非盾牌時，套用右手/左手修練的傷害修正
-  const offItem = state.equip.shield ? ITEMS[state.equip.shield] : null;
+  const offId = getEquipBaseItemId('shield');
+  const offItem = offId ? ITEMS[offId] : null;
   if (offItem && offItem.type === 'weapon' && canDualWield(state.jobId)) {
-    const offRefLevel = (state.refinement && state.equip.shield) ? (state.refinement[state.equip.shield] || 0) : 0;
+    const offRefLevel = getRefinementLevel('shield');
     const offWeaponLv = offItem.weaponLv || 1;
     const offAtk = (offItem.atk || 0) + getRefinementAtkBonus(offRefLevel, offWeaponLv);
     const rightPct = (state.rightHandPct != null ? state.rightHandPct : 50) / 100;
@@ -227,17 +321,18 @@ function equippedAtk() {
   return mainAtk;
 }
 function equippedMatk() {
-  const w = state.equip.weapon ? ITEMS[state.equip.weapon] : null;
+  const wId = getEquipBaseItemId('weapon');
+  const w = wId ? ITEMS[wId] : null;
   return w && w.matk ? w.matk : 0;
 }
 function equippedDef() {
   let def = 0;
   // Check all equipped armor slots
   ['head_top', 'head_mid', 'head_bottom', 'armor', 'shield', 'garment', 'footgear', 'accessory1', 'accessory2'].forEach(slot => {
-    const a = state.equip[slot] ? ITEMS[state.equip[slot]] : null;
+    const id = getEquipBaseItemId(slot);
+    const a = id ? ITEMS[id] : null;
     const baseDef = a && a.def ? a.def : 0;
-    const refLevel = (state.refinement && state.equip[slot]) ? (state.refinement[state.equip[slot]] || 0) : 0;
-    def += baseDef + getRefinementDefBonus(refLevel);
+    def += baseDef + getRefinementDefBonus(getRefinementLevel(slot));
   });
   return def;
 }
@@ -250,7 +345,8 @@ function equippedStatBonus(stat) {
   const slots = (stat === 'atk' || stat === 'matk') ? EQUIP_SLOTS_NO_WEAPON : EQUIP_SLOTS_ALL;
   let total = 0;
   slots.forEach(slot => {
-    const it = state.equip[slot] ? ITEMS[state.equip[slot]] : null;
+    const id = getEquipBaseItemId(slot);
+    const it = id ? ITEMS[id] : null;
     if (it && typeof it[stat] === 'number') total += it[stat];
   });
   return total;
@@ -802,20 +898,37 @@ function recomputeDerived(fullHeal) {
     state.maxSp = Math.round(state.maxSp * (1 + spPctBonus));
   }
 
-  // 卡片加成 — 屬性傷害加成、種族減傷（存入 state 供戰鬥使用）
+  // 卡片加成 — 對特定目標的加傷/減傷（存入 state 供戰鬥使用）
+  //   eleDmg_X / raceDmg_X / sizeDmg_X       ：打「屬性X / 種族X / 體型X」的怪時增傷
+  //   eleReduce_X / raceDmgReduce_X          ：被「屬性X / 種族X」的怪打時減傷
   state.cardEleDmgBonus = {};
+  state.cardRaceDmgBonus = {};
+  state.cardSizeDmgBonus = {};
+  state.cardEleDmgReduce = {};
   state.cardRaceDmgReduce = {};
-  Object.values(state.equippedCards || {}).forEach(cardId => {
+  state.cardHpRegenPct = 0;
+  state.cardSpRegenPct = 0;
+  const CARD_BONUS_MAPS = {
+    'eleDmg_': 'cardEleDmgBonus',
+    'raceDmg_': 'cardRaceDmgBonus',
+    'sizeDmg_': 'cardSizeDmgBonus',
+    'eleReduce_': 'cardEleDmgReduce',
+    'raceDmgReduce_': 'cardRaceDmgReduce'
+  };
+  allEquippedCards().forEach(cardId => {
     const card = CARDS[cardId];
     if (!card || !card.bonus) return;
     for (const [k, v] of Object.entries(card.bonus)) {
-      if (k.startsWith('eleDmg_')) {
-        const ele = k.replace('eleDmg_', '');
-        state.cardEleDmgBonus[ele] = (state.cardEleDmgBonus[ele] || 0) + v / 100;
-      } else if (k.startsWith('raceDmgReduce_')) {
-        const race = k.replace('raceDmgReduce_', '');
-        state.cardRaceDmgReduce[race] = (state.cardRaceDmgReduce[race] || 0) + v / 100;
-      }
+      if (k === 'hpRegenPct') { state.cardHpRegenPct += v; continue; }
+      if (k === 'spRegenPct') { state.cardSpRegenPct += v; continue; }
+      // raceDmgReduce_ 必須排在 raceDmg_ 前面比對，否則會被前者的前綴先吃掉
+      const prefix = Object.keys(CARD_BONUS_MAPS)
+        .sort((a, b) => b.length - a.length)
+        .find(p => k.startsWith(p));
+      if (!prefix) continue;
+      const bucket = state[CARD_BONUS_MAPS[prefix]];
+      const key = k.slice(prefix.length);
+      bucket[key] = (bucket[key] || 0) + v / 100;
     }
   });
 
@@ -833,6 +946,18 @@ function recomputeDerived(fullHeal) {
 ------------------------------------------------- */
 function hitChancePct(attackerHit, defenderFlee) {
   return Math.min(100, Math.max(5, 100 + attackerHit - defenderFlee));
+}
+
+/* 卡片對「這隻怪」的總增傷倍率：屬性 + 種族 + 體型三種加成相加後一次套用。
+   回傳的是倍率（例如 +20% 種族傷害會回傳 1.2），沒有任何加成時回傳 1。 */
+function cardTargetDmgMult(monDef) {
+  if (!monDef) return 1;
+  let bonus = 0;
+  const ele = monDef.element || 'none';
+  if (state.cardEleDmgBonus && state.cardEleDmgBonus[ele]) bonus += state.cardEleDmgBonus[ele];
+  if (monDef.race && state.cardRaceDmgBonus && state.cardRaceDmgBonus[monDef.race]) bonus += state.cardRaceDmgBonus[monDef.race];
+  if (monDef.size && state.cardSizeDmgBonus && state.cardSizeDmgBonus[monDef.size]) bonus += state.cardSizeDmgBonus[monDef.size];
+  return 1 + bonus;
 }
 function mitigateDamage(rawDmg, def) {
   const reduction = def / (def + 60);
@@ -1135,6 +1260,8 @@ function gameTick() {
     passiveRegen();
     townRestore();
     autoUsePotion();
+    // 成就一律在這裡集中判定，不在戰鬥流程裡埋觸發點（詳見 achievements.js 開頭說明）
+    checkAchievements();
     if (state.autoSkill) {
       tryAutoCastSkill();
     }
@@ -1288,20 +1415,21 @@ function gameTick() {
 }
 
 function passiveRegen() {
-  const regenMult = state.hpRegenMult || 1;
+  // 卡片的「HP/SP恢復力+N%」加成
+  const regenMult = (state.hpRegenMult || 1) * (1 + (state.cardHpRegenPct || 0) / 100);
   const hpRegen = Math.max(1, Math.ceil((state.maxHp * 0.015 + state.stats.vit * 0.15) * regenMult));
   // 禪心：SP恢復量固定+3~30，並額外+0.2%~2%（以最大SP計）
   const zenFlat = state.zenSpFlatBonus || 0;
   const zenPct = state.maxSp * ((state.zenSpPctBonus || 0) / 100);
   // 聖母之頌歌buff：SP恢復速度倍率
   const sprateMult = buffMult('sprate').mult;
-  const spRegen = Math.max(1, Math.ceil((state.maxSp * 0.02 + state.stats.int * 0.15 + zenFlat + zenPct) * (state.spRegenMult || 1) * sprateMult));
+  const spRegen = Math.max(1, Math.ceil((state.maxSp * 0.02 + state.stats.int * 0.15 + zenFlat + zenPct) * (state.spRegenMult || 1) * sprateMult * (1 + (state.cardSpRegenPct || 0) / 100)));
   if (state.hp < state.maxHp) state.hp = Math.min(state.maxHp, state.hp + hpRegen);
   if (state.sp < state.maxSp) state.sp = Math.min(state.maxSp, state.sp + spRegen);
 }
 
 function getItemQty(itemId) {
-  const row = state.inventory.find(r => r.item === itemId);
+  const row = state.inventory.find(r => r.item === itemId && !r.instanceId);
   return row ? row.qty : 0;
 }
 
@@ -1397,7 +1525,8 @@ function computeAspd() {
   const s = state.stats;
 
   // Step 1: 查表取得武器 ASPD 基礎值 & 盾牌懲罰
-  const weapon = state.equip.weapon ? ITEMS[state.equip.weapon] : null;
+  const weaponId = getEquipBaseItemId('weapon');
+  const weapon = weaponId ? ITEMS[weaponId] : null;
   const weaponType = weapon ? weapon.weaponType : null;
   // baseAspd 可以是數字（全武器統一值）或物件（依武器類型查表）
   let weaponValue = 154;
@@ -1409,7 +1538,8 @@ function computeAspd() {
     }
   }
   // 左手欄位裝備的是武器（雙持）時不算盾牌懲罰，只有真正的盾牌才扣ASPD
-  const shieldSlotItem = state.equip.shield ? ITEMS[state.equip.shield] : null;
+  const shieldSlotId = getEquipBaseItemId('shield');
+  const shieldSlotItem = shieldSlotId ? ITEMS[shieldSlotId] : null;
   const shieldPenalty = (shieldSlotItem && shieldSlotItem.type !== 'weapon') ? (job.shieldPenalty || -5) : 0;
 
   // Step 2: StatBonus = √(AGI × 1120/111 + DEX × 11/60)
@@ -1441,7 +1571,8 @@ function computeAspd() {
   let equipAspdPct = 0;
   let aspdFlatBonus = state.passiveAspdFlat || 0;
   ['weapon', 'armor'].forEach(slot => {
-    const item = state.equip[slot] ? ITEMS[state.equip[slot]] : null;
+    const aspdItemId = getEquipBaseItemId(slot);
+    const item = aspdItemId ? ITEMS[aspdItemId] : null;
     if (item) {
       if (item.aspdBonus) equipAspdPct += (item.aspdBonus - 1);
       if (item.aspdFlat) aspdFlatBonus += item.aspdFlat;
@@ -1512,6 +1643,7 @@ function spawnMonster() {
   state.monsterIdCounter = (state.monsterIdCounter || 0) + 1;
   state.monsters.push({ defId, hp: def.hp, maxHp: def.hp, id: state.monsterIdCounter });
   state.monster = state.monsters[0];
+  codexRecordSeen(defId);
   const isMvp = mvpList && mvpList.includes(defId);
   logMsg(isMvp ? `⚠️ ${def.icon} ${def.name}（MVP）降臨了！` : `一隻 ${def.icon} ${def.name} 出現了！`);
 }
@@ -1573,7 +1705,8 @@ function playerAttack() {
   }
 
   // 屬性相剋：武器屬性 vs 怪物屬性
-  const weapon = state.equip.weapon ? ITEMS[state.equip.weapon] : null;
+  const atkWeaponId = getEquipBaseItemId('weapon');
+  const weapon = atkWeaponId ? ITEMS[atkWeaponId] : null;
   let atkElement = (weapon && weapon.element) ? weapon.element : 'none';
   // 聖之祈福buff：暫時附加聖屬性
   if (state.buffs.some(b => b.type === 'holyweapon')) atkElement = 'holy';
@@ -1585,12 +1718,8 @@ function playerAttack() {
   }
   raw *= elemMult;
 
-  // 卡片屬性傷害加成：對特定屬性怪物額外增傷
-  const monElement = monDef.element || 'none';
-  if (state.cardEleDmgBonus && state.cardEleDmgBonus[monElement]) {
-    const bonus = state.cardEleDmgBonus[monElement];
-    raw *= (1 + bonus);
-  }
+  // 卡片增傷：對特定屬性/種族/體型的怪物額外增傷
+  raw *= cardTargetDmgMult(monDef);
 
   // 體型傷害修正（依武器類型 vs 怪物體型）
   raw *= getSizeMultiplier(monDef);
@@ -1811,6 +1940,10 @@ function monsterAttackSingle(mon) {
   if (monDef.race && state.cardRaceDmgReduce && state.cardRaceDmgReduce[monDef.race]) {
     raw *= (1 - state.cardRaceDmgReduce[monDef.race]);
   }
+  // 卡片屬性減傷（例如受到地屬性傷害-30%）
+  if (state.cardEleDmgReduce && state.cardEleDmgReduce[monAtkElement]) {
+    raw *= (1 - state.cardEleDmgReduce[monAtkElement]);
+  }
 
   // 狂暴狀態：DEF -55%
   let playerDef = state.def;
@@ -1879,8 +2012,119 @@ function monsterAttackSingle(mon) {
   trySpearCounterProc(mon, monDef);
 }
 
+/* ---------------- 圖鑑（收集追蹤） ----------------
+   state.codex = {
+     mon:  { 怪物id: 累計擊殺數 },
+     seen: { 怪物id: 1 },          // 遭遇過就算發現，不一定要打倒
+     item: { 道具id: 累計取得數 }
+   }
+   完成度的分母只算「玩家真的碰得到」的內容：掛在地圖上的怪、這些怪掉得到的道具、
+   商店買得到的道具。資料表裡有 2000 多隻沒有出沒地圖的孤兒怪與兩萬多個沒有取得
+   管道的道具，全部算進分母的話完成度永遠停在個位數，收集就失去意義。
+------------------------------------------------- */
+function ensureCodex() {
+  if (!state.codex) state.codex = {};
+  if (!state.codex.mon) state.codex.mon = {};
+  if (!state.codex.seen) state.codex.seen = {};
+  if (!state.codex.item) state.codex.item = {};
+  if (!state.codex.maps) state.codex.maps = {};
+  return state.codex;
+}
+function codexRecordSeen(defId) {
+  if (!state || !defId) return;
+  ensureCodex().seen[defId] = 1;
+}
+function codexRecordKill(defId) {
+  if (!state || !defId) return;
+  const c = ensureCodex();
+  c.seen[defId] = 1;
+  c.mon[defId] = (c.mon[defId] || 0) + 1;
+}
+function codexRecordItem(itemId, qty) {
+  if (!state || !itemId) return;
+  const c = ensureCodex();
+  c.item[itemId] = (c.item[itemId] || 0) + (qty || 1);
+}
+
+// 可收集清單是靜態資料算出來的，只算一次後快取
+let _codexPoolCache = null;
+function getCodexPool() {
+  if (_codexPoolCache) return _codexPoolCache;
+  const monSet = new Set();
+  MAPS.forEach(m => (m.monsters || []).forEach(e => { if (MONSTERS[e.id]) monSet.add(e.id); }));
+  if (typeof MVP_MAP_DATA !== 'undefined') {
+    Object.values(MVP_MAP_DATA).forEach(list => (list || []).forEach(id => { if (MONSTERS[id]) monSet.add(id); }));
+  }
+  const itemSet = new Set();
+  monSet.forEach(id => {
+    (MONSTERS[id].drops || []).forEach(d => { if (ITEMS[d.item]) itemSet.add(d.item); });
+  });
+  if (typeof MONSTER_CARD_DROPS !== 'undefined') {
+    Object.entries(MONSTER_CARD_DROPS).forEach(([monId, cd]) => {
+      if (monSet.has(monId) && cd && ITEMS[cd.card]) itemSet.add(cd.card);
+    });
+  }
+  Object.values(NPC_SHOPS).forEach(shop => (shop.items || []).forEach(id => { if (ITEMS[id]) itemSet.add(id); }));
+  POTION_TIERS.forEach(id => { if (ITEMS[id]) itemSet.add(id); });
+  const cardSet = new Set([...itemSet].filter(id => CARDS[id]));
+  _codexPoolCache = {
+    monsters: [...monSet].sort((a, b) => (MONSTERS[a].level || 0) - (MONSTERS[b].level || 0)),
+    items: [...itemSet].filter(id => !CARDS[id]),
+    cards: [...cardSet]
+  };
+  return _codexPoolCache;
+}
+
+// 哪些怪會掉這個道具（圖鑑的「取得來源」欄用）
+let _codexSourceCache = null;
+function getItemSources(itemId) {
+  if (!_codexSourceCache) {
+    _codexSourceCache = {};
+    getCodexPool().monsters.forEach(monId => {
+      (MONSTERS[monId].drops || []).forEach(d => {
+        (_codexSourceCache[d.item] = _codexSourceCache[d.item] || []).push({ mon: monId, chance: d.chance });
+      });
+      const cd = (typeof MONSTER_CARD_DROPS !== 'undefined') ? MONSTER_CARD_DROPS[monId] : null;
+      if (cd) (_codexSourceCache[cd.card] = _codexSourceCache[cd.card] || []).push({ mon: monId, chance: cd.chance });
+    });
+  }
+  const list = (_codexSourceCache[itemId] || []).slice();
+  // 同一隻怪可能同時出現在 drops 與卡片表，取機率高的那筆就好
+  const best = {};
+  list.forEach(s => { if (!best[s.mon] || best[s.mon].chance < s.chance) best[s.mon] = s; });
+  return Object.values(best).sort((a, b) => b.chance - a.chance);
+}
+
+// 哪些地圖有這隻怪
+let _codexMapCache = null;
+function getMonsterMaps(monId) {
+  if (!_codexMapCache) {
+    _codexMapCache = {};
+    MAPS.forEach(m => (m.monsters || []).forEach(e => {
+      (_codexMapCache[e.id] = _codexMapCache[e.id] || []).push(m.name);
+    }));
+  }
+  return _codexMapCache[monId] || [];
+}
+
+function getCodexProgress() {
+  const pool = getCodexPool();
+  const c = ensureCodex();
+  const count = (ids, book) => ids.reduce((n, id) => n + (book[id] ? 1 : 0), 0);
+  return {
+    monsters: { found: count(pool.monsters, c.seen), killed: count(pool.monsters, c.mon), total: pool.monsters.length },
+    items: { found: count(pool.items, c.item), total: pool.items.length },
+    cards: { found: count(pool.cards, c.item), total: pool.cards.length }
+  };
+}
+
 function killMonster(def, monObj) {
+  // 查表一律用 MONSTERS 的 key，不要用 def.id：有 72 隻怪的 def.id 帶著去重時加上的底線
+  // 後綴（例如 poring 的 def.id 是 'poring_'），拿 def.id 去查 MONSTER_CARD_DROPS 會落空，
+  // 波利/綠棉蟲/小惡魔/耳語的卡片因此一直掉不出來。所有呼叫端都有傳 monObj，用它的 defId 最準。
+  const monKey = (monObj && monObj.defId) || def.id;
   logMsg(`擊敗了 ${def.name}！獲得 ${def.exp} 經驗與 ${def.jobExp} 職業經驗。`);
+  codexRecordKill(monKey);
   gainExp(def.exp, def.jobExp);
   const goldGain = Math.round((3 + def.level * 1.4) * buffMult('gold').mult);
   state.gold += goldGain;
@@ -1909,7 +2153,7 @@ function killMonster(def, monObj) {
     logMsg(`💰 貪婪發動！額外獲得了 ${bonusName}！`);
   }
   // 卡片掉落
-  const cardDrop = MONSTER_CARD_DROPS[def.id];
+  const cardDrop = MONSTER_CARD_DROPS[monKey];
   if (cardDrop && Math.random() < cardDrop.chance) {
     addItem(cardDrop.card, 1);
     const card = CARDS[cardDrop.card];
@@ -1945,6 +2189,7 @@ function tryAutoRevive() {
 }
 
 function onPlayerDown() {
+  state.deaths = (state.deaths || 0) + 1;
   logMsg(`⚠️ 你被擊倒了！正在返回安全地帶療傷……`);
   state.monster = null;
   state.monsters = [];
@@ -1959,6 +2204,7 @@ function onPlayerDown() {
   }
   if (!safeMap) safeMap = 'prontera'; // 兜底
   state.mapId = safeMap;
+  ensureCodex().maps[safeMap] = 1; // 被抬回城也算造訪過，這條路徑沒有經過 changeMap()
   state.hp = state.maxHp;
   state.sp = state.maxSp;
   state.attackAccumulator = 0;
@@ -2198,7 +2444,7 @@ function castSkill(skillId) {
         if (tag) logMsg(`${tag} ${ELEMENT_NAMES[skElement]}攻 → ${ELEMENT_NAMES[def.element || 'none']}防 (${pctStr}%)`);
       }
       // 卡片屬性傷害加成
-      const skEleDmgBonus = (state.cardEleDmgBonus && state.cardEleDmgBonus[def.element || 'none']) || 0;
+      const skEleDmgBonus = cardTargetDmgMult(def) - 1;
       let skillMult = mult;
       // 超音速投擲被動：音速投擲傷害+90%
       if (sk.id === 'sonicblow' && state.hasSonicblowBoost) {
@@ -2266,7 +2512,7 @@ function castSkill(skillId) {
           }
         }
         const monElemMult = getElementMultiplierVsMonster(skElement, monDef);
-        const monEleDmgBonus = (state.cardEleDmgBonus && state.cardEleDmgBonus[monDef.element || 'none']) || 0;
+        const monEleDmgBonus = cardTargetDmgMult(monDef) - 1;
         // 負重量上升：加成手推車攻擊傷害
         let aoeMult = mult;
         if (sk.id === 'cartattack' && state.cartDmgBonusMult) aoeMult *= (1 + state.cartDmgBonusMult);
@@ -2423,7 +2669,7 @@ function castSkill(skillId) {
         break;
       }
       const elemMult = getElementMultiplierVsMonster(skElement, def);
-      const dotEleDmgBonus = (state.cardEleDmgBonus && state.cardEleDmgBonus[def.element || 'none']) || 0;
+      const dotEleDmgBonus = cardTargetDmgMult(def) - 1;
       const dmg = mitigateDamage(baseDmgStat * mult * elemMult * (1 + dotEleDmgBonus), def.def * 0.6);
       target.hp -= dmg;
       logMsg(`☠️ 「${sk.name}」Lv${lv} 造成 ${dmg} 點持續傷害！`);
@@ -2520,7 +2766,7 @@ function castSkill(skillId) {
         break;
       }
       const elemMult = getElementMultiplierVsMonster(skElement, def);
-      const mhEleDmgBonus = (state.cardEleDmgBonus && state.cardEleDmgBonus[def.element || 'none']) || 0;
+      const mhEleDmgBonus = cardTargetDmgMult(def) - 1;
       // 第一段：單體傷害
       const dmg1 = mitigateDamage(baseDmgStat * mult * elemMult * getSizeMultiplier(def) * (1 + mhEleDmgBonus), def.def) + raceFlatBonus(def);
       target.hp -= dmg1;
@@ -2535,7 +2781,7 @@ function castSkill(skillId) {
         const mon = state.monsters[i];
         const monDef = MONSTERS[mon.defId];
         const monElemMult = getElementMultiplierVsMonster(skElement, monDef);
-        const mon2EleDmgBonus = (state.cardEleDmgBonus && state.cardEleDmgBonus[monDef.element || 'none']) || 0;
+        const mon2EleDmgBonus = cardTargetDmgMult(monDef) - 1;
         const dmg2 = mitigateDamage(baseDmgStat * mult2 * monElemMult * getSizeMultiplier(monDef) * (1 + mon2EleDmgBonus), monDef.def) + raceFlatBonus(monDef);
         mon.hp -= dmg2;
         combatLogBuf.push(`  → 對 ${monDef.name} 造成 ${dmg2} 點範圍傷害！`);
@@ -2571,7 +2817,7 @@ function castSkill(skillId) {
         break;
       }
       const elemMult = getElementMultiplierVsMonster(skElement, def);
-      const multiEleDmgBonus = (state.cardEleDmgBonus && state.cardEleDmgBonus[def.element || 'none']) || 0;
+      const multiEleDmgBonus = cardTargetDmgMult(def) - 1;
       const hits = Array.isArray(sk.hits) ? sk.hits[lv - 1] : (sk.hits || 1);
       let totalDmg = 0;
       for (let i = 0; i < hits; i++) {
@@ -2593,7 +2839,7 @@ function castSkill(skillId) {
       const scHitPct = hitChancePctVsMonster(effectiveHitWithBuff(), def);
       if (Math.random() * 100 <= scHitPct) {
         const elemMult = getElementMultiplierVsMonster(skElement, def);
-        const scEleDmgBonus = (state.cardEleDmgBonus && state.cardEleDmgBonus[def.element || 'none']) || 0;
+        const scEleDmgBonus = cardTargetDmgMult(def) - 1;
         const dmg = mitigateDamage(baseDmgStat * mult * elemMult * (1 + scEleDmgBonus), def.def);
         target.hp -= dmg;
         logMsg(`⚡ 「${sk.name}」Lv${lv} 造成 ${dmg} 點傷害！`);
@@ -2920,11 +3166,13 @@ const NPC_SHOPS = {
   }
 };
 
+// NPC 商店開在地圖分頁裡（只有安全區的地圖才會有入口），不再有獨立的 NPC 分頁
 function openNpcShop(shopId) {
   const shop = NPC_SHOPS[shopId];
   if (!shop) return;
+  if (!isInTown()) return;
   const items = shop.getItems();
-  const el = document.getElementById('tab-npc');
+  const el = document.getElementById('tab-map');
   if (!el) return;
 
   // Group items by type
@@ -2947,7 +3195,7 @@ function openNpcShop(shopId) {
 
   let html = `<div class="npc-shop">
     <div class="npc-shop-header">
-      <button class="btn-small" onclick="renderNpcTab()">← 返回</button>
+      <button class="btn-small" onclick="renderMapTab()">← 返回地圖</button>
       <h3 class="panel-title">${shop.icon} ${shop.name}</h3>
     </div>`;
 
@@ -2995,20 +3243,23 @@ function townRestore() {
     logMsg('🏠 你在城鎮中休息，HP 與 SP 已完全恢復！');
   }
 }
+// 註：背包裡「個體裝備」是獨立一行（帶 instanceId），跟普通堆疊分開；
+// 所有按 itemId 找堆疊的地方都要排除個體行，否則會誤動到那一件獨立裝備。
 function addItem(itemId, qty) {
-  const row = state.inventory.find(r => r.item === itemId);
+  const row = state.inventory.find(r => r.item === itemId && !r.instanceId);
   if (row) row.qty += qty; else state.inventory.push({ item: itemId, qty });
+  codexRecordItem(itemId, qty);
 }
 function removeItem(itemId, qty) {
-  const row = state.inventory.find(r => r.item === itemId);
+  const row = state.inventory.find(r => r.item === itemId && !r.instanceId);
   if (!row) return false;
   row.qty -= qty;
-  if (row.qty <= 0) state.inventory = state.inventory.filter(r => r.item !== itemId);
+  if (row.qty <= 0) state.inventory = state.inventory.filter(r => !(r.item === itemId && !r.instanceId));
   return true;
 }
 function useItem(itemId) {
   const def = ITEMS[itemId];
-  const row = state.inventory.find(r => r.item === itemId);
+  const row = state.inventory.find(r => r.item === itemId && !r.instanceId);
   if (!def || !row) return false;
   if (def.type === 'consumable' || def.type === 'material') {
     if (def.heal) {
@@ -3043,9 +3294,10 @@ function useItem(itemId) {
   }
   return false;
 }
-function equipItem(itemId) {
+// 決定某個道具會裝到哪個欄位；equipItem（普通堆疊）跟 equipInstance（個體裝備）共用同一套判斷
+function resolveEquipSlotFor(itemId) {
   const def = ITEMS[itemId];
-  if (!def) return false;
+  if (!def) return null;
 
   let slot;
   if (def.type === 'weapon') {
@@ -3053,7 +3305,7 @@ function equipItem(itemId) {
       slot = 'weapon';
     } else if (!state.equip.weapon) {
       slot = 'weapon';
-    } else if (canDualWield(state.jobId) && !isTwoHanded(state.equip.weapon)) {
+    } else if (canDualWield(state.jobId) && !isTwoHanded(getEquipBaseItemId('weapon'))) {
       // 主手已有單手武器，且職業支援雙持 → 放入左手（副手武器）
       slot = 'shield';
     } else {
@@ -3061,7 +3313,7 @@ function equipItem(itemId) {
     }
   } else if (def.type === 'armor') {
     switch (def.armorType) {
-      case 'headgear':
+      case 'headgear': {
         // 根據物品描述中的「位置」決定頭部欄位（兼容簡繁體）
         const pos = def.desc || '';
         const hasTop = pos.includes('頭上') || pos.includes('头上');
@@ -3080,6 +3332,7 @@ function equipItem(itemId) {
         }
         else slot = 'head_top';
         break;
+      }
       case 'shield': slot = 'shield'; break;
       case 'garment': slot = 'garment'; break;
       case 'footgear': slot = 'footgear'; break;
@@ -3091,41 +3344,72 @@ function equipItem(itemId) {
       default: slot = 'armor'; break;
     }
   } else {
-    return false;
+    return null;
   }
+  return slot;
+}
 
+// 裝備前的共通檢查與讓位處理；回傳 false 表示不能裝
+function prepareEquipSlot(slot, itemId) {
   // 雙手武器：裝備時自動卸下左手欄位（盾牌或副手武器）
-  if (slot === 'weapon' && isTwoHanded(itemId)) {
-    if (state.equip.shield) {
-      const offName = ITEMS[state.equip.shield]?.name || '左手裝備';
-      addItem(state.equip.shield, 1);
-      logMsg(`雙手武器無法搭配左手裝備，卸下了 ${offName}。`);
-      state.equip.shield = null;
-    }
+  if (slot === 'weapon' && isTwoHanded(itemId) && state.equip.shield) {
+    const offName = getItemDisplayName(getEquipBaseItemId('shield'));
+    returnEquipToInventory('shield');
+    logMsg(`雙手武器無法搭配左手裝備，卸下了 ${offName}。`);
   }
-
   // 左手欄位：如果目前武器是雙手武器，無法裝備
-  if (slot === 'shield' && isTwoHanded(state.equip.weapon)) {
+  if (slot === 'shield' && isTwoHanded(getEquipBaseItemId('weapon'))) {
     logMsg(`⚠️ 雙手武器無法搭配盾牌！`);
     return false;
   }
+  return true;
+}
 
-  const old = state.equip[slot];
-  state.equip[slot] = itemId;
+function equipItem(itemId) {
+  const def = ITEMS[itemId];
+  if (!def) return false;
+  const slot = resolveEquipSlotFor(itemId);
+  if (!slot) return false;
+  if (!prepareEquipSlot(slot, itemId)) return false;
+
   removeItem(itemId, 1);
-  if (old) addItem(old, 1);
+  returnEquipToInventory(slot);   // 原本穿的那件（不管普通或個體）連同它的精煉/卡片一起回背包
+  state.equip[slot] = itemId;
   recomputeDerived(false);
   logMsg(`裝備了 ${def.name}。`);
   saveGame();
   return true;
 }
 
-function unequipItem(slotKey) {
-  const itemId = state.equip[slotKey];
-  if (!itemId) return false;
+// 裝備背包裡的個體裝備（精煉過或插過卡的那一件）
+function equipInstance(instanceId) {
+  const inst = state.instances && state.instances[instanceId];
+  if (!inst) return false;
+  if (state.inventory.findIndex(r => r.instanceId === instanceId) === -1) return false;
+  const itemId = inst.item;
   const def = ITEMS[itemId];
-  state.equip[slotKey] = null;
-  addItem(itemId, 1);
+  if (!def) return false;
+  const slot = resolveEquipSlotFor(itemId);
+  if (!slot) return false;
+  if (!prepareEquipSlot(slot, itemId)) return false;
+
+  // 讓位可能動到背包，重新定位這一行再移除
+  const idx = state.inventory.findIndex(r => r.instanceId === instanceId);
+  if (idx !== -1) state.inventory.splice(idx, 1);
+  returnEquipToInventory(slot);
+  state.equip[slot] = instanceId;
+  recomputeDerived(false);
+  logMsg(`裝備了 ${describeInstance(inst)}。`);
+  saveGame();
+  return true;
+}
+
+function unequipItem(slotKey) {
+  if (!state.equip[slotKey]) return false;
+  const baseItemId = getEquipBaseItemId(slotKey);
+  const def = ITEMS[baseItemId];
+  // 插著卡也能正常卸下——卡片是跟著這一件裝備走的，會一起回到背包，不會變成孤兒
+  returnEquipToInventory(slotKey);
   recomputeDerived(false);
   logMsg(`卸下了 ${def ? def.name : '裝備'}。`);
   saveGame();
@@ -3133,9 +3417,11 @@ function unequipItem(slotKey) {
 }
 
 /* ---------------- 裝備精煉 ---------------- */
-function refineItem(itemId, materialType) {
-  if (!state.refinement) state.refinement = {};
-  const currentLevel = state.refinement[itemId] || 0;
+// 注意：操作對象是「裝備欄位」，精煉結果掛在那一件裝備的個體紀錄上，跟背包裡同名的其他份無關
+function refineItem(slotKey, materialType) {
+  const itemId = getEquipBaseItemId(slotKey);
+  if (!itemId) return false;
+  const currentLevel = getRefinementLevel(slotKey);
   if (currentLevel >= REFINEMENT_MAX) {
     logMsg(`⚠️ ${ITEMS[itemId].name} 已達最大精煉等級 +${REFINEMENT_MAX}！`);
     return false;
@@ -3161,7 +3447,7 @@ function refineItem(itemId, materialType) {
   }
 
   // 檢查材料庫存
-  const invRow = state.inventory.find(r => r.item === mat.id);
+  const invRow = state.inventory.find(r => r.item === mat.id && !r.instanceId);
   if (!invRow || invRow.qty < 1) {
     logMsg(`⚠️ 你沒有 ${mat.name}。`);
     return false;
@@ -3180,10 +3466,11 @@ function refineItem(itemId, materialType) {
   // 計算成功率
   const successRate = getRefinementSuccessRate(currentLevel, weaponLv, materialType);
   const safeLevel = getRefinementSafeLevel(weaponLv, isArmor);
+  const inst = state.instances[getOrCreateEquipInstance(slotKey)];
 
   if (Math.random() * 100 < successRate) {
     // 成功
-    state.refinement[itemId] = currentLevel + 1;
+    inst.refine = currentLevel + 1;
     logMsg(`🔨 精煉成功！${item.name} 提升至 +${currentLevel + 1}！`);
     recomputeDerived(false);
     saveGame();
@@ -3197,105 +3484,182 @@ function refineItem(itemId, materialType) {
     } else if (currentLevel >= safeLevel) {
       // 安全等級以上：降3級或損壞
       if (currentLevel > 3) {
-        state.refinement[itemId] = Math.max(0, currentLevel - 3);
+        inst.refine = Math.max(0, currentLevel - 3);
         logMsg(`💥 精煉失敗！${item.name} 降至 +${Math.max(0, currentLevel - 3)}…`);
       } else {
         // +3 以下直接損壞
-        delete state.refinement[itemId];
+        inst.refine = 0;
         logMsg(`💥 精煉失敗！${item.name} 損壞了！`);
       }
     } else {
       // 安全等級以下：不降級
       logMsg(`💥 精煉失敗！${item.name} 維持 +${currentLevel}。`);
     }
+    maybeDeinstanceSlot(slotKey);
+    recomputeDerived(false);
     saveGame();
     return false;
   }
 }
 
-function getRefinementLevel(itemId) {
-  if (!state.refinement) return 0;
-  return state.refinement[itemId] || 0;
+// 注意：精煉度掛在裝備欄位（透過個體紀錄），參數是 slotKey 不是 itemId
+function getRefinementLevel(slot) {
+  const inst = getEquipInstance(slot);
+  return inst ? (inst.refine || 0) : 0;
 }
 
-/* ---------------- 怪物卡片系統 ---------------- */
+/* ---------------- 怪物卡片系統 ----------------
+   state.equippedCards = { 裝備欄位: [卡片id, ...] }
+   一個欄位可以插多張卡，張數上限по該件裝備自己的 slots 欄位（武器常見 1~3 孔）。
+   卡片資料的 slot 欄位決定它能插在哪些欄位，對照表見 CARD_SLOT_TARGETS。
+------------------------------------------------- */
+
+// 卡片的 slot → 允許插入的裝備欄位
+const CARD_SLOT_TARGETS = {
+  weapon: ['weapon'],
+  armor: ['armor'],
+  shield: ['shield'],
+  headgear: ['head_top', 'head_mid', 'head_bottom'],
+  garment: ['garment'],
+  footgear: ['footgear'],
+  accessory: ['accessory1', 'accessory2'],
+  any: ['weapon', 'head_top', 'head_mid', 'head_bottom', 'armor', 'shield', 'garment', 'footgear', 'accessory1', 'accessory2']
+};
+const EQUIP_SLOT_NAMES = {
+  weapon: '武器', head_top: '頭上', head_mid: '頭中', head_bottom: '頭下', armor: '身體',
+  shield: '左手', garment: '披風', footgear: '鞋子', accessory1: '飾品1', accessory2: '飾品2'
+};
+
+function cardFitsSlot(card, equipSlot) {
+  const targets = CARD_SLOT_TARGETS[card.slot] || CARD_SLOT_TARGETS.any;
+  return targets.includes(equipSlot);
+}
+function cardSlotLabel(card) {
+  const targets = CARD_SLOT_TARGETS[card.slot] || CARD_SLOT_TARGETS.any;
+  if (card.slot === 'any') return '任意部位';
+  return targets.map(t => EQUIP_SLOT_NAMES[t] || t).join('／');
+}
+
+// 取得某欄位已插的卡片陣列（卡片存在該件裝備的個體紀錄裡，跟著裝備走）
+function getEquippedCards(slot) {
+  const inst = getEquipInstance(slot);
+  return (inst && inst.cards) ? inst.cards : [];
+}
+// 舊介面：回傳第一張，仍有呼叫端在用
 function getEquippedCard(slot) {
-  if (!state.equippedCards) return null;
-  return state.equippedCards[slot] || null;
+  const list = getEquippedCards(slot);
+  return list.length ? list[0] : null;
+}
+// 全身已插的卡片，攤平成一維
+function allEquippedCards() {
+  const out = [];
+  EQUIP_SLOTS_ALL.forEach(slot => {
+    getEquippedCards(slot).forEach(id => { if (id) out.push(id); });
+  });
+  return out;
+}
+// 個體裝備的顯示字串：「+7 短劍 [3]（🃏波利卡片、瘋兔卡片）」
+function describeInstance(inst) {
+  if (!inst) return '';
+  const name = getItemDisplayName(inst.item);
+  const ref = inst.refine > 0 ? `+${inst.refine} ` : '';
+  const cards = (inst.cards && inst.cards.length)
+    ? `（🃏${inst.cards.map(id => CARDS[id] ? CARDS[id].name : id).join('、')}）` : '';
+  return `${ref}${name}${cards}`;
 }
 
 function insertCard(equipSlot, cardId) {
-  if (!state.equippedCards) state.equippedCards = {};
   const card = CARDS[cardId];
   if (!card) return false;
 
-  // 檢查卡片是否在背包中
-  const invRow = state.inventory.find(r => r.item === cardId);
+  // 卡片本身不會被個體化，只找普通堆疊
+  const invRow = state.inventory.find(r => r.item === cardId && !r.instanceId);
   if (!invRow || invRow.qty < 1) {
     logMsg(`⚠️ 你沒有這張卡片。`);
     return false;
   }
-
-  // 檢查卡槽是否正確
-  if (card.slot === 'weapon' && equipSlot !== 'weapon') {
-    logMsg(`⚠️ ${card.name} 只能插在武器上。`);
-    return false;
-  }
-  if (card.slot === 'armor' && !['head_top', 'head_mid', 'head_bottom', 'armor', 'shield', 'garment', 'footgear'].includes(equipSlot)) {
-    logMsg(`⚠️ ${card.name} 只能插在防具上。`);
-    return false;
-  }
-
-  // 檢查是否有裝備
-  if (!state.equip[equipSlot]) {
+  const baseItemId = getEquipBaseItemId(equipSlot);
+  if (!baseItemId) {
     logMsg(`⚠️ 該欄位沒有裝備。`);
     return false;
   }
-
-  // 檢查卡槽限制
-  const maxSlots = getEquipCardSlots(equipSlot);
-  if (maxSlots <= 0) {
-    logMsg(`⚠️ 該欄位無法插卡。`);
+  // 卡片只能插在資料指定的部位
+  if (!cardFitsSlot(card, equipSlot)) {
+    logMsg(`⚠️ ${card.name} 只能插在${cardSlotLabel(card)}。`);
     return false;
   }
 
-  // 如果已有卡片，先移除
-  if (state.equippedCards[equipSlot]) {
-    const oldCardId = state.equippedCards[equipSlot];
-    addItem(oldCardId, 1);
-    logMsg(`移除了 ${CARDS[oldCardId].name}。`);
+  // 插卡數量上限 = 該件裝備自己的孔數
+  const maxSlots = getEquipCardSlots(equipSlot);
+  if (maxSlots <= 0) {
+    logMsg(`⚠️ ${ITEMS[baseItemId].name} 沒有卡片插槽。`);
+    return false;
+  }
+  const cur = getEquippedCards(equipSlot);
+  if (cur.length >= maxSlots) {
+    logMsg(`⚠️ ${ITEMS[baseItemId].name} 的 ${maxSlots} 個插槽已經滿了。`);
+    return false;
   }
 
-  // 插入新卡片
   removeItem(cardId, 1);
-  state.equippedCards[equipSlot] = cardId;
-  logMsg(`🃏 將 ${card.name} 插入了${ITEMS[state.equip[equipSlot]].name}！`);
+  const inst = state.instances[getOrCreateEquipInstance(equipSlot)];
+  if (!inst.cards) inst.cards = [];
+  inst.cards.push(cardId);
+  logMsg(`🃏 將 ${card.name} 插入了${ITEMS[baseItemId].name}（${inst.cards.length}/${maxSlots}）！`);
   recomputeDerived(false);
   saveGame();
   return true;
 }
 
-function removeCard(equipSlot) {
-  if (!state.equippedCards) return false;
-  const cardId = state.equippedCards[equipSlot];
-  if (!cardId) {
+/* 拔卡：卡片可以取回，但裝備會在拆卸過程中損毀。
+   這是刻意的取捨——沒有代價的話插卡就變成隨時可換的免費設定，
+   卡片的選擇也就不成為決定。呼叫端必須自己先跟玩家確認。 */
+// 拆「身上穿著」那件的卡：裝備連同精煉度一起銷毀，卡片全部取回。cardIndex 已無意義（一律全取回），保留參數只為相容舊呼叫。
+function removeCard(equipSlot, cardIndex) {
+  const ref = state.equip[equipSlot];
+  const inst = getEquipInstance(equipSlot);
+  const cur = getEquippedCards(equipSlot);
+  if (!cur.length) {
     logMsg(`⚠️ 該欄位沒有插卡片。`);
     return false;
   }
+  const equipName = ITEMS[inst.item] ? ITEMS[inst.item].name : '裝備';
+  cur.forEach(id => { if (CARDS[id]) addItem(id, 1); });
+  const names = cur.map(id => CARDS[id] ? CARDS[id].name : id).join('、');
 
-  const card = CARDS[cardId];
-  addItem(cardId, 1);
-  delete state.equippedCards[equipSlot];
-  logMsg(`移除了 ${card.name}。`);
+  state.equip[equipSlot] = null;
+  delete state.instances[ref];
+  logMsg(`💥 ${equipName} 在拆卸過程中損毀了！取回了 ${names}。`);
+  recomputeDerived(false);
+  saveGame();
+  return true;
+}
+
+// 拆「背包裡」那件個體裝備的卡：同樣是銷毀裝備換回卡片
+function destroyInstanceForCards(instanceId) {
+  const idx = state.inventory.findIndex(r => r.instanceId === instanceId);
+  const inst = state.instances && state.instances[instanceId];
+  if (idx === -1 || !inst) return false;
+  const cur = inst.cards || [];
+  if (!cur.length) {
+    logMsg(`⚠️ 這件裝備沒有插卡片。`);
+    return false;
+  }
+  const equipName = ITEMS[inst.item] ? ITEMS[inst.item].name : '裝備';
+  cur.forEach(id => { if (CARDS[id]) addItem(id, 1); });
+  const names = cur.map(id => CARDS[id] ? CARDS[id].name : id).join('、');
+
+  state.inventory.splice(idx, 1);
+  delete state.instances[instanceId];
+  logMsg(`💥 ${equipName} 在拆卸過程中損毀了！取回了 ${names}。`);
   recomputeDerived(false);
   saveGame();
   return true;
 }
 
 function getCardBonus(stat) {
-  if (!state.equippedCards) return 0;
   let total = 0;
-  Object.values(state.equippedCards).forEach(cardId => {
+  allEquippedCards().forEach(cardId => {
     const card = CARDS[cardId];
     if (card && card.bonus && card.bonus[stat]) {
       total += card.bonus[stat];
@@ -3303,10 +3667,38 @@ function getCardBonus(stat) {
   });
   return total;
 }
+/* ---------------- 道具鎖定 ----------------
+   鎖定只擋「會讓道具消失」的操作：賣出、全部賣出、自動販賣、露天商店。
+   存倉庫不擋——東西還在，取得回來，鎖定的用意是防手滑賣掉珍品，不是禁止搬動。
+------------------------------------------------- */
+function isItemLocked(itemId) {
+  return !!(state.lockedItems && state.lockedItems[itemId]);
+}
+function toggleItemLock(itemId) {
+  if (!state.lockedItems) state.lockedItems = {};
+  if (state.lockedItems[itemId]) {
+    delete state.lockedItems[itemId];
+    logMsg(`🔓 已解除 ${getItemDisplayName(itemId)} 的鎖定。`);
+  } else {
+    state.lockedItems[itemId] = 1;
+    logMsg(`🔒 已鎖定 ${getItemDisplayName(itemId)}，不會被賣出或自動販賣。`);
+    // 鎖定時順手從自動販賣清單移除，免得兩個設定互相矛盾
+    if (state.autoSellConfig && state.autoSellConfig.items) {
+      state.autoSellConfig.items = state.autoSellConfig.items.filter(id => id !== itemId);
+    }
+  }
+  saveGame();
+  return true;
+}
+
 function sellItem(itemId, qty) {
   const def = ITEMS[itemId];
-  const row = state.inventory.find(r => r.item === itemId);
+  const row = state.inventory.find(r => r.item === itemId && !r.instanceId);
   if (!def || !row || row.qty < qty) return false;
+  if (isItemLocked(itemId)) {
+    logMsg(`🔒 ${def.name} 已鎖定，無法賣出。請先解除鎖定。`);
+    return false;
+  }
   removeItem(itemId, qty);
   const unitPrice = Math.round(def.sell * (state.shopOverchargeMult || 1));
   const total = unitPrice * qty;
@@ -3316,9 +3708,29 @@ function sellItem(itemId, qty) {
   return true;
 }
 function sellItemAll(itemId) {
-  const row = state.inventory.find(r => r.item === itemId);
+  const row = state.inventory.find(r => r.item === itemId && !r.instanceId);
   if (!row || row.qty < 1) return false;
   return sellItem(itemId, row.qty);
+}
+// 賣掉背包裡一件個體裝備；插在上面的卡片會跟著消失（要留卡請先用「拆卸取回卡片」）
+function sellItemInstance(instanceId) {
+  const idx = state.inventory.findIndex(r => r.instanceId === instanceId);
+  const inst = state.instances && state.instances[instanceId];
+  if (idx === -1 || !inst) return false;
+  const def = ITEMS[inst.item];
+  if (!def) return false;
+  if (isItemLocked(inst.item)) {
+    logMsg(`🔒 ${def.name} 已鎖定，無法賣出。請先解除鎖定。`);
+    return false;
+  }
+  const label = describeInstance(inst);
+  state.inventory.splice(idx, 1);
+  delete state.instances[instanceId];
+  const price = Math.round(def.sell * (state.shopOverchargeMult || 1));
+  state.gold += price;
+  logMsg(`賣出 ${label}，獲得 ${price} 鋅幣。`);
+  saveGame();
+  return true;
 }
 
 /* ---------------- 自動販賣：玩家勾選的道具，每30秒(或手動)自動以原價賣出全部 ---------------- */
@@ -3327,7 +3739,13 @@ function toggleAutoSellItem(itemId) {
   if (!state.autoSellConfig) state.autoSellConfig = { enabled: false, items: [] };
   const idx = state.autoSellConfig.items.indexOf(itemId);
   if (idx >= 0) state.autoSellConfig.items.splice(idx, 1);
-  else state.autoSellConfig.items.push(itemId);
+  else {
+    if (isItemLocked(itemId)) {
+      logMsg(`🔒 ${getItemDisplayName(itemId)} 已鎖定，無法加入自動販賣。`);
+      return;
+    }
+    state.autoSellConfig.items.push(itemId);
+  }
   saveGame();
 }
 function setAutoSellEnabled(v) {
@@ -3349,8 +3767,9 @@ function autoSellSelectedItems() {
   let totalGold = 0;
   state.autoSellConfig.items.forEach(itemId => {
     const def = ITEMS[itemId];
-    const row = state.inventory.find(r => r.item === itemId);
+    const row = state.inventory.find(r => r.item === itemId && !r.instanceId);
     if (!def || !row || row.qty < 1) return;
+    if (isItemLocked(itemId)) return;   // 鎖定的道具自動販賣一律跳過
     const qty = row.qty;
     removeItem(itemId, qty);
     const price = Math.round(def.sell * (state.shopOverchargeMult || 1)) * qty;
@@ -3390,8 +3809,9 @@ function tryAutoVending() {
   let soldAny = false;
   state.vendingConfig.items.forEach(itemId => {
     const def = ITEMS[itemId];
-    const row = state.inventory.find(r => r.item === itemId);
+    const row = state.inventory.find(r => r.item === itemId && !r.instanceId);
     if (!def || !row || row.qty < 1) return;
+    if (isItemLocked(itemId)) return;   // 鎖定的道具露天商店也不賣
     removeItem(itemId, 1);
     const price = Math.round(def.sell * sellMult);
     state.gold += price;
@@ -3542,6 +3962,7 @@ function changeMap(mapId) {
   const map = MAPS.find(m => m.id === mapId);
   if (!map) return false;
   state.mapId = mapId;
+  ensureCodex().maps[mapId] = 1; // 探索成就用
   state.monsters = [];
   state.monster = null;
   logMsg(`前往「${map.name}」。`);
@@ -3585,6 +4006,19 @@ function loadGame() {
     }
     if (typeof state.autoBuyPotion !== 'boolean') state.autoBuyPotion = true;
     if (typeof state.muted !== 'boolean') state.muted = false;
+    // 圖鑑遷移：舊存檔沒有紀錄，至少把背包/裝備裡現有的東西補登為「已取得」，
+    // 免得老角色開圖鑑看到一片空白
+    if (!state.codex) {
+      state.codex = { mon: {}, seen: {}, item: {}, maps: {} };
+      (state.inventory || []).forEach(r => { state.codex.item[r.item] = r.qty; });
+      Object.values(state.equip || {}).forEach(id => { if (id) state.codex.item[id] = state.codex.item[id] || 1; });
+      allEquippedCards().forEach(id => { state.codex.item[id] = state.codex.item[id] || 1; });
+    }
+    if (!state.codex.maps) state.codex.maps = {};
+    if (state.mapId) state.codex.maps[state.mapId] = 1; // 至少把現在站的地圖算進去
+    if (typeof state.deaths !== 'number') state.deaths = 0;
+    if (!state.achievements) state.achievements = { done: {}, points: 0 };
+    if (!state.lockedItems) state.lockedItems = {};
     if (!state.autoSkillConfig) state.autoSkillConfig = { skillId: null, mode: 'once', spThreshold: 30, skillId2: null, spThreshold2: 50, monsterCount2: 2 };
     if (!state.autoSkillConfig.skillId2) state.autoSkillConfig.skillId2 = null;
     if (!state.autoSkillConfig.spThreshold2) state.autoSkillConfig.spThreshold2 = 50;
@@ -3628,6 +4062,40 @@ function loadGame() {
     if (!state.equip.accessory2) state.equip.accessory2 = null;
     if (!state.refinement) state.refinement = {};
     if (!state.equippedCards) state.equippedCards = {};
+    if (!state.instances) state.instances = {};
+    // 卡片改成一欄位多張後，舊存檔的單張字串要正規化成陣列；
+    // 順便丟掉插在不合法部位的卡（早期沒有部位檢查，可能插錯地方），卡片退回背包不沒收
+    Object.keys(state.equippedCards).forEach(slot => {
+      const v = state.equippedCards[slot];
+      if (!v) { delete state.equippedCards[slot]; return; }
+      let list = Array.isArray(v) ? v.slice() : [v];
+      const kept = [];
+      list.forEach(id => {
+        const card = CARDS[id];
+        if (!card) return;                                   // 卡片已不存在
+        if (!cardFitsSlot(card, slot)) { addItem(id, 1); return; }
+        kept.push(id);
+      });
+      const max = state.equip[slot] ? getEquipCardSlots(slot) : 0;
+      while (kept.length > max) addItem(kept.pop(), 1);       // 超過孔數的退回背包
+      if (kept.length) state.equippedCards[slot] = kept; else delete state.equippedCards[slot];
+    });
+    // Migration：舊存檔的精煉度掛在itemId、卡片掛在欄位，改成掛在「那一件裝備」的個體紀錄上
+    (function migrateEquipToInstances() {
+      let n = 0;
+      EQUIP_SLOTS_ALL.forEach(slot => {
+        const cur = state.equip[slot];
+        if (!cur || state.instances[cur]) return;   // 空欄位或已經是個體
+        const legacyRefine = state.refinement[cur] || 0;
+        const legacyCards = state.equippedCards[slot] || [];
+        if (legacyRefine > 0 || legacyCards.length) {
+          const id = cur + '#mig' + Date.now() + '_' + (n++);
+          state.instances[id] = { item: cur, refine: legacyRefine, cards: legacyCards.slice() };
+          state.equip[slot] = id;
+          delete state.equippedCards[slot];
+        }
+      });
+    })();
 
     // Migration: convert old boolean learnedSkills to level format
     if (state.learnedSkills) {
@@ -3732,6 +4200,14 @@ function computeOfflineProgress() {
     let qty = Math.floor(expected);
     if (Math.random() < (expected - qty)) qty++;
     if (qty > 0) { addItem(itemId, qty); itemsGained.push({ item: itemId, qty }); }
+  });
+
+  // 離線擊殺也要記進圖鑑，依出沒權重分配到各怪物；掛機一整晚回來圖鑑卻沒動會很奇怪
+  pool.forEach(m => {
+    if (!MONSTERS[m.id]) return;
+    const share = Math.floor(totalKills * (m.weight / totalWeight));
+    if (share > 0) codexRecordKill(m.id);
+    if (share > 1) ensureCodex().mon[m.id] += share - 1;
   });
 
   const beforeBaseLv = state.baseLevel;
