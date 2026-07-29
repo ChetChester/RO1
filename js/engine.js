@@ -160,7 +160,8 @@ function createCharacter(name, statAlloc, gender) {
     jobSkillPoints: {}, // { jobId: remainingPoints } 按職業分離的技能點
     jobLevelHistory: {}, // { jobId: jobLevel } 轉職歷史（職業加成跨職業繼承）
     learnedSkills: {},   // {skillId: level}
-    equip: { head_top: null, head_mid: null, head_bottom: null, weapon: null, armor: null, shield: null, garment: null, footgear: null, accessory1: null, accessory2: null },
+    equip: { head_top: null, head_mid: null, head_bottom: null, weapon: null, armor: null, shield: null, garment: null, footgear: null, accessory1: null, accessory2: null, ammo: null },
+    equipSkin: 'grid',  // 裝備視窗外觀：grid / ro / ro_dark
     refinement: {},   // 舊版精煉資料（按itemId），僅供遷移讀取，新邏輯一律用 instances
     equippedCards: {}, // 舊版插卡資料（按欄位），僅供遷移讀取，新邏輯一律用 instances
     instances: {},     // { instanceId: {item, refine, cards:[cardId,...]} } 精煉或插卡過的裝備會變成獨立個體，跟著那一件走
@@ -180,7 +181,12 @@ function createCharacter(name, statAlloc, gender) {
     autoSkill: true,
     autoSkillConfig: { skillId: null, mode: 'once', spThreshold: 30, skillId2: null, spThreshold2: 50, monsterCount2: 2 }, // skillId2=第二招, spThreshold2=SP%門檻, monsterCount2=怪物數門檻
     autoPotion: { enabled: true, primary: '', fallback: 'red_potion', hpThreshold: 50 },
+    autoSpPotion: { enabled: false, primary: '', fallback: 'blue_potion', spThreshold: 30 },
+    autoAspdPotion: { enabled: false, items: [] },
+    autoBuyAspdPotion: false,
     autoBuyPotion: true,
+    autoBuySpPotion: false,
+    autoBuyArrow: true,
     autoSellConfig: { enabled: false, items: [] }, // 自動販賣：每30秒自動賣出背包內已選擇的道具
     autoSellReadyAt: 0,
     cardEleDmgBonus: {}, // 屬性傷害加成（由卡片提供）
@@ -221,6 +227,69 @@ function currentJob() { return JOB_TREE[state.jobId]; }
 function canDualWield(jobId) { return jobId === 'assassin'; }
 
 // 長矛類武器判定（矛限定技能共用）：道具資料的weaponType欄位對矛類武器標示很乾淨，直接用它判斷
+/* ---------------- 箭矢／彈藥系統 ----------------
+   弓類武器需要裝備箭矢才能攻擊。箭矢提供額外 ATK，且屬性箭會覆寫武器屬性
+   （官方 RO 規則：弓本身無屬性，實際打出去的屬性由箭矢決定）。
+   每次普攻消耗 1 支，用完會自動從背包補同一種，沒有就停手。
+------------------------------------------------- */
+function isBowWeapon(itemId) {
+  const w = itemId ? ITEMS[itemId] : null;
+  return !!(w && w.weaponType === 'bow');
+}
+function needsAmmo() { return isBowWeapon(getEquipBaseItemId('weapon')); }
+function isAmmoItem(itemId) {
+  const d = itemId ? ITEMS[itemId] : null;
+  return !!(d && d.ammo);
+}
+function getEquippedAmmoId() { return (state && state.equip) ? (state.equip.ammo || null) : null; }
+function getEquippedAmmo() {
+  const id = getEquippedAmmoId();
+  return id ? ITEMS[id] : null;
+}
+// 目前裝備的箭矢剩餘數（箭矢就存在背包裡，裝備欄只記「選了哪一種」）
+function getAmmoCount() {
+  const id = getEquippedAmmoId();
+  return id ? getItemQty(id) : 0;
+}
+function equipAmmo(itemId) {
+  if (!isAmmoItem(itemId)) return false;
+  if (getItemQty(itemId) < 1) { logMsg('⚠️ 你沒有這種箭矢。'); return false; }
+  state.equip.ammo = itemId;
+  recomputeDerived(false);
+  logMsg(`🏹 裝備了 ${ITEMS[itemId].name}（剩餘 ${getItemQty(itemId)}）。`);
+  saveGame();
+  return true;
+}
+function unequipAmmo() {
+  if (!state.equip.ammo) return false;
+  const nm = ITEMS[state.equip.ammo] ? ITEMS[state.equip.ammo].name : '箭矢';
+  state.equip.ammo = null;
+  recomputeDerived(false);
+  logMsg(`卸下了 ${nm}。`);
+  saveGame();
+  return true;
+}
+// 消耗一支箭；回傳 false 代表沒箭了（呼叫端要中止這次攻擊）
+function consumeAmmo() {
+  const id = getEquippedAmmoId();
+  if (!id) return false;
+  if (getItemQty(id) < 1) return false;
+  removeItem(id, 1);
+  if (getItemQty(id) <= 0) {
+    logMsg(`🏹 ${ITEMS[id].name} 用完了！`);
+    // 背包還有別種箭就自動換上，免得掛機時默默停擺
+    const next = state.inventory.find(r => !r.instanceId && isAmmoItem(r.item) && r.qty > 0);
+    if (next) {
+      state.equip.ammo = next.item;
+      logMsg(`🏹 自動換上 ${ITEMS[next.item].name}（剩餘 ${next.qty}）。`);
+    } else {
+      state.equip.ammo = null;
+    }
+    recomputeDerived(false);
+  }
+  return true;
+}
+
 function hasSpearEquipped() {
   const wId = getEquipBaseItemId('weapon');
   const w = wId ? ITEMS[wId] : null;
@@ -306,6 +375,11 @@ function equippedAtk() {
   const refLevel = getRefinementLevel('weapon');
   const weaponLv = w ? (w.weaponLv || 1) : 1;
   let mainAtk = baseAtk + getRefinementAtkBonus(refLevel, weaponLv);
+  // 弓：箭矢的 ATK 直接加進武器攻擊力（官方 RO 就是這樣算）
+  if (isBowWeapon(wId)) {
+    const ammo = getEquippedAmmo();
+    if (ammo && ammo.atk) mainAtk += ammo.atk;
+  }
 
   // 雙持：左手欄位裝備的是單手武器而非盾牌時，套用右手/左手修練的傷害修正
   const offId = getEquipBaseItemId('shield');
@@ -469,6 +543,9 @@ function recomputeDerived(fullHeal) {
   state.critRate = Math.min(50, 4 + Math.floor(cLuk / 3));
 
   // ASPD 初始計算（不含 buff，buff 在 tick 時動態套用）
+  // 官方計算機用的是「總 AGI/DEX」（含職業、裝備、卡片、buff），先寄存給 computeAspd() 用
+  state._totalAgi = cAgi;
+  state._totalDex = cDex;
   computeAspd();
 
   // Passive skill bonuses（跨職業）
@@ -1260,6 +1337,8 @@ function gameTick() {
     passiveRegen();
     townRestore();
     autoUsePotion();
+    autoUseSpPotion();
+    autoUseAspdPotion();
     // 成就一律在這裡集中判定，不在戰鬥流程裡埋觸發點（詳見 achievements.js 開頭說明）
     checkAchievements();
     if (state.autoSkill) {
@@ -1293,6 +1372,8 @@ function gameTick() {
     tryAutoVending();
     // 自動販賣：玩家勾選的道具，每30秒自動以原價賣出全部
     tryAutoSell();
+    // 自動補箭：弓箭手掛機時箭快見底就自動補貨
+    tryAutoBuyArrow();
     // 冰刃之牆被動：自動補上護盾
     tryAutoShield();
     // 投擲長矛：敵人數≥2時定時隨機攻擊
@@ -1458,6 +1539,92 @@ function autoUsePotion() {
   }
 }
 
+/* SP 藥水自動使用：結構與 HP 那組一模一樣（第一格背包任選、第二格藍水可自動買）。
+   商店只賣藍水，其他回SP道具（藍色藥草／葡萄／草莓／蜂蜜／蜂膠／天地樹）都要打怪拿。 */
+const AUTO_BUY_SP_QTY = 50;
+function autoUseSpPotion() {
+  if (!state.autoSpPotion || !state.autoSpPotion.enabled) return;
+  const threshold = (state.autoSpPotion.spThreshold || 30) / 100;
+  if (state.sp >= state.maxSp * threshold) return;
+
+  const primary = state.autoSpPotion.primary;
+  const fallback = state.autoSpPotion.fallback;
+
+  // 優先使用第一選擇（背包裡任何回SP道具）
+  if (primary && getItemQty(primary) > 0) {
+    useItem(primary);
+    return;
+  }
+  // 第二選擇：藍水（唯一買得到的）
+  if (fallback) {
+    if (getItemQty(fallback) <= 0 && state.autoBuySpPotion) {
+      buyItem(fallback, AUTO_BUY_SP_QTY);
+    }
+    if (getItemQty(fallback) > 0) useItem(fallback);
+  }
+}
+/* 攻速藥水自動使用：勾選哪幾種就在 buff 消失後自動補上（由高到低挑職業能用的）。
+   開了自動購買的話，勾選的那種喝完會自動補貨（買不起就換下一種）。 */
+const AUTO_BUY_ASPD_QTY = 10;
+function autoUseAspdPotion() {
+  if (!state.autoAspdPotion || !state.autoAspdPotion.enabled) return;
+  // 已經有攻速 buff 就不重複喝
+  if (state.buffs.some(b => b.type === 'aspd' && b.fromPotion)) return;
+  const picks = state.autoAspdPotion.items || [];
+  // 效果高的優先
+  const order = ['berserk_potion', 'awakening_potion', 'center_potion'];
+  for (const id of order) {
+    if (!picks.includes(id)) continue;
+    if (aspdPotionBlockReason(id)) continue;
+    if (getItemQty(id) <= 0 && state.autoBuyAspdPotion) {
+      const def = ITEMS[id];
+      const unit = def && def.buyPrice ? Math.max(1, Math.round(def.buyPrice * (state.shopDiscountMult || 1))) : 0;
+      // 買得起整批才買，免得把錢掏空只買到一兩瓶
+      if (unit && state.gold >= unit * AUTO_BUY_ASPD_QTY) buyItem(id, AUTO_BUY_ASPD_QTY);
+    }
+    if (getItemQty(id) <= 0) continue;
+    useItem(id);
+    return;
+  }
+}
+function setAutoBuyAspdPotion(v) { state.autoBuyAspdPotion = !!v; saveGame(); }
+function toggleAutoAspdPotion(itemId, on) {
+  if (!state.autoAspdPotion) state.autoAspdPotion = { enabled: true, items: [] };
+  const arr = state.autoAspdPotion.items;
+  const i = arr.indexOf(itemId);
+  if (on && i < 0) arr.push(itemId);
+  if (!on && i >= 0) arr.splice(i, 1);
+  saveGame();
+}
+function setAutoAspdPotionEnabled(v) {
+  if (!state.autoAspdPotion) state.autoAspdPotion = { enabled: true, items: [] };
+  state.autoAspdPotion.enabled = !!v; saveGame();
+}
+
+function setAutoSpPotionEnabled(v) { state.autoSpPotion.enabled = !!v; saveGame(); }
+function setAutoSpPotionPrimary(v) { state.autoSpPotion.primary = v; saveGame(); }
+function setAutoSpPotionFallback(v) { state.autoSpPotion.fallback = v; saveGame(); }
+function setAutoSpPotionThreshold(v) { state.autoSpPotion.spThreshold = Math.max(10, Math.min(90, parseInt(v) || 30)); saveGame(); }
+function setAutoBuySpPotion(v) { state.autoBuySpPotion = !!v; saveGame(); }
+
+/* 自動補箭：掛機時箭快用完就自動買同一種（只在城鎮外也能買，比照自動買藥水的做法）。
+   買不起或那種箭商店沒賣就安靜跳過，playerAttack() 那邊會提示沒箭。 */
+const AUTO_BUY_ARROW_QTY = 500;
+const AUTO_BUY_ARROW_THRESHOLD = 50;
+function tryAutoBuyArrow() {
+  if (!state.autoBuyArrow) return;
+  if (!needsAmmo()) return;
+  const id = getEquippedAmmoId();
+  if (!id) return;
+  if (getItemQty(id) > AUTO_BUY_ARROW_THRESHOLD) return;
+  const def = ITEMS[id];
+  if (!def || !def.buyPrice) return;
+  const unit = Math.max(1, Math.round(def.buyPrice * (state.shopDiscountMult || 1)));
+  if (state.gold < unit * AUTO_BUY_ARROW_QTY) return;
+  buyItem(id, AUTO_BUY_ARROW_QTY);
+}
+function setAutoBuyArrow(v) { state.autoBuyArrow = !!v; saveGame(); }
+
 function buyItem(itemId, qty) {
   const def = ITEMS[itemId];
   if (!def || !def.buyPrice) return false;
@@ -1520,57 +1687,66 @@ function tickBuffs() {
 
 // ASPD 計算（每次 tick 重新計算，反映即時 buff）
 // 使用武器 ASPD 查表（ro_aspd_data/aspd_weapon_base.json）
+/* 弓系：官方對這幾類武器改用另一條素質公式（AGI 權重略低） */
+const ASPD_BOW_LIKE = ['bow', 'instrument', 'whip', 'pistol', 'rifle', 'shotgun', 'gatling', 'grenade'];
+// 雙持時左手武器對應的表格欄位
+const ASPD_DUAL_KEY = { dagger: 'dual_dagger', sword1: 'dual_sword1', axe1: 'dual_axe1' };
+
 function computeAspd() {
-  const job = currentJob();
-  const s = state.stats;
+  const tbl = ASPD_WEAPON_BASE[state.jobId];
+  const weapons = tbl ? tbl.weapons : null;
+  const shieldTbl = tbl ? tbl.shield : null;
 
-  // Step 1: 查表取得武器 ASPD 基礎值 & 盾牌懲罰
+  // Step 1: 右手武器基礎值。查不到（職業不能拿這種武器、或沒資料）一律退回空手值
   const weaponId = getEquipBaseItemId('weapon');
-  const weapon = weaponId ? ITEMS[weaponId] : null;
-  const weaponType = weapon ? weapon.weaponType : null;
-  // baseAspd 可以是數字（全武器統一值）或物件（依武器類型查表）
-  let weaponValue = 154;
-  if (job.baseAspd) {
-    if (typeof job.baseAspd === 'number') {
-      weaponValue = job.baseAspd;
-    } else if (weaponType && job.baseAspd[weaponType] !== undefined) {
-      weaponValue = job.baseAspd[weaponType];
-    }
+  const rightCat = aspdCategoryOf(weaponId);
+  const bare = (weapons && weapons.bare !== undefined) ? weapons.bare : 154;
+  let rightValue = (weapons && weapons[rightCat] !== undefined) ? weapons[rightCat] : bare;
+
+  // Step 2: 左手 —— 盾牌是負修正，副手武器則走雙持公式
+  const offId = getEquipBaseItemId('shield');
+  const offItem = offId ? ITEMS[offId] : null;
+  const dualWield = !!(offItem && offItem.type === 'weapon' && canDualWield(state.jobId));
+  let leftValue = 0;
+  if (dualWield) {
+    const dk = ASPD_DUAL_KEY[aspdCategoryOf(offId)];
+    // 左手值查不到就用該武器的單手值，再不行就用右手值（官方雙持限單手武器）
+    leftValue = (shieldTbl && dk && shieldTbl[dk] !== undefined) ? shieldTbl[dk]
+              : ((weapons && weapons[aspdCategoryOf(offId)] !== undefined) ? weapons[aspdCategoryOf(offId)] : rightValue);
+  } else if (offItem) {
+    leftValue = (shieldTbl && shieldTbl.shield !== undefined) ? shieldTbl.shield : -5;
   }
-  // 左手欄位裝備的是武器（雙持）時不算盾牌懲罰，只有真正的盾牌才扣ASPD
-  const shieldSlotId = getEquipBaseItemId('shield');
-  const shieldSlotItem = shieldSlotId ? ITEMS[shieldSlotId] : null;
-  const shieldPenalty = (shieldSlotItem && shieldSlotItem.type !== 'weapon') ? (job.shieldPenalty || -5) : 0;
 
-  // Step 2: StatBonus = √(AGI × 1120/111 + DEX × 11/60)
-  // 含被動技能 DEX 加成、心神凝聚 DEX/AGI% buff（避免直接修改 state.stats.dex 導致膨脹）
-  const buffStatPct = state._buffStatPct || 0;
-  const effectiveDex = (s.dex + (state._passiveDexBonus || 0)) * (1 + buffStatPct);
-  const effectiveAgi = s.agi * (1 + buffStatPct);
-  const statBonus = Math.sqrt(effectiveAgi * 1120 / 111 + effectiveDex * 11 / 60);
+  // Step 3: 素質加成。官方用「總 AGI/DEX」，recomputeDerived() 已把職業/裝備/卡片/被動/buff 都算進去
+  const agi = (state._totalAgi != null ? state._totalAgi : state.stats.agi);
+  const dex = (state._totalDex != null ? state._totalDex : state.stats.dex);
+  const statBonus = ASPD_BOW_LIKE.includes(rightCat)
+    ? Math.sqrt(Math.abs(agi * (10 - 1 / 400) + dex * 11 / 60))
+    : Math.sqrt(Math.abs(agi * 1120 / 111 + dex * 11 / 60));
 
-  // Step 3: Core（依武器基礎值分高低速公式）
+  // Step 4: BaseTemp
   let core;
-  if (weaponValue >= 145) {
+  if (dualWield) {
+    // 雙持不套盾牌值，左手武器用另一條公式折算
+    core = rightValue + (leftValue - 194) / 4 + statBonus * 1.04518;
+  } else if (rightValue >= 145) {
     // 高速武器：素質加成有邊際效應
-    core = weaponValue + statBonus * (1 - (weaponValue - 144) / 50) + shieldPenalty;
+    core = rightValue + statBonus * (1 - (rightValue - 144) / 50) + leftValue;
   } else {
-    core = weaponValue + statBonus + shieldPenalty;
+    core = rightValue + statBonus + leftValue;
   }
 
-  // Step 4: 技能/藥水攻速百分比
+  // Step 5: 技能/藥水攻速百分比
   let skillAspdPct = 0;
   state.buffs.forEach(b => {
-    if (b.type === 'aspd' && b.mult) {
-      skillAspdPct += (b.mult - 1);
-    }
+    if (b.type === 'aspd' && b.mult) skillAspdPct += (b.mult - 1);
   });
   const afterSkill = 200 - (200 - core) * (1 - skillAspdPct);
 
-  // Step 5: 裝備攻速百分比 + 固定值（含蒼鷹之眼等被動固定ASPD加成）
+  // Step 6: 裝備攻速百分比 + 固定值（含蒼鷹之眼等被動固定ASPD加成）
   let equipAspdPct = 0;
   let aspdFlatBonus = state.passiveAspdFlat || 0;
-  ['weapon', 'armor'].forEach(slot => {
+  EQUIP_SLOTS_ALL.forEach(slot => {
     const aspdItemId = getEquipBaseItemId(slot);
     const item = aspdItemId ? ITEMS[aspdItemId] : null;
     if (item) {
@@ -1580,7 +1756,9 @@ function computeAspd() {
   });
   const finalAspd = Math.floor(195 - (195 - afterSkill) * (1 - equipAspdPct) + aspdFlatBonus);
 
-  state.aspd = Math.min(193, Math.max(100, finalAspd));
+  // 官方上限：未滿100等 190，100等以上 193
+  const cap = state.baseLevel >= 100 ? 193 : 190;
+  state.aspd = Math.min(cap, Math.max(100, finalAspd));
   state.attackInterval = getAttackInterval(state.aspd);
 }
 function buffMult(type) {
@@ -1664,6 +1842,15 @@ function spawnExtraMonster() {
 
 function playerAttack() {
   if (!state.monsters || state.monsters.length === 0) return;
+  // 弓沒箭就打不出去（先擋在最前面，音效動畫都不放）
+  if (needsAmmo() && !consumeAmmo()) {
+    if (!state._noAmmoWarned) {
+      logMsg('🏹 沒有箭矢，無法用弓攻擊！請到裝備分頁裝上箭矢，或去商店購買。');
+      state._noAmmoWarned = true;
+    }
+    return;
+  }
+  state._noAmmoWarned = false;
   // 攻擊音效 + 動畫
   if (typeof playAttackSound === 'function') playAttackSound();
   if (typeof playAttackAnim === 'function') playAttackAnim();
@@ -1708,6 +1895,11 @@ function playerAttack() {
   const atkWeaponId = getEquipBaseItemId('weapon');
   const weapon = atkWeaponId ? ITEMS[atkWeaponId] : null;
   let atkElement = (weapon && weapon.element) ? weapon.element : 'none';
+  // 弓的實際屬性由箭矢決定（弓本身無屬性），屬性箭在此覆寫
+  if (isBowWeapon(atkWeaponId)) {
+    const ammo = getEquippedAmmo();
+    if (ammo && ammo.element) atkElement = ammo.element;
+  }
   // 聖之祈福buff：暫時附加聖屬性
   if (state.buffs.some(b => b.type === 'holyweapon')) atkElement = 'holy';
   const elemMult = getElementMultiplierVsMonster(atkElement, monDef);
@@ -2118,6 +2310,30 @@ function getCodexProgress() {
   };
 }
 
+/* 以太礦石：只有 MVP（王）會掉，機率依王的等級分三段。
+   兩種各自獨立擲骰，所以同一隻王有機會兩種都掉。 */
+const ETHER_DROP_RATES = [
+  { minLevel: 99, chance: 0.05 },
+  { minLevel: 50, chance: 0.01 },
+  { minLevel: 0,  chance: 0.001 }
+];
+function getEtherDropChance(monDef) {
+  if (!monDef || !monDef.isBoss) return 0;
+  const lv = monDef.level || 0;
+  const tier = ETHER_DROP_RATES.find(t => lv >= t.minLevel);
+  return tier ? tier.chance : 0;
+}
+function rollEtherDrop(monDef) {
+  const chance = getEtherDropChance(monDef);
+  if (chance <= 0) return;
+  ['ether_oridecon', 'ether_elunium'].forEach(id => {
+    if (Math.random() < chance) {
+      addItem(id, 1);
+      logMsg(`✨ MVP 掉落！獲得了 ${ITEMS[id].name}！`);
+    }
+  });
+}
+
 function killMonster(def, monObj) {
   // 查表一律用 MONSTERS 的 key，不要用 def.id：有 72 隻怪的 def.id 帶著去重時加上的底線
   // 後綴（例如 poring 的 def.id 是 'poring_'），拿 def.id 去查 MONSTER_CARD_DROPS 會落空，
@@ -2131,6 +2347,7 @@ function killMonster(def, monObj) {
   (def.drops || []).forEach(d => {
     if (Math.random() < d.chance) addItem(d.item, 1);
   });
+  rollEtherDrop(def);
   // 偷竊被動：擊敗怪物時機率額外掉落一份道具
   if (state.stealChance && def.drops && def.drops.length > 0 && Math.random() * 100 < state.stealChance) {
     const stolen = def.drops[Math.floor(Math.random() * def.drops.length)];
@@ -3141,7 +3358,9 @@ const NPC_SHOPS = {
   weapon: {
     name: '武器商人',
     icon: '⚔️',
-    items: ['knife', 'cutter', 'main_gauche', 'dirk', 'dagger', 'stiletto', 'gladius', 'damascus', 'cinquedea', 'kindling_dagger', 'obsidian_dagger', 'item_1249', 'jujube_dagger', 'coward', 'sword', 'falchion', 'blade', 'lapier', 'tsurugi', 'haedonggum', 'saber', 'slayer', 'bastard_sword', 'two_hand_sword', 'broad_sword', 'spear', 'pike', 'lance', 'guisarme', 'glaive', 'halberd', 'axe', 'battle_axe', 'hammer', 'buster', 'two_handed_axe', 'club', 'mace', 'smasher', 'flail', 'morning_star', 'sword_mace', 'chain', 'stunner', 'bow', 'composite_bow', 'great_bow', 'cross_bow', 'arbalest', 'kakkung', 'hunter_bow', 'repeting_cross_bow', 'waghnakh', 'knuckle_duster', 'hora', 'fist', 'claw', 'finger', 'violin', 'mandolin', 'lute', 'guitar', 'harp', 'guh_moon_goh'],
+    items: ['knife', 'cutter', 'main_gauche', 'dirk', 'dagger', 'stiletto', 'gladius', 'damascus', 'cinquedea', 'kindling_dagger', 'obsidian_dagger', 'item_1249', 'jujube_dagger', 'coward', 'sword', 'falchion', 'blade', 'lapier', 'tsurugi', 'haedonggum', 'saber', 'slayer', 'bastard_sword', 'two_hand_sword', 'broad_sword', 'spear', 'pike', 'lance', 'guisarme', 'glaive', 'halberd', 'axe', 'battle_axe', 'hammer', 'buster', 'two_handed_axe', 'club', 'mace', 'smasher', 'flail', 'morning_star', 'sword_mace', 'chain', 'stunner', 'bow', 'composite_bow', 'great_bow', 'cross_bow', 'arbalest', 'kakkung', 'hunter_bow', 'repeting_cross_bow', 'waghnakh', 'knuckle_duster', 'hora', 'fist', 'claw', 'finger', 'violin', 'mandolin', 'lute', 'guitar', 'harp', 'guh_moon_goh',
+      // 箭矢：弓箭手系列的消耗品，跟弓放同一家店
+      'arrow', 'iron_arrow', 'steel_arrow', 'silver_arrow', 'fire_arrow', 'crystal_arrow', 'arrow_of_wind', 'stone_arrow'],
     getItems() {
       return this.items.filter(id => {
         const item = ITEMS[id];
@@ -3149,6 +3368,18 @@ const NPC_SHOPS = {
         if (item.reqLevel && state.baseLevel < item.reqLevel) return false;
         return true;
       });
+    }
+  },
+  item: {
+    name: '道具商人',
+    icon: '🧪',
+    // 補HP藥水、精煉材料、攻速藥水；SP 只賣藍水（1000z），其餘回SP道具靠打怪掉
+    items: ['red_potion', 'orange_potion', 'yellow_potion', 'white_potion',
+            'blue_potion',
+            'refine_stone',
+            'center_potion', 'awakening_potion', 'berserk_potion'],
+    getItems() {
+      return this.items.filter(id => ITEMS[id]);
     }
   },
   armor: {
@@ -3188,6 +3419,14 @@ function openNpcShop(shopId) {
       const armorType = item.armorType || 'cloth';
       const typeNames = { cloth: '衣服', leather: '皮甲', shield: '盾牌', garment: '披風', footgear: '鞋子', accessory: '飾品' };
       category = typeNames[armorType] || armorType;
+    } else if (item.aspdPct) {
+      category = '攻速藥水';
+    } else if (item.restoreSp) {
+      category = 'SP 回復';
+    } else if (item.heal) {
+      category = 'HP 回復';
+    } else if (REFINEMENT_MATERIALS[id]) {
+      category = '精煉材料';
     }
     if (!grouped[category]) grouped[category] = [];
     grouped[category].push(id);
@@ -3262,17 +3501,35 @@ function useItem(itemId) {
   const row = state.inventory.find(r => r.item === itemId && !r.instanceId);
   if (!def || !row) return false;
   if (def.type === 'consumable' || def.type === 'material') {
+    // 攻速藥水：不是回復類，直接掛一個 aspd buff。先擋職業/等級限制
+    if (def.aspdPct) {
+      const block = aspdPotionBlockReason(itemId);
+      if (block) { logMsg(`⚠️ ${def.name}：${block}。`); return false; }
+      const dur = def.aspdDuration || 1800;
+      // 同類型只留一個，避免疊到爆
+      state.buffs = state.buffs.filter(b => b.type !== 'aspd' || !b.fromPotion);
+      state.buffs.push({ type: 'aspd', mult: 1 + def.aspdPct / 100, msRemaining: dur * 1000, fromPotion: true });
+      removeItem(itemId, 1);
+      recomputeDerived(false);
+      logMsg(`🧪 使用了 ${def.name}，攻速 +${def.aspdPct}%（${Math.round(dur / 60)} 分鐘）。`);
+      saveGame();
+      return true;
+    }
+    // HP 與 SP 要各自判斷：蜂蜜／蜂膠／天地樹果實這類是兩種都回，不能用 else if
+    let healed = false;
     if (def.heal) {
       // 快速恢復：HP恢復道具效果加成
       const boostedHeal = Math.round(def.heal * (1 + (state.hpItemEffectBonusPct || 0) / 100));
       state.hp = Math.min(state.maxHp, state.hp + boostedHeal);
+      healed = true;
     }
-    else if (def.restoreSp) {
+    if (def.restoreSp) {
       // 禪心：SP恢復道具效果+10%~100%
       const boosted = Math.round(def.restoreSp * (1 + (state.spItemEffectBonusPct || 0) / 100));
       state.sp = Math.min(state.maxSp, state.sp + boosted);
+      healed = true;
     }
-    else {
+    if (!healed) {
       // 從描述中推斷回復量（背包道具/食材類）
       const desc = def.desc || '';
       const hpMatch = desc.match(/恢復(\d+)/) || desc.match(/恢复(\d+)/);
@@ -3349,6 +3606,33 @@ function resolveEquipSlotFor(itemId) {
   return slot;
 }
 
+/* ---------------- 裝備限制 ----------------
+   兩道關卡：
+   1. reqJob（道具自己寫的職業限制）—— 用整條職業鏈比對，二轉能穿一轉的裝備
+   2. 官方攻速表 —— 表裡沒有這種武器分類就是這個職業不能拿
+      （初心者表裡沒有 bow → 新手不能拿弓；法師只有 dagger/rod → 不能拿劍與弓）
+   還有等級限制 reqLevel。回傳 null 表示可以裝，否則回傳擋下來的原因。
+------------------------------------------------- */
+function equipBlockReason(itemId) {
+  const d = ITEMS[itemId];
+  if (!d) return '道具不存在。';
+  if (d.reqLevel && state.baseLevel < d.reqLevel) {
+    return `需要基本等級 ${d.reqLevel}（目前 ${state.baseLevel}）。`;
+  }
+  if (d.reqJob && d.reqJob.length) {
+    const chain = getAllLearnedJobs();
+    if (!chain.some(j => d.reqJob.includes(j))) {
+      return `${currentJob().name}無法裝備這件道具。`;
+    }
+  }
+  if (d.type === 'weapon' && !jobCanUseWeapon(state.jobId, itemId)) {
+    // WEAPON_TYPE_LABELS 定義在 ui.js，引擎單獨跑（測試）時可能不存在
+    const label = (typeof WEAPON_TYPE_LABELS !== 'undefined' && WEAPON_TYPE_LABELS[d.weaponType]) || '這類武器';
+    return `${currentJob().name}不能使用${label}。`;
+  }
+  return null;
+}
+
 // 裝備前的共通檢查與讓位處理；回傳 false 表示不能裝
 function prepareEquipSlot(slot, itemId) {
   // 雙手武器：裝備時自動卸下左手欄位（盾牌或副手武器）
@@ -3368,6 +3652,8 @@ function prepareEquipSlot(slot, itemId) {
 function equipItem(itemId) {
   const def = ITEMS[itemId];
   if (!def) return false;
+  const block = equipBlockReason(itemId);
+  if (block) { logMsg(`⚠️ ${block}`); return false; }
   const slot = resolveEquipSlotFor(itemId);
   if (!slot) return false;
   if (!prepareEquipSlot(slot, itemId)) return false;
@@ -3389,6 +3675,8 @@ function equipInstance(instanceId) {
   const itemId = inst.item;
   const def = ITEMS[itemId];
   if (!def) return false;
+  const block = equipBlockReason(itemId);
+  if (block) { logMsg(`⚠️ ${block}`); return false; }
   const slot = resolveEquipSlotFor(itemId);
   if (!slot) return false;
   if (!prepareEquipSlot(slot, itemId)) return false;
@@ -3412,6 +3700,27 @@ function unequipItem(slotKey) {
   returnEquipToInventory(slotKey);
   recomputeDerived(false);
   logMsg(`卸下了 ${def ? def.name : '裝備'}。`);
+  saveGame();
+  return true;
+}
+
+/* ---------------- 原石合成 ----------------
+   神之金屬原石 ×5 → 神之金屬、鋁原石 ×5 → 鋁。免費，隨時可做。
+------------------------------------------------- */
+function canSynthesizeOre(key) {
+  const r = ORE_SYNTHESIS[key];
+  return !!r && getItemQty(r.from) >= r.need;
+}
+function synthesizeOre(key) {
+  const r = ORE_SYNTHESIS[key];
+  if (!r) return false;
+  if (getItemQty(r.from) < r.need) {
+    logMsg(`⚠️ ${ITEMS[r.from].name} 不足 ${r.need} 個。`);
+    return false;
+  }
+  removeItem(r.from, r.need);
+  addItem(r.to, 1);
+  logMsg(`⚒️ ${ITEMS[r.from].name} ×${r.need} 合成出 ${ITEMS[r.to].name} ×1！`);
   saveGame();
   return true;
 }
@@ -3440,12 +3749,6 @@ function refineItem(slotKey, materialType) {
     return false;
   }
 
-  // 檢查以太礦石是否需要 +10 以上
-  if ((materialType === 'ether_oridecon' || materialType === 'ether_elunium') && currentLevel < 10) {
-    logMsg(`⚠️ ${mat.name} 需要 +10 以上才能使用。`);
-    return false;
-  }
-
   // 檢查材料庫存
   const invRow = state.inventory.find(r => r.item === mat.id && !r.instanceId);
   if (!invRow || invRow.qty < 1) {
@@ -3453,9 +3756,9 @@ function refineItem(slotKey, materialType) {
     return false;
   }
 
-  const cost = REFINEMENT_COST;
+  const cost = getRefinementCost(currentLevel);
   if (state.gold < cost) {
-    logMsg(`⚠️ 鋅幣不足，精煉需要 ${cost} 鋅幣。`);
+    logMsg(`⚠️ 鋅幣不足，精煉需要 ${cost.toLocaleString()} 鋅幣。`);
     return false;
   }
 
@@ -4005,6 +4308,13 @@ function loadGame() {
       delete state.autoPotion.tier;
     }
     if (typeof state.autoBuyPotion !== 'boolean') state.autoBuyPotion = true;
+    if (typeof state.autoBuyArrow !== 'boolean') state.autoBuyArrow = true;
+    if (!state.autoSpPotion) state.autoSpPotion = { enabled: false, primary: '', fallback: 'blue_potion', spThreshold: 30 };
+    if (typeof state.autoSpPotion.spThreshold !== 'number') state.autoSpPotion.spThreshold = 30;
+    if (typeof state.autoBuySpPotion !== 'boolean') state.autoBuySpPotion = false;
+    if (!state.autoAspdPotion) state.autoAspdPotion = { enabled: false, items: [] };
+    if (!Array.isArray(state.autoAspdPotion.items)) state.autoAspdPotion.items = [];
+    if (typeof state.autoBuyAspdPotion !== 'boolean') state.autoBuyAspdPotion = false;
     if (typeof state.muted !== 'boolean') state.muted = false;
     // 圖鑑遷移：舊存檔沒有紀錄，至少把背包/裝備裡現有的東西補登為「已取得」，
     // 免得老角色開圖鑑看到一片空白
@@ -4060,6 +4370,8 @@ function loadGame() {
     if (!state.equip.footgear) state.equip.footgear = null;
     if (!state.equip.accessory1) state.equip.accessory1 = null;
     if (!state.equip.accessory2) state.equip.accessory2 = null;
+    if (!state.equip.ammo) state.equip.ammo = null;
+    if (!state.equipSkin) state.equipSkin = 'grid';
     if (!state.refinement) state.refinement = {};
     if (!state.equippedCards) state.equippedCards = {};
     if (!state.instances) state.instances = {};

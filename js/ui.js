@@ -746,16 +746,15 @@ function renderMapTab() {
     <div class="town-npcs">
       <h4 class="town-npc-title">🏪 城鎮 NPC</h4>
       <div class="town-npc-list">
-        <div class="town-npc-card" onclick="openNpcShop('weapon');">
-          <div class="town-npc-icon">⚔️</div>
-          <div class="town-npc-name">武器商人</div>
-          <div class="town-npc-hint">購買各種武器</div>
-        </div>
-        <div class="town-npc-card" onclick="openNpcShop('armor');">
-          <div class="town-npc-icon">🛡️</div>
-          <div class="town-npc-name">防具商人</div>
-          <div class="town-npc-hint">購買各種防具</div>
-        </div>
+        ${/* 直接由 NPC_SHOPS 產生，之後新增商店不用再回來改這裡 */
+          Object.keys(NPC_SHOPS).map(id => {
+            const shop = NPC_SHOPS[id];
+            return `<div class="town-npc-card" onclick="openNpcShop('${id}');">
+              <div class="town-npc-icon">${shop.icon}</div>
+              <div class="town-npc-name">${shop.name}</div>
+              <div class="town-npc-hint">${shop.getItems().length} 項商品</div>
+            </div>`;
+          }).join('')}
       </div>
     </div>
     ` : ''}`;
@@ -848,6 +847,24 @@ function renderAutoBattleTab() {
     const qty = getItemQty(tier);
     return `<option value="${tier}" ${currentFallback === tier ? 'selected' : ''}>${def.name} (${effect}) 持有${qty}</option>`;
   }).join('');
+
+  // ---- SP 藥水設定（結構比照 HP：第一格背包任選、第二格藍水）----
+  const spCfg = state.autoSpPotion || { enabled: false, primary: '', fallback: 'blue_potion', spThreshold: 30 };
+  const spThreshold = spCfg.spThreshold || 30;
+  const invSpItems = state.inventory.filter(row => {
+    if (row.instanceId) return false;
+    const d = ITEMS[row.item];
+    return d && d.restoreSp > 0;
+  });
+  const invSpOptions = invSpItems.map(row => {
+    const def = ITEMS[row.item];
+    return `<option value="${row.item}" ${spCfg.primary === row.item ? 'selected' : ''}>${def.name} (恢復${def.restoreSp}SP) x${row.qty}</option>`;
+  }).join('');
+  const aspdCfg = state.autoAspdPotion || { enabled: false, items: [] };
+  const spFallbackDef = ITEMS['blue_potion'];
+  const spFallbackOption = spFallbackDef
+    ? `<option value="blue_potion" selected>${spFallbackDef.name} (恢復${spFallbackDef.restoreSp}SP) 持有${getItemQty('blue_potion')}</option>`
+    : '';
 
   // 攻擊技能下拉選項
   const attackOptions = attackSkills.map(sk =>
@@ -1016,6 +1033,56 @@ function renderAutoBattleTab() {
           ${potionOptions}
         </select>
       </div>
+    </div>
+
+    <div class="ab-section">
+      <h4 class="ab-section-title">💧 SP 藥水設定</h4>
+      <div class="potion-toggles">
+        <label class="auto-toggle"><input type="checkbox" ${spCfg.enabled ? 'checked' : ''} onchange="setAutoSpPotionEnabled(this.checked);"> 自動使用回復SP道具</label>
+        <label class="auto-toggle"><input type="checkbox" ${state.autoBuySpPotion ? 'checked' : ''} onchange="setAutoBuySpPotion(this.checked);"> 藍水不足時自動購買${AUTO_BUY_SP_QTY}瓶</label>
+      </div>
+      <div class="ab-config-row">
+        <label class="ab-config-label">SP 低於</label>
+        <input type="range" class="ab-slider" min="10" max="90" value="${spThreshold}"
+          oninput="setAutoSpPotionThreshold(this.value);document.getElementById('sp-threshold-val').textContent=this.value+'%'">
+        <span id="sp-threshold-val" class="ab-slider-val">${spThreshold}%</span>
+        <span class="ab-config-hint">時使用</span>
+      </div>
+      <div class="ab-config-row">
+        <label class="ab-config-label">首先使用</label>
+        <select class="ab-select" onchange="setAutoSpPotionPrimary(this.value);renderAutoBattleTab();">
+          <option value="">不使用背包道具</option>
+          ${invSpOptions}
+        </select>
+      </div>
+      <div class="ab-config-row">
+        <label class="ab-config-label">用完後使用</label>
+        <select class="ab-select" onchange="setAutoSpPotionFallback(this.value);renderAutoBattleTab();">
+          ${spFallbackOption}
+        </select>
+      </div>
+      <div class="ab-config-hint" style="margin-top:4px">商店只賣藍色藥水（${(ITEMS['blue_potion']||{}).buyPrice || 1000}z），其他回SP道具要打怪取得。</div>
+    </div>
+
+    <div class="ab-section">
+      <h4 class="ab-section-title">⚡ 攻速藥水</h4>
+      <div class="potion-toggles">
+        <label class="auto-toggle"><input type="checkbox" ${aspdCfg.enabled ? 'checked' : ''} onchange="setAutoAspdPotionEnabled(this.checked);renderAutoBattleTab();"> 效果結束後自動補喝</label>
+        <label class="auto-toggle"><input type="checkbox" ${state.autoBuyAspdPotion ? 'checked' : ''} onchange="setAutoBuyAspdPotion(this.checked);"> 沒了自動購買${AUTO_BUY_ASPD_QTY}瓶</label>
+      </div>
+      ${Object.keys(ASPD_POTIONS).map(id => {
+        const d = ITEMS[id];
+        if (!d) return '';
+        const block = aspdPotionBlockReason(id);
+        const checked = (aspdCfg.items || []).includes(id);
+        return `<label class="auto-toggle aspd-potion-row${block ? ' disabled' : ''}" title="${block || '可使用'}">
+          <input type="checkbox" ${checked ? 'checked' : ''} ${block ? 'disabled' : ''}
+            onchange="toggleAutoAspdPotion('${id}',this.checked);renderAutoBattleTab();">
+          ${d.name}　<span class="ab-config-hint">攻速+${d.aspdPct}%　持有 ${getItemQty(id)}</span>
+          ${block ? `<span class="aspd-potion-block">${block}</span>` : ''}
+        </label>`;
+      }).join('')}
+      <div class="ab-config-hint" style="margin-top:4px">效果較高的優先使用。限制依道具敘述：覺醒需 40 級且服事／祭司不可，菠色克需 85 級且限法師系／劍士系／商人系。</div>
     </div>
   `;
 }
@@ -1594,7 +1661,7 @@ const ARMOR_TYPE_LABELS = {
   headgear: '頭飾', leather: '鎧甲', shield: '盾牌',
   garment: '披風', footgear: '鞋子', accessory: '飾品'
 };
-const ITEM_SUBTYPE_LABELS = { consumable: '消耗品', material: '素材', etc: '雜物' };
+const ITEM_SUBTYPE_LABELS = { consumable: '消耗品', material: '素材', ammo: '箭矢', etc: '雜物' };
 
 let invCategory = 'weapon';
 let invSub = 'all';
@@ -1635,19 +1702,14 @@ const COMPARE_STATS = [
   ['str', 'STR'], ['agi', 'AGI'], ['vit', 'VIT'], ['int', 'INT'], ['dex', 'DEX'], ['luk', 'LUK']
 ];
 // 這件裝備會佔用哪個欄位（用來決定跟誰比）
+/* 直接沿用引擎決定「這件會裝到哪一格」的同一套邏輯。
+   自己寫一份簡化版會出錯：頭飾一律當成「頭上」，害頭中／頭下的裝備
+   （例：金屬口罩是頭下）跑去跟頭上那件比；飾品也一律比飾品1。 */
 function targetSlotOf(itemId) {
   const d = ITEMS[itemId];
   if (!d) return null;
-  if (d.type === 'weapon') return 'weapon';
-  if (d.type !== 'armor') return null;
-  switch (d.armorType) {
-    case 'headgear': return 'head_top';
-    case 'shield': return 'shield';
-    case 'garment': return 'garment';
-    case 'footgear': return 'footgear';
-    case 'accessory': return 'accessory1';
-    default: return 'armor';
-  }
+  if (d.type !== 'weapon' && d.type !== 'armor') return null;
+  return resolveEquipSlotFor(itemId);
 }
 // 精煉度現在是跟著「那一件」走，不能從 itemId 反查，必須由呼叫端傳進來
 function statWithRefine(itemId, key, ref) {
@@ -1697,6 +1759,110 @@ function onInvSearch(v) {
 }
 
 /* 10 格裝備視窗的 HTML；背包分頁已不再顯示它，改由「裝備」分頁使用 */
+/* ---------------- 裝備視窗外觀（可切換，仿 RO 換 UI 皮膚） ----------------
+   grid    = 現在這套格狀排版
+   ro      = RO 原版底圖（淺色，basic_equipwin_bg 原色）
+   ro_dark = 同一張底圖 CSS 反轉成深色，配合本作深色主題
+   底圖上的 10 個橢圓位置是直接從圖檔量出來的百分比座標。
+------------------------------------------------- */
+const EQUIP_SKINS = [
+  { key: 'grid',    name: '格狀（預設）' },
+  { key: 'ro',      name: 'RO 原版（淺色）' },
+  { key: 'ro_dark', name: 'RO 原版（深色）' },
+];
+// 圖檔 280×130，左欄橢圓中心 x=6.1%、右欄 93.6%，五列 y=13.1/32.3/52.3/72.3/92.3%
+const EQUIPWIN_POS = {
+  head_top:    { x: 6.1,  y: 13.1, name: '頭上' },
+  head_mid:    { x: 6.1,  y: 32.3, name: '頭中' },
+  weapon:      { x: 6.1,  y: 52.3, name: '武器' },
+  garment:     { x: 6.1,  y: 72.3, name: '披風' },
+  accessory1:  { x: 6.1,  y: 92.3, name: '飾品1' },
+  head_bottom: { x: 93.6, y: 13.1, name: '頭下' },
+  armor:       { x: 93.6, y: 32.3, name: '身體' },
+  shield:      { x: 93.6, y: 52.3, name: '左手' },
+  footgear:    { x: 93.6, y: 72.3, name: '鞋子' },
+  accessory2:  { x: 93.6, y: 92.3, name: '飾品2' },
+  ammo:        { x: 50.4, y: 88.5, name: '箭矢' },   // 中間那顆大橢圓（原本是角色影子）
+};
+function getEquipSkin() { return (state && state.equipSkin) || 'grid'; }
+function setEquipSkin(v) { state.equipSkin = v; saveGame(); renderEquipTab(); }
+
+function buildEquipPanelHtml() {
+  return getEquipSkin() === 'grid' ? buildEquipGridHtml() : buildEquipWinHtml();
+}
+
+// RO 底圖版：把 10 格（＋箭矢格）用百分比疊在底圖上
+function buildEquipWinHtmlInner() {
+  const weaponId = getEquipBaseItemId('weapon');
+  const twoHanded = isTwoHanded(weaponId);
+  const dark = getEquipSkin() === 'ro_dark';
+
+  let html = `<div class="equipwin${dark ? ' equipwin--dark' : ''}">
+    <img class="equipwin-bg" src="images/ui/equipwin_bg.png" alt="">`;
+
+  Object.keys(EQUIPWIN_POS).forEach(key => {
+    const p = EQUIPWIN_POS[key];
+    // 左手被雙手武器佔住時，顯示同一把武器
+    const shadow = (key === 'shield' && twoHanded);
+    const srcSlot = shadow ? 'weapon' : key;
+    const itemId = key === 'ammo' ? getEquippedAmmoId() : getEquipBaseItemId(srcSlot);
+    const ref = key === 'ammo' ? 0 : getRefinementLevel(srcSlot);
+    const cards = key === 'ammo' ? [] : getEquippedCards(srcSlot);
+    const style = `left:${p.x}%;top:${p.y}%`;
+
+    if (!itemId) {
+      html += `<div class="equipwin-slot is-empty" style="${style}" title="${p.name}"></div>`;
+      return;
+    }
+    const qtyTag = key === 'ammo' ? `<span class="equipwin-qty">${getItemQty(itemId)}</span>` : '';
+    html += `<div class="equipwin-slot${shadow ? ' two-hand-shadow' : ''}" style="${style}"
+      title="${p.name}"
+      onmouseenter="showEquipTooltip(event,'${srcSlot}')" onmouseleave="hideEquipTooltip()"
+      onclick="showSlotActions('${srcSlot}')">
+      <img src="${itemImgSrc(itemId)}" onerror="this.onerror=null;this.src='${placeholderImgSrc(key === 'ammo' ? 'item' : 'armor')}'">
+      ${ref > 0 ? `<span class="equipwin-refine">+${ref}</span>` : ''}
+      ${cards.length ? `<span class="equipwin-card">🃏</span>` : ''}
+      ${qtyTag}
+    </div>`;
+  });
+
+  html += `</div>`;
+  return html;
+}
+// 底圖版也要有箭矢的操作入口（中間那顆橢圓只是顯示，按鈕仍放在下方一列）
+function buildEquipWinHtml() {
+  return buildEquipWinHtmlInner() + buildAmmoRowHtml();
+}
+
+/* 底圖版的格子太小塞不下按鈕，改成點格子開這個動作面板（卸下／插卡／取出／精煉都在這） */
+function showSlotActions(slotKey) {
+  const el = document.getElementById('tab-equip');
+  if (!el) return;
+  const itemId = getEquipBaseItemId(slotKey);
+  if (!itemId) return;
+  const d = ITEMS[itemId];
+  const ref = getRefinementLevel(slotKey);
+  const cards = getEquippedCards(slotKey);
+  const maxSlots = getEquipCardSlots(slotKey);
+
+  let html = `<h3 class="panel-title">${ref > 0 ? `+${ref} ` : ''}${getItemDisplayName(itemId)}</h3>`;
+  html += `<button class="btn-small" onclick="renderEquipTab()">← 返回裝備欄</button>`;
+  html += `<div class="equip-pick-stats" style="margin:8px 0">${
+    [d.atk ? `ATK ${statWithRefine(itemId,'atk',ref)}` : '', d.def ? `DEF ${statWithRefine(itemId,'def',ref)}` : '',
+     d.element ? `${ELEMENT_ICONS[d.element]}${ELEMENT_NAMES[d.element]}` : '',
+     maxSlots ? `插槽 ${cards.length}/${maxSlots}` : ''].filter(Boolean).join('　')}</div>`;
+  if (cards.length) {
+    html += `<div class="equip-pick-cards">🃏 ${cards.map(id => CARDS[id] ? CARDS[id].name : id).join('、')}</div>`;
+  }
+  html += `<div class="equip-pick-head">
+    <button class="btn-small" onclick="unequipItem('${slotKey}');renderEquipTab();renderTopBar();">卸下</button>
+    ${maxSlots > cards.length ? `<button class="btn-small ghost" onclick="showCardSelect('${slotKey}')">插卡</button>` : ''}
+    ${cards.length ? `<button class="btn-small ghost danger" onclick="doRemoveCard('${slotKey}')">取出卡片</button>` : ''}
+    <button class="btn-small ghost" onclick="doRefineSlot('${slotKey}')">精煉</button>
+  </div>`;
+  el.innerHTML = html;
+}
+
 function buildEquipGridHtml() {
   {
     const equipSlotDefs = [
@@ -1718,14 +1884,18 @@ function buildEquipGridHtml() {
 
     let equipHtml = '<div class="ro-equip-grid">';
     equipSlotDefs.forEach(slot => {
-      // 雙手武器時，盾牌欄顯示為被佔用
+      // 雙手武器佔住左手：左手格直接顯示同一把武器的圖示（淡一點表示是被佔用而非另一件裝備）
       if (slot.key === 'shield' && isWeaponTwoHanded) {
-        equipHtml += `<div class="ro-equip-slot has-item" style="opacity:0.5"
+        const twoHandRef = getRefinementLevel('weapon');
+        equipHtml += `<div class="ro-equip-slot has-item two-hand-shadow"
           onmouseenter="showEquipTooltip(event,'weapon')"
           onmouseleave="hideEquipTooltip()"
+          onclick="onEquipSlotClick('weapon')"
         >
           <div class="slot-label">${slot.name}</div>
-          <div class="slot-name" style="font-size:9px;color:var(--ink-dim)">雙手武器佔用</div>
+          ${twoHandRef > 0 ? `<div class="slot-refine">+${twoHandRef}</div>` : ''}
+          <img class="slot-icon" src="${itemImgSrc(weaponId)}" onerror="this.onerror=null;this.src='${placeholderImgSrc('weapon')}'">
+          <div class="slot-name">${getItemDisplayName(weaponId)}</div>
         </div>`;
         return;
       }
@@ -1773,8 +1943,59 @@ function buildEquipGridHtml() {
       </div>`;
     });
     equipHtml += '</div>';
+
+    // 箭矢欄（格狀版沒有中間那顆橢圓，改成底圖版之外的獨立一列）
+    equipHtml += buildAmmoRowHtml();
     return equipHtml;
   }
+}
+
+/* 箭矢狀態列：裝了哪種箭、剩幾支；拿弓卻沒箭時給明顯警告 */
+function buildAmmoRowHtml() {
+  const ammoId = getEquippedAmmoId();
+  const bow = needsAmmo();
+  if (!ammoId && !bow) return '';
+  const d = ammoId ? ITEMS[ammoId] : null;
+  const qty = getAmmoCount();
+  const warn = bow && qty <= 0;
+  return `<div class="ammo-row${warn ? ' warn' : ''}">
+    <span class="ammo-label">🏹 箭矢</span>
+    ${d
+      ? `<img class="ammo-icon" src="${itemImgSrc(ammoId)}" onerror="this.onerror=null;this.src='${placeholderImgSrc('item')}'">
+         <span class="ammo-name">${d.name}${d.element && d.element !== 'none' ? ` ${ELEMENT_ICONS[d.element]}` : ''}　ATK+${d.atk || 0}</span>
+         <span class="ammo-qty${qty <= 0 ? ' zero' : ''}">×${qty}</span>
+         <button class="btn-small ghost" onclick="unequipAmmo();renderEquipTab();renderTopBar();">卸下</button>`
+      : `<span class="ammo-name">未裝備</span>`}
+    <button class="btn-small" onclick="showAmmoSelect()">選擇箭矢</button>
+    ${warn ? `<span class="ammo-warn">沒箭矢，弓無法攻擊！</span>` : ''}
+  </div>`;
+}
+
+// 選箭矢：只列背包裡真的有的箭
+function showAmmoSelect() {
+  const el = document.getElementById('tab-equip');
+  if (!el) return;
+  const rows = state.inventory.filter(r => !r.instanceId && isAmmoItem(r.item) && r.qty > 0);
+  let html = `<h3 class="panel-title">🏹 選擇箭矢</h3>`;
+  html += `<button class="btn-small" onclick="renderEquipTab()">← 返回裝備欄</button>`;
+  if (!rows.length) {
+    html += `<div class="equip-pick-empty">背包裡沒有箭矢。弓箭手可以在城鎮的武器商人買到。</div>`;
+  } else {
+    html += rows.map(r => {
+      const d = ITEMS[r.item];
+      const on = getEquippedAmmoId() === r.item;
+      return `<div class="equip-pick-row${on ? ' equipped' : ''}">
+        <img src="${itemImgSrc(r.item)}" onerror="this.onerror=null;this.src='${placeholderImgSrc('item')}'">
+        <div class="equip-pick-info">
+          <div class="equip-pick-name">${d.name}　<span class="ammo-qty">×${r.qty}</span></div>
+          <div class="equip-pick-stats">ATK +${d.atk || 0}${d.element && d.element !== 'none' ? `　${ELEMENT_ICONS[d.element]}${ELEMENT_NAMES[d.element]}屬性` : '　無屬性'}</div>
+        </div>
+        ${on ? `<span class="equip-pick-stats">使用中</span>`
+             : `<button class="btn-small" onclick="equipAmmo('${r.item}');renderEquipTab();renderTopBar();">裝備</button>`}
+      </div>`;
+    }).join('');
+  }
+  el.innerHTML = html;
 }
 
 /* ---------------- 裝備分頁 ----------------
@@ -1847,8 +2068,13 @@ function renderEquipTab() {
 
     el.innerHTML = `
       <div class="equip-fixed">
-        <h3 class="panel-title">裝備欄</h3>
-        ${buildEquipGridHtml()}
+        <div class="equip-fixed-head">
+          <h3 class="panel-title">裝備欄</h3>
+          <select class="ab-select equip-skin-select" onchange="setEquipSkin(this.value)" title="切換裝備視窗外觀">
+            ${EQUIP_SKINS.map(s => `<option value="${s.key}" ${getEquipSkin() === s.key ? 'selected' : ''}>${s.name}</option>`).join('')}
+          </select>
+        </div>
+        ${buildEquipPanelHtml()}
       </div>
       <div class="equip-pick-head">
         <button class="btn-small ${equipPickCat === 'weapon' ? 'active' : 'ghost'}" onclick="setEquipPickCat('weapon')">⚔️ 武器</button>
@@ -1972,6 +2198,16 @@ function renderInventoryTab() {
         <div class="inv-actions">
           <button class="btn-small ${locked ? '' : 'ghost'}" title="${locked ? '解除鎖定' : '鎖定後不會被賣出／自動販賣'}"
             onclick="toggleItemLock('${row.item}');renderInventoryTab();">${locked ? '🔒' : '🔓'}</button>
+          ${def.ammo ? `<button class="btn-small" onclick="equipAmmo('${row.item}');renderInventoryTab();renderTopBar();">裝備箭矢</button>` : ''}
+          ${(() => {
+            // 原石：湊滿 5 個就能合成
+            const k = Object.keys(ORE_SYNTHESIS).find(x => ORE_SYNTHESIS[x].from === row.item);
+            if (!k) return '';
+            const r = ORE_SYNTHESIS[k];
+            return `<button class="btn-small" ${row.qty >= r.need ? '' : 'disabled'}
+              onclick="synthesizeOre('${k}');renderInventoryTab();renderTopBar();"
+              title="${r.need} 個合成 1 個${ITEMS[r.to].name}">合成(${row.qty}/${r.need})</button>`;
+          })()}
           ${canUse ? `<button class="btn-small" onclick="useItem('${row.item}');renderInventoryTab();">${def.type === 'consumable' ? '使用' : '裝備'}</button>` : ''}
           ${locked ? '' : `<button class="btn-small ghost" onclick="sellItem('${row.item}',1);renderInventoryTab();renderTopBar();">賣出(${def.sell})</button>`}
           ${!locked && row.qty > 1 ? `<button class="btn-small ghost" onclick="sellItemAll('${row.item}');renderInventoryTab();renderTopBar();">全部賣出</button>` : ''}
@@ -2094,19 +2330,21 @@ function showEquipTooltip(event, slotKey) {
   tt.innerHTML = html;
   tt.classList.add('show');
 
-  // 定位：在滑鼠附近
-  const slotEl = event.target.closest('.ro-equip-slot');
-  if (slotEl) {
-    const rect = slotEl.getBoundingClientRect();
-    let left = rect.right + 8;
-    let top = rect.top;
-    // 防止超出右側
-    if (left + 280 > window.innerWidth) left = rect.left - 288;
-    // 防止超出底部
-    if (top + 200 > window.innerHeight) top = window.innerHeight - 210;
-    tt.style.left = left + 'px';
-    tt.style.top = top + 'px';
-  }
+  // 定位：貼在被指到的那一格旁邊。格狀版是 .ro-equip-slot，底圖版是 .equipwin-slot，
+  // 兩個都要認得，否則底圖版會找不到基準點、提示框停在畫面外看不到。
+  const slotEl = event.target.closest('.ro-equip-slot, .equipwin-slot');
+  const rect = slotEl ? slotEl.getBoundingClientRect()
+                      : { right: event.clientX || 0, left: event.clientX || 0, top: event.clientY || 0 };
+  let left = rect.right + 8;
+  let top = rect.top;
+  // 防止超出右側
+  if (left + 280 > window.innerWidth) left = rect.left - 288;
+  if (left < 4) left = 4;
+  // 防止超出底部
+  if (top + 200 > window.innerHeight) top = window.innerHeight - 210;
+  if (top < 4) top = 4;
+  tt.style.left = left + 'px';
+  tt.style.top = top + 'px';
 }
 
 function hideEquipTooltip() {
@@ -2141,6 +2379,39 @@ function onEquipSlotClick(slotKey) {
 }
 
 /* ---------------- 角色分頁 ---------------- */
+/* 素質加成的來源明細（給 title 用，滑過去就看得到是哪件裝備／哪張卡給的）。
+   走訪所有裝備欄與已插的卡片，把有貢獻這項素質的列出來。 */
+function statGearSources(stat) {
+  const out = [];
+  EQUIP_SLOTS_ALL.forEach(slot => {
+    const id = getEquipBaseItemId(slot);
+    const d = id ? ITEMS[id] : null;
+    if (d && typeof d[stat] === 'number' && d[stat] !== 0) {
+      out.push({ name: getItemDisplayName(id), v: d[stat] });
+    }
+  });
+  allEquippedCards().forEach(cid => {
+    const c = CARDS[cid];
+    if (c && c.bonus && c.bonus[stat]) out.push({ name: c.name, v: c.bonus[stat] });
+  });
+  return out;
+}
+// title 屬性不能直接放引號/HTML，統一轉成純文字多行
+function statGearSourceTitle(stat) {
+  const src = statGearSources(stat);
+  if (!src.length) return '裝備／卡片加成';
+  const total = src.reduce((a, b) => a + b.v, 0);
+  return ['裝備／卡片加成　合計 ' + (total > 0 ? '+' : '') + total]
+    .concat(src.map(s => `・${s.name}　${s.v > 0 ? '+' : ''}${s.v}`))
+    .join('\n').replace(/"/g, '＂');
+}
+function statJobSourceTitle(stat, bonus) {
+  // 職業加成是跨職業累計繼承的，把整條職業鏈列出來比較好懂
+  const chain = (typeof getAllLearnedJobs === 'function' ? getAllLearnedJobs() : [state.jobId])
+    .map(j => (JOB_TREE[j] && JOB_TREE[j].name) || j);
+  return `職業加成　+${bonus}\n來自：${chain.join(' → ')}`.replace(/"/g, '＂');
+}
+
 function renderCharacterTab() {
   const job = currentJob();
   const el = document.getElementById('tab-character');
@@ -2172,10 +2443,15 @@ function renderCharacterTab() {
         const cost = statPointCost(state.stats[k]);
         const canAfford = state.statPoints >= cost;
         const bonus = jobBonus[k];
+        // 裝備與卡片的素質加成本來就有算進戰鬥數值，只是這裡沒顯示，
+        // 看起來就像「魔術師帽的 AGI+1 沒效果」——補上金色那段
+        const gear = equippedStatBonus(k) + getCardBonus(k);
         return `
         <div class="stat-row">
           <div class="stat-label">${STAT_NAMES[k]}</div>
-          <div class="stat-value">${state.stats[k]}${bonus > 0 ? `<span style="color:#4fc3f7">+${bonus}</span>` : ''}</div>
+          <div class="stat-value"><span class="stat-seg" title="基礎值（已分配的屬性點）">${state.stats[k]}</span>${
+            bonus > 0 ? `<span class="stat-seg" style="color:#4fc3f7" title="${statJobSourceTitle(k, bonus)}">+${bonus}</span>` : ''}${
+            gear !== 0 ? `<span class="stat-seg" style="color:var(--gold-soft)" title="${statGearSourceTitle(k)}">${gear > 0 ? '+' : ''}${gear}</span>` : ''}</div>
           <div class="stat-cost">-${cost}</div>
           <button class="btn-tiny" ${canAfford ? '' : 'disabled'} onclick="allocateStat('${k}');renderCharacterTab();renderTopBar();">+</button>
         </div>`;
@@ -2422,7 +2698,7 @@ function doRefineSlot(slotKey) {
     if (isArmor && !mat.usableArmor) return false;
     if (!isArmor && !mat.usableWeaponLv.includes(weaponLv)) return false;
     const invRow = state.inventory.find(r => r.item === mat.id && !r.instanceId);
-    return invRow && invRow.qty > 1;
+    return invRow && invRow.qty >= 1;   // 一次只消耗 1 個，剩 1 個當然也能精煉
   });
 
   if (availableMats.length === 0) {

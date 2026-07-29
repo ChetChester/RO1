@@ -395,10 +395,14 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-deep); co
 /* 角色分頁 */
 .job-name { font-size: 13px; color: var(--ink-dim); }
 .stat-grid { display: flex; flex-direction: column; gap: 6px; margin: 14px 0; }
-.stat-row { display: grid; grid-template-columns: 1fr 34px 30px 30px; align-items: center; gap: 8px; }
-.stat-cost { font-size: 11px; color: var(--teal-soft); text-align: center; }
+/* 數值欄改成 auto：素質加上職業與裝備加成後會變成「1123+8」這種長字串，
+   原本固定 34px 會撐爆並蓋掉右邊的消耗點數 */
+.stat-row { display: grid; grid-template-columns: 1fr auto auto 30px; align-items: center; gap: 10px; }
+.stat-cost { font-size: 11px; color: var(--teal-soft); text-align: right; white-space: nowrap; min-width: 30px; }
 .stat-label { font-size: 13px; color: var(--ink-dim); }
-.stat-value { text-align: center; font-weight: 700; color: var(--gold-soft); }
+.stat-value { text-align: right; font-weight: 700; color: var(--gold-soft); white-space: nowrap; }
+/* 有加成來源的區段：提示可以指上去看明細 */
+.stat-seg { cursor: help; }
 .stat-points-left { font-size: 12px; color: var(--ink-dim); margin-bottom: 14px; }
 .derived-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 13px; color: var(--ink); background: var(--bg-panel-2); padding: 12px; border-radius: 8px; border: 1px solid var(--line); }
 .stat-formula-hint { font-size: 11px; color: var(--ink-dim); line-height: 1.6; margin-top: 10px; }
@@ -801,6 +805,73 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-deep); co
 .equip-fixed .ro-equip-slot .slot-name { font-size: 9px; }
 .equip-fixed .ro-equip-slot .slot-cards { margin-top: 1px; }
 
+.equip-fixed-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.equip-fixed-head .panel-title { margin: 0; }
+.equip-skin-select { font-size: 11px; padding: 2px 4px; max-width: 150px; }
+
+/* ---- RO 原版底圖裝備視窗 ---- */
+.equipwin {
+  position: relative;
+  width: 100%;
+  max-width: 360px;
+  aspect-ratio: 280 / 130;   /* 底圖原始比例，格子座標才對得準 */
+  margin: 8px 0;
+}
+.equipwin-bg {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+/* 深色版：同一張圖反轉，白底變深底、灰橢圓變橄欖金 */
+.equipwin--dark .equipwin-bg { filter: invert(1); }
+.equipwin-slot {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 30px; height: 30px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.equipwin-slot img { width: 26px; height: 26px; object-fit: contain; image-rendering: pixelated; }
+.equipwin-slot:hover { background: rgba(212, 175, 55, 0.25); box-shadow: 0 0 0 1px var(--gold); }
+.equipwin-slot.is-empty { cursor: default; }
+.equipwin-slot.two-hand-shadow { opacity: 0.55; }
+.equipwin-refine {
+  position: absolute; top: -4px; right: -4px;
+  font-size: 9px; font-weight: 700; color: #5dade2;
+  text-shadow: 0 0 3px #000, 0 0 3px #000;
+}
+.equipwin-card {
+  position: absolute; bottom: -4px; left: -4px;
+  font-size: 8px; text-shadow: 0 0 3px #000;
+}
+.equipwin-qty {
+  position: absolute; bottom: -5px; right: -4px;
+  font-size: 9px; font-weight: 700; color: var(--gold-soft);
+  text-shadow: 0 0 3px #000, 0 0 3px #000;
+}
+
+/* ---- 攻速藥水勾選列 ---- */
+.aspd-potion-row { display: flex; align-items: center; gap: 6px; }
+.aspd-potion-row.disabled { opacity: 0.5; }
+.aspd-potion-block { color: var(--crimson-soft); font-size: 11px; }
+
+/* ---- 箭矢狀態列 ---- */
+.ammo-row {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 6px 8px; margin: 6px 0 0;
+  background: var(--bg-panel-2); border: 1px solid var(--line); border-radius: 4px;
+  font-size: 12px;
+}
+.ammo-row.warn { border-color: var(--crimson-soft); }
+.ammo-label { color: var(--ink-dim); font-size: 11px; }
+.ammo-icon { width: 20px; height: 20px; object-fit: contain; image-rendering: pixelated; }
+.ammo-name { color: var(--ink); }
+.ammo-qty { color: var(--gold-soft); font-variant-numeric: tabular-nums; }
+.ammo-qty.zero { color: var(--crimson-soft); }
+.ammo-warn { color: var(--crimson-soft); font-size: 11px; }
+
 .equip-pick-head { display: flex; align-items: center; gap: 8px; margin: 10px 0 8px; flex-wrap: wrap; }
 .equip-pick-empty { color: var(--ink-dim); font-size: 13px; padding: 16px 0; text-align: center; }
 .equip-pick-row {
@@ -814,6 +885,9 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-deep); co
 .equip-pick-name { font-size: 12px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .equip-pick-stats { font-size: 11px; color: var(--ink-dim); margin-top: 2px; }
 .equip-pick-cards { font-size: 10px; color: var(--gold-soft); margin-top: 2px; }
+
+/* 雙手武器佔住的左手格：同一把武器的分身，畫淡一點並用虛線邊框跟真正的裝備區隔 */
+.ro-equip-slot.two-hand-shadow { opacity: 0.55; border-style: dashed; }
 
 /* 頭部三格佔滿第一行 */
 .ro-equip-slot.head-slot {
