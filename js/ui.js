@@ -1718,7 +1718,7 @@ function statWithRefine(itemId, key, ref) {
   let v = typeof d[key] === 'number' ? d[key] : 0;
   // 精煉只加成武器 ATK 與防具 DEF，跟 equippedAtk()/equippedDef() 的算法一致
   ref = ref || 0;
-  if (ref > 0 && key === 'atk' && d.type === 'weapon') v += getRefinementAtkBonus(ref, d.weaponLv || 1);
+  if (ref > 0 && key === 'atk' && d.type === 'weapon') v += getRefinementAtkBonus(ref, getRefineWeaponLv(d));
   if (ref > 0 && key === 'def' && d.type === 'armor') v += ref;
   return v;
 }
@@ -2460,7 +2460,7 @@ function renderCharacterTab() {
     <div class="stat-points-left">可分配屬性點：${state.statPoints}</div>
     ${buffListHtml}
     <div class="derived-grid">
-      <div>物理攻擊 ATK：${state.atk}${(() => { const r = getRefinementLevel('weapon'); const wId = getEquipBaseItemId('weapon'); const wLv = wId ? (ITEMS[wId].weaponLv || 1) : 1; return r > 0 ? ` (+${getRefinementAtkBonus(r, wLv)}精煉)` : ''; })()}</div>
+      <div>物理攻擊 ATK：${state.atk}${(() => { const r = getRefinementLevel('weapon'); const wId = getEquipBaseItemId('weapon'); const wLv = wId ? getRefineWeaponLv(ITEMS[wId]) : 1; return r > 0 ? ` (+${getRefinementAtkBonus(r, wLv)}精煉)` : ''; })()}</div>
       <div>魔法攻擊 MATK：${state.matkMin}~${state.matkMax}</div>
       <div>防禦 DEF：${state.def}${(() => { let refBonus = 0; ['head_top','head_mid','head_bottom','armor','shield','garment','footgear','accessory1','accessory2'].forEach(s => { const lv = getRefinementLevel(s); if (lv > 0) refBonus += getRefinementDefBonus(lv); }); return refBonus > 0 ? ` (+${refBonus}精煉)` : ''; })()}</div>
       <div>攻擊速度 ASPD：${state.aspd}${state.buffs.some(b => b.type === 'aspd') ? ' <span class="buff-active">BUFF</span>' : ''}</div>
@@ -2686,29 +2686,36 @@ function doRefineSlot(slotKey) {
   const item = ITEMS[itemId];
   const currentLevel = getRefinementLevel(slotKey);
   const isArmor = item.type === 'armor';
-  const weaponLv = isArmor ? 0 : (item.weaponLv || 1);
+  const weaponLv = isArmor ? 0 : getRefineWeaponLv(item);
 
   if (currentLevel >= REFINEMENT_MAX) {
     showToast(`${item.name} 已達最大精煉 +${REFINEMENT_MAX}！`);
     return;
   }
 
-  // 取得可用材料
-  const availableMats = Object.entries(REFINEMENT_MATERIALS).filter(([key, mat]) => {
-    if (isArmor && !mat.usableArmor) return false;
-    if (!isArmor && !mat.usableWeaponLv.includes(weaponLv)) return false;
+  // 這件裝備「用得上」的材料（不管身上有沒有），拿來給玩家看該去湊什麼
+  const usableMats = Object.entries(REFINEMENT_MATERIALS).filter(([, mat]) =>
+    isArmor ? mat.usableArmor : mat.usableWeaponLv.includes(weaponLv));
+  // 其中身上真的有的
+  const availableMats = usableMats.filter(([, mat]) => {
     const invRow = state.inventory.find(r => r.item === mat.id && !r.instanceId);
     return invRow && invRow.qty >= 1;   // 一次只消耗 1 個，剩 1 個當然也能精煉
   });
 
   if (availableMats.length === 0) {
-    showToast('沒有可用的精煉材料！');
+    // 只說「沒有材料」會讓人搞不懂——身上明明有一堆礦，卻是等級對不上。把該用什麼講清楚。
+    const need = usableMats.map(([, m]) => m.name).join('、');
+    showToast(need
+      ? `沒有可用的精煉材料！${isArmor ? '防具' : `Lv${weaponLv} 武器`}要用：${need}`
+      : '這件裝備沒有對應的精煉材料！');
     return;
   }
 
-  const cost = REFINEMENT_COST;
+  // +11 以上官方是 100,000z，這裡不能寫死 REFINEMENT_COST，否則過了 +10
+  // 前端放行、engine 端卻因為錢不夠回 false，變成假的「精煉失敗」
+  const cost = getRefinementCost(currentLevel);
   if (state.gold < cost) {
-    showToast(`鋅幣不足！需要 ${cost} 鋅幣`);
+    showToast(`鋅幣不足！需要 ${cost.toLocaleString()} 鋅幣`);
     return;
   }
 
@@ -2722,7 +2729,8 @@ function doRefineSlot(slotKey) {
     return `${mat.name} (x${invRow ? invRow.qty : 0}) - 成功率 ${rate}%, ${penaltyText}`;
   }).join('\n');
 
-  const msg = `精煉 ${item.name} +${currentLevel}→+${currentLevel + 1}\n花費 ${cost} 鋅幣\n\n可用材料：\n${matList}\n\n選擇材料後點擊確定`;
+  const lvTag = isArmor ? '防具' : `Lv${weaponLv} 武器`;
+  const msg = `精煉 ${item.name}（${lvTag}） +${currentLevel}→+${currentLevel + 1}\n花費 ${cost.toLocaleString()} 鋅幣\n\n可用材料：\n${matList}\n\n選擇材料後點擊確定`;
 
   // 簡化版：自動使用第一個可用材料
   if (confirm(msg)) {

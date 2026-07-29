@@ -373,7 +373,7 @@ function equippedAtk() {
   const w = wId ? ITEMS[wId] : null;
   const baseAtk = w && w.atk ? w.atk : 0;
   const refLevel = getRefinementLevel('weapon');
-  const weaponLv = w ? (w.weaponLv || 1) : 1;
+  const weaponLv = w ? getRefineWeaponLv(w) : 1;
   let mainAtk = baseAtk + getRefinementAtkBonus(refLevel, weaponLv);
   // 弓：箭矢的 ATK 直接加進武器攻擊力（官方 RO 就是這樣算）
   if (isBowWeapon(wId)) {
@@ -386,7 +386,7 @@ function equippedAtk() {
   const offItem = offId ? ITEMS[offId] : null;
   if (offItem && offItem.type === 'weapon' && canDualWield(state.jobId)) {
     const offRefLevel = getRefinementLevel('shield');
-    const offWeaponLv = offItem.weaponLv || 1;
+    const offWeaponLv = getRefineWeaponLv(offItem);
     const offAtk = (offItem.atk || 0) + getRefinementAtkBonus(offRefLevel, offWeaponLv);
     const rightPct = (state.rightHandPct != null ? state.rightHandPct : 50) / 100;
     const leftPct = (state.leftHandPct != null ? state.leftHandPct : 30) / 100;
@@ -3738,7 +3738,7 @@ function refineItem(slotKey, materialType) {
 
   const item = ITEMS[itemId];
   const isArmor = item.type === 'armor';
-  const weaponLv = isArmor ? 0 : (item.weaponLv || 1);
+  const weaponLv = isArmor ? 0 : getRefineWeaponLv(item);
 
   // 檢查材料是否適用
   const mat = REFINEMENT_MATERIALS[materialType];
