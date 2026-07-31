@@ -391,31 +391,141 @@ function stopAnim() {
   if (animTimer) { clearInterval(animTimer); animTimer = null; }
 }
 
-// 音效管理
-let attackAudio = null;
-let hitAudio = null;
+/* ---------------- 音效 ----------------
+   WAV/ 底下分四個資料夾：
+     物理攻擊揮空 — 每次普攻都放，依裝備的武器種類挑檔
+     物理攻擊命中 — 真的打中才放，同樣依武器種類
+     魔法傷害     — 依技能挑；火箭術／冰箭術／雷擊術照技能等級連放同樣次數（Lv10 響 10 下）
+     異常狀態     — 中毒／暈眩／沉默
 
-function initSoundEffects() {
-  attackAudio = new Audio('WAV/_swordman_attack.wav');
-  hitAudio = new Audio('WAV/_swordman_hit.wav');
+   同一個音效可能連續觸發（箭術連放、AoE 一次打好幾隻），
+   單一個 Audio 元素會互相打斷，所以每個檔案開一個小的輪替池。
+------------------------------------------------- */
+const SFX_DIR_SWING = 'WAV/物理攻擊揮空/';
+const SFX_DIR_HIT = 'WAV/物理攻擊命中/';
+const SFX_DIR_MAGIC = 'WAV/魔法傷害/';
+const SFX_DIR_STATUS = 'WAV/異常狀態/';
+
+// 武器分類（aspdCategoryOf 的回傳值）→ 揮空／命中要放哪個檔
+// 揮空 null 代表那個分類沒有對應的檔（空手、拳套、槍械），只放命中音
+const SFX_WEAPON = {
+  bare:       { swing: null,     hit: ['_hit_fist1', '_hit_fist2', '_hit_fist3', '_hit_fist4'] },
+  knuckle:    { swing: null,     hit: ['_hit_fist1', '_hit_fist2', '_hit_fist3', '_hit_fist4'] },
+  dagger:     { swing: '_attack_dagger', hit: '_hit_dagger' },
+  katar:      { swing: '_attack_katar',  hit: '_hit_mace' },
+  sword1:     { swing: '_attack_sword',  hit: '_hit_sword' },
+  sword2:     { swing: '_attack_sword',  hit: '_hit_sword' },
+  axe1:       { swing: '_attack_axe',    hit: '_hit_axe' },
+  axe2:       { swing: '_attack_axe',    hit: '_hit_axe' },
+  spear1:     { swing: '_attack_spear',  hit: '_hit_spear' },
+  spear2:     { swing: '_attack_spear',  hit: '_hit_spear' },
+  mace:       { swing: '_attack_mace',   hit: '_hit_mace' },
+  rod1:       { swing: '_attack_rod',    hit: '_hit_rod' },
+  rod2:       { swing: '_attack_rod',    hit: '_hit_rod' },
+  book:       { swing: '_attack_book',   hit: '_hit_rod' },
+  bow:        { swing: '_attack_bow',    hit: '_hit_arrow' },
+  // 樂器與鞭沒有專屬音效，借用法杖那組（一樣是揮舞手持物的悶聲）
+  instrument: { swing: '_attack_rod',    hit: '_hit_rod' },
+  whip:       { swing: '_attack_rod',    hit: '_hit_rod' },
+  // 槍械：本作目前沒有這類武器，音檔先對好，之後加槍手職業就直接有聲音
+  pistol:     { swing: null, hit: '_hit_手槍' },
+  rifle:      { swing: null, hit: '_hit_步槍' },
+  shotgun:    { swing: null, hit: '_hit_霰彈槍' },
+  gatling:    { swing: null, hit: '_hit_格林機槍單發' },
+  grenade:    { swing: null, hit: '_hit_榴彈發射器' },
+};
+
+// 三系箭術有專屬音效，而且要照等級連放（官方本來就是打幾發）
+const SFX_MAGIC_BOLT = { firebolt: '火箭術', coldbolt: '冰箭術', lightningbolt: '雷擊術' };
+const SFX_BOLT_GAP_MS = 130;
+// 其餘法術照屬性分
+const SFX_MAGIC_BY_ELEMENT = { fire: '其餘火系', water: '其餘冰系', wind: '其餘雷系', earth: '石系' };
+const SFX_MAGIC_TYPES = ['magic', 'magic_aoe', 'field_aoe_magic'];
+const SFX_HEAL_TYPES = ['heal', 'heal_over_time', 'field_heal'];
+
+const SFX_STATUS = { poison: '中毒', stun: '暈眩', silence: '沉默' };
+const SFX_STATUS_GAP_MS = 300;   // AoE 一次讓好幾隻中毒/暈眩，不要疊成噪音
+
+const SFX_POOL_SIZE = 4;
+const _sfxPools = {};
+const _sfxLastPlayed = {};
+
+function sfxVolume() { return state && state.sfxVolume != null ? state.sfxVolume : 0.5; }
+
+/* url 直接播。minGapMs 是同一個音效的最短間隔，用來擋 AoE 的連珠炮。*/
+function playSfx(url, minGapMs) {
+  if (!url) return;
+  if (state && state.muted) return;
+  const now = Date.now();
+  if (minGapMs && now - (_sfxLastPlayed[url] || 0) < minGapMs) return;
+  _sfxLastPlayed[url] = now;
+
+  let pool = _sfxPools[url];
+  if (!pool) {
+    pool = _sfxPools[url] = { list: [], next: 0 };
+    for (let i = 0; i < SFX_POOL_SIZE; i++) pool.list.push(new Audio(url));
+  }
+  const a = pool.list[pool.next];
+  pool.next = (pool.next + 1) % SFX_POOL_SIZE;
+  a.volume = sfxVolume();
+  try { a.currentTime = 0; } catch (e) { /* 還沒載完就不用倒帶 */ }
+  a.play().catch(() => {});
 }
 
+// 檔名有中文，路徑要編碼過再交給 Audio
+function sfxUrl(dir, name) { return dir + encodeURIComponent(name) + '.wav'; }
+
+function currentWeaponSfx() {
+  const cat = typeof aspdCategoryOf === 'function' ? aspdCategoryOf(getEquipBaseItemId('weapon')) : 'bare';
+  return SFX_WEAPON[cat] || SFX_WEAPON.bare;
+}
+function pickSfxName(v) { return Array.isArray(v) ? v[Math.floor(Math.random() * v.length)] : v; }
+
+/* 揮空：被閃過去的時候放（空手／拳套／槍械沒有對應的檔，那就不出聲）。
+   這兩個都不設最短間隔——二刀連擊的第二段是緊接著的，設了就會被吃掉，
+   聽起來只剩一下。攻擊本身有攻速間隔擋著，不會變成連珠炮。 */
 function playAttackSound() {
-  if (!attackAudio) initSoundEffects();
-  if (attackAudio) {
-    attackAudio.volume = (state.sfxVolume != null ? state.sfxVolume : 0.5);
-    attackAudio.currentTime = 0;
-    attackAudio.play().catch(() => {});
+  const name = pickSfxName(currentWeaponSfx().swing);
+  if (name) playSfx(sfxUrl(SFX_DIR_SWING, name));
+}
+
+/* 命中：真的打進去才放。暴擊時整個換成 Critical.ogg，不放武器的命中音——
+   暴擊本來就該聽起來跟普通一下不一樣。 */
+const SFX_CRIT_URL = 'WAV/' + encodeURIComponent('爆擊') + '/Critical.ogg';
+function playHitSound(isCrit) {
+  if (isCrit) { playSfx(SFX_CRIT_URL); return; }
+  const name = pickSfxName(currentWeaponSfx().hit);
+  if (name) playSfx(sfxUrl(SFX_DIR_HIT, name));
+}
+
+/* 技能音效。三系箭術照等級連放，其餘法術依屬性放一次，補血放治癒術。
+   物理技能沒有專屬音檔，交給普攻那組處理，這裡不出聲。 */
+function playSkillSound(sk, lv) {
+  if (!sk) return;
+  const bolt = SFX_MAGIC_BOLT[sk.id];
+  if (bolt) {
+    const url = sfxUrl(SFX_DIR_MAGIC, bolt);
+    const shots = Math.max(1, lv || 1);
+    for (let i = 0; i < shots; i++) {
+      // 第一發立刻放，後面照間隔排隊；播放間隔不受 minGap 限制
+      setTimeout(() => playSfx(url), i * SFX_BOLT_GAP_MS);
+    }
+    return;
+  }
+  if (SFX_HEAL_TYPES.includes(sk.type)) {
+    playSfx(sfxUrl(SFX_DIR_MAGIC, '治癒術'), 40);
+    return;
+  }
+  if (SFX_MAGIC_TYPES.includes(sk.type)) {
+    const name = SFX_MAGIC_BY_ELEMENT[sk.element];
+    if (name) playSfx(sfxUrl(SFX_DIR_MAGIC, name), 40);
   }
 }
 
-function playHitSound() {
-  if (!hitAudio) initSoundEffects();
-  if (hitAudio) {
-    hitAudio.volume = (state.sfxVolume != null ? state.sfxVolume : 0.5);
-    hitAudio.currentTime = 0;
-    hitAudio.play().catch(() => {});
-  }
+// 異常狀態：'poison' | 'stun' | 'silence'
+function playStatusSound(kind) {
+  const name = SFX_STATUS[kind];
+  if (name) playSfx(sfxUrl(SFX_DIR_STATUS, name), SFX_STATUS_GAP_MS);
 }
 
 let lastMonsterDefId = null; // 追蹤目前顯示的怪物，避免重複渲染
@@ -524,6 +634,9 @@ function showDamageFloat(dmg, type, element) {
   }
   if (!targetEl) targetEl = document.querySelector('.monster-slot.target');
 
+  // 暴擊走專屬特效：星爆圖 + 中間的黃色數字，不再另外飄一次字
+  if (type === 'crit') { showCritEffect(dmg, targetEl); return; }
+
   const el = document.createElement('div');
   el.className = 'damage-float';
   if (type === 'crit') el.classList.add('crit');
@@ -570,86 +683,60 @@ function triggerMonsterHit(isCrit) {
   if (isCrit) icon.classList.add('crit-flash');
 }
 
-// 暴擊特效：Canvas 閃光 + 數字放大
-function showCritEffect() {
-  // 找怪物位置
-  const monsterSlot = document.querySelector('.monster-slot.target');
+/* ---------------- 暴擊特效 ----------------
+   images/effects/crit/ 底下是 15 張 96×66 的星爆圖，照順序播完一輪，
+   傷害數字用黃色壓在圖的正中央（暴擊就不再另外飄一次白字了）。
+------------------------------------------------- */
+const CRIT_FRAME_COUNT = 15;
+const CRIT_FRAME_MS = 50;
+const CRIT_FLOAT_MS = 900;   // 要跟 CSS 的 critBurstFloat 對齊
+const CRIT_JITTER_X = 28;    // 起始位置的左右亂數範圍
+/* 觸發點跟一般傷害數字一樣在怪物頭上。一般飄字是以左上角定位、字級 22px，
+   星爆這組是以中心定位、字級 26px，所以要往下補半個字高，
+   黃色數字才會落在跟白色飄字同一條線上。 */
+const CRIT_HEAD_OFFSET_Y = -10;
+const CRIT_NUM_HALF_H = 13;
+const CRIT_FRAMES = Array.from({ length: CRIT_FRAME_COUNT },
+  (_, i) => `images/effects/crit/msg_frame_${String(i).padStart(3, '0')}.png`);
+// 先預載，否則第一次暴擊會因為還在下載而閃一下空白
+CRIT_FRAMES.forEach(src => { const im = new Image(); im.src = src; });
+
+function showCritEffect(dmgText, targetEl) {
+  const host = targetEl || document.querySelector('.monster-slot.target');
   let cx = window.innerWidth * 0.5, cy = window.innerHeight * 0.4;
-  if (monsterSlot) {
-    const rect = monsterSlot.getBoundingClientRect();
+  if (host) {
+    const rect = host.getBoundingClientRect();
     cx = rect.left + rect.width / 2;
-    cy = rect.top + rect.height / 2;
+    cy = rect.top + CRIT_HEAD_OFFSET_Y + CRIT_NUM_HALF_H;
   }
 
-  // 建立 Canvas（每次都新建，避免殘留）
-  const cvs = document.createElement('canvas');
-  cvs.width = window.innerWidth;
-  cvs.height = window.innerHeight;
-  cvs.style.cssText = 'position:fixed;top:0;left:0;pointer-events:none;z-index:9997;';
-  document.body.appendChild(cvs);
-  const ctx = cvs.getContext('2d');
+  const wrap = document.createElement('div');
+  wrap.className = 'crit-burst';
+  // 左右抖一點，連續暴擊才不會整組疊在同一個位置變成一坨
+  wrap.style.left = (cx + (Math.random() - 0.5) * CRIT_JITTER_X) + 'px';
+  wrap.style.top = cy + 'px';
+
+  const img = document.createElement('img');
+  img.className = 'crit-burst-img';
+  img.src = CRIT_FRAMES[0];
+  img.alt = '';
+
+  const num = document.createElement('span');
+  num.className = 'crit-burst-num';
+  num.textContent = dmgText;
+
+  wrap.appendChild(img);
+  wrap.appendChild(num);
+  document.body.appendChild(wrap);
 
   let frame = 0;
-  const maxFrames = 18;
-
-  function drawFrame() {
-    ctx.clearRect(0, 0, cvs.width, cvs.height);
-    const t = frame / maxFrames;
-    const alpha = 1 - t;
-
-    // 放射線閃光
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    ctx.translate(cx, cy);
-    for (let i = 0; i < 12; i++) {
-      const angle = (Math.PI * 2 / 12) * i + t * 0.8;
-      const len = 100 * (1 - t * 0.3) * (0.6 + Math.random() * 0.4);
-      ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.lineTo(Math.cos(angle) * len, Math.sin(angle) * len);
-      ctx.strokeStyle = `rgba(255, ${Math.floor(80 + Math.random() * 120)}, 0, ${alpha})`;
-      ctx.lineWidth = 3 + Math.random() * 3;
-      ctx.stroke();
-    }
-
-    // 中心閃光圈
-    const glowR = 80 * (1 - t * 0.5);
-    const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, glowR);
-    grad.addColorStop(0, `rgba(255, 255, 220, ${alpha})`);
-    grad.addColorStop(0.4, `rgba(255, 120, 50, ${alpha * 0.6})`);
-    grad.addColorStop(1, 'rgba(255, 0, 0, 0)');
-    ctx.beginPath();
-    ctx.arc(0, 0, glowR, 0, Math.PI * 2);
-    ctx.fillStyle = grad;
-    ctx.fill();
-
-    // 飛散粒子
-    for (let i = 0; i < 10; i++) {
-      const a = (Math.PI * 2 / 10) * i + t * 3;
-      const d = 20 + t * 100;
-      const s = 4 * (1 - t);
-      ctx.beginPath();
-      ctx.arc(Math.cos(a) * d, Math.sin(a) * d, s, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(255, 220, 80, ${alpha})`;
-      ctx.fill();
-    }
-    ctx.restore();
-
+  const timer = setInterval(() => {
     frame++;
-    if (frame <= maxFrames) {
-      requestAnimationFrame(drawFrame);
-    } else {
-      cvs.remove();
-    }
-  }
-
-  requestAnimationFrame(drawFrame);
-
-  // 全螢幕紅色閃光（CSS）
-  const overlay = document.createElement('div');
-  overlay.className = 'crit-flash-overlay';
-  document.body.appendChild(overlay);
-  setTimeout(() => overlay.remove(), 300);
+    // 播完就停在最後一格（星芒已經散開），剩下的交給外層的淡出
+    if (frame >= CRIT_FRAME_COUNT) { clearInterval(timer); return; }
+    img.src = CRIT_FRAMES[frame];
+  }, CRIT_FRAME_MS);
+  setTimeout(() => wrap.remove(), CRIT_FLOAT_MS + 100);
 }
 
 function triggerMonsterDie() {
@@ -796,7 +883,9 @@ function renderAutoBattleTab() {
     if (!jobDef) continue;
     jobDef.skills.forEach(sk => {
       const lv = state.learnedSkills[sk.id];
-      if (lv && ['damage', 'magic', 'dot', 'damage_multihit', 'damage_multi', 'damage_aoe', 'magic_aoe', 'poison_proc'].includes(sk.type) && !sk.isQuest) {
+      // 不排除 isQuest：任務技能只是「不能加點」，主動攻擊技能（衝鋒箭、手推車攻擊）
+      // 一樣該能設成自動施放；被動的任務技能本來就會被 type 過濾掉
+      if (lv && ['damage', 'magic', 'dot', 'damage_multihit', 'damage_multi', 'damage_aoe', 'magic_aoe', 'poison_proc'].includes(sk.type)) {
         attackSkills.push({ ...sk, lv, jobName: jobDef.name });
       }
     });
@@ -809,7 +898,8 @@ function renderAutoBattleTab() {
     if (!jobDef) continue;
     jobDef.skills.forEach(sk => {
       const lv = state.learnedSkills[sk.id];
-      if (lv && ['buff_atk', 'buff_def', 'buff_aspd', 'buff_flee', 'buff_gold', 'buff_crit', 'buff_poison', 'buff_statpct', 'buff_maxroll', 'buff_blessing', 'buff_shield', 'buff_sprate', 'buff_lukflat', 'buff_holyweapon', 'debuff_def', 'debuff', 'heal', 'heal_over_time', 'field_heal', 'field_aoe_magic', 'stun_field', 'multi_dot_stun'].includes(sk.type) && !sk.isQuest) {
+      // buff_flatstat（商人的大聲吶喊）原本漏在清單外，自動戰鬥頁面就勾不到
+      if (lv && ['buff_atk', 'buff_def', 'buff_aspd', 'buff_flee', 'buff_gold', 'buff_crit', 'buff_poison', 'buff_statpct', 'buff_flatstat', 'buff_maxroll', 'buff_blessing', 'buff_shield', 'buff_sprate', 'buff_lukflat', 'buff_holyweapon', 'debuff_def', 'debuff', 'heal', 'heal_over_time', 'field_heal', 'field_aoe_magic', 'stun_field', 'multi_dot_stun'].includes(sk.type)) {
         supportSkills.push({ ...sk, lv, jobName: jobDef.name });
       }
     });
@@ -1232,7 +1322,8 @@ function renderSkillBar() {
     if (!job) continue;
     job.skills.forEach(s => {
       const lv = state.learnedSkills[s.id];
-      if (lv && s.type !== 'passive' && !s.isQuest) {
+      // 同上：任務技能只是不能加點，主動技能一樣要能手動放
+      if (lv && s.type !== 'passive') {
         learned.push(s);
       }
     });
@@ -1654,8 +1745,9 @@ const INV_CATEGORIES = [
   { key: 'item',   name: '道具', icon: '🎒' }
 ];
 const WEAPON_TYPE_LABELS = {
+  // knuckle 原本被標成「拳刃」——拳刃是 katar，knuckle 是拳套，兩種不同武器
   dagger: '匕首', sword: '單手劍', tsword: '雙手劍', spear: '矛',
-  mace: '鈍器', bow: '弓', knuckle: '拳刃'
+  mace: '鈍器', bow: '弓', knuckle: '拳套', katar: '拳刃', rod: '法杖'
 };
 const ARMOR_TYPE_LABELS = {
   headgear: '頭飾', leather: '鎧甲', shield: '盾牌',
@@ -1858,7 +1950,7 @@ function showSlotActions(slotKey) {
     <button class="btn-small" onclick="unequipItem('${slotKey}');renderEquipTab();renderTopBar();">卸下</button>
     ${maxSlots > cards.length ? `<button class="btn-small ghost" onclick="showCardSelect('${slotKey}')">插卡</button>` : ''}
     ${cards.length ? `<button class="btn-small ghost danger" onclick="doRemoveCard('${slotKey}')">取出卡片</button>` : ''}
-    <button class="btn-small ghost" onclick="doRefineSlot('${slotKey}')">精煉</button>
+    <button class="btn-small ghost" onclick="showRefinePanel('${slotKey}')">精煉</button>
   </div>`;
   el.innerHTML = html;
 }
@@ -1910,19 +2002,21 @@ function buildEquipGridHtml() {
       const nameHtml = hasItem ? `<div class="slot-name">${getItemDisplayName(itemId)}</div>` : '';
       const refHtml = refLevel > 0 ? `<div class="slot-refine">+${refLevel}</div>` : '';
 
-      // 卡片插槽：顯示 ●（已插）/ ○（空孔），並提供插卡／取出的入口
+      // 卡片插槽：顯示 ●（已插）/ ○（空孔），並提供插卡／取出／精煉的入口
+      // （精煉不論有沒有插槽都要有，否則格狀版根本進不去精煉面板）
       let cardHtml = '';
       if (hasItem) {
         const maxSlots = getEquipCardSlots(slot.key);
-        if (maxSlots > 0) {
-          const inserted = getEquippedCards(slot.key);
-          const pips = '●'.repeat(inserted.length) + '○'.repeat(Math.max(0, maxSlots - inserted.length));
-          cardHtml = `<div class="slot-cards" title="卡片插槽 ${inserted.length}/${maxSlots}">
-            <span class="slot-pips">${pips}</span>
-            ${inserted.length < maxSlots ? `<button class="btn-pip" onclick="event.stopPropagation();showCardSelect('${slot.key}')">插卡</button>` : ''}
-            ${inserted.length ? `<button class="btn-pip danger" onclick="event.stopPropagation();doRemoveCard('${slot.key}')">取出</button>` : ''}
-          </div>`;
-        }
+        const inserted = maxSlots > 0 ? getEquippedCards(slot.key) : [];
+        const pips = maxSlots > 0
+          ? `<span class="slot-pips">${'●'.repeat(inserted.length)}${'○'.repeat(Math.max(0, maxSlots - inserted.length))}</span>`
+          : '';
+        cardHtml = `<div class="slot-cards" title="${maxSlots > 0 ? `卡片插槽 ${inserted.length}/${maxSlots}` : '無插槽'}">
+          ${pips}
+          ${inserted.length < maxSlots ? `<button class="btn-pip" onclick="event.stopPropagation();showCardSelect('${slot.key}')">插卡</button>` : ''}
+          ${inserted.length ? `<button class="btn-pip danger" onclick="event.stopPropagation();doRemoveCard('${slot.key}')">取出</button>` : ''}
+          <button class="btn-pip" onclick="event.stopPropagation();showRefinePanel('${slot.key}')">精煉</button>
+        </div>`;
       }
 
       // 雙手武器讓武器欄看起來更寬
@@ -2411,6 +2505,18 @@ function statJobSourceTitle(stat, bonus) {
     .map(j => (JOB_TREE[j] && JOB_TREE[j].name) || j);
   return `職業加成　+${bonus}\n來自：${chain.join(' → ')}`.replace(/"/g, '＂');
 }
+// 技能／buff 的素質加成來源（鶚梟之眼、物品鑑定、天使之賜福…）
+function statListTitle(head, list) {
+  if (!list || !list.length) return head;
+  return [head].concat(list.map(x => `・${x.name}　${x.v > 0 ? '+' : ''}${x.v}`))
+    .join('\n').replace(/"/g, '＂');
+}
+function statPctTitle(pctSrc, added) {
+  const head = `百分比加成　實際 +${added}`;
+  if (!pctSrc || !pctSrc.length) return head;
+  return [head].concat(pctSrc.map(x => `・${x.name}　+${Math.round(x.v * 100)}%`))
+    .join('\n').replace(/"/g, '＂');
+}
 
 function renderCharacterTab() {
   const job = currentJob();
@@ -2425,12 +2531,24 @@ function renderCharacterTab() {
   // 顯示目前啟動中的 buffs
   let buffListHtml = '<div id="active-buffs" class="active-buffs">';
   if (state.buffs && state.buffs.length > 0) {
-    const buffNames = { aspd: '攻速', atk: '攻擊', def: '防禦', flee: '迴避', gold: '金錢', crit: '暴擊', hit: '命中' };
+    // 素質類 buff 的 mult 是「比例」（心神凝聚 0.03 = +3%），照 ×0.03 印會看起來像被削弱
+    const buffNames = {
+      aspd: '攻速', atk: '攻擊', def: '防禦', flee: '迴避', gold: '金錢', crit: '暴擊', hit: '命中',
+      statpct: 'DEX/AGI', blessing: 'STR/INT/DEX', flatstat: 'STR/ATK', agiflat: 'AGI', lukflat: 'LUK',
+      sprate: 'SP回復', poison: '毒', maxroll: '傷害固定最大值', holyweapon: '聖屬武器', shield: '護盾', magnumfire: '火屬強化'
+    };
+    const PCT_BUFFS = ['statpct', 'magnumfire'];
     buffListHtml += state.buffs.map(b => {
-      const name = buffNames[b.type] || b.type;
+      const label = (typeof buffSourceLabel === 'function' ? buffSourceLabel(b) : b.type);
+      const stat = buffNames[b.type] || b.type;
       const remain = Math.ceil(b.msRemaining / 1000);
-      const bonus = b.flatBonus ? `+${b.flatBonus}` : `×${b.mult.toFixed(2)}`;
-      return `<span class="buff-tag">${name} ${bonus} (${remain}s)</span>`;
+      let bonus;
+      if (PCT_BUFFS.includes(b.type)) bonus = `+${Math.round((b.mult || 0) * 100)}%`;
+      else if (b.type === 'blessing') bonus = `+${b.strBonus || 0}`;
+      else if (b.flatBonus) bonus = `+${b.flatBonus}`;
+      else if (typeof b.mult === 'number' && b.mult !== 1) bonus = `×${b.mult.toFixed(2)}`;
+      else bonus = '啟動中';
+      return `<span class="buff-tag" title="${label}">${stat} ${bonus} (${remain}s)</span>`;
     }).join('');
   }
   buffListHtml += '</div>';
@@ -2446,12 +2564,21 @@ function renderCharacterTab() {
         // 裝備與卡片的素質加成本來就有算進戰鬥數值，只是這裡沒顯示，
         // 看起來就像「魔術師帽的 AGI+1 沒效果」——補上金色那段
         const gear = equippedStatBonus(k) + getCardBonus(k);
+        // 技能／buff 那兩段同理：鶚梟之眼的 DEX+10、心神凝聚的 DEX/AGI% 本來也算進去了，
+        // 只是畫面上完全沒有數字，看起來就像技能沒效果
+        const bd = (state._statBreakdown && state._statBreakdown[k]) || null;
+        const skillV = bd ? bd.skill : 0;
+        const buffV = bd ? bd.buff : 0;
+        const pctV = bd ? bd.pct : 0;
         return `
         <div class="stat-row">
           <div class="stat-label">${STAT_NAMES[k]}</div>
           <div class="stat-value"><span class="stat-seg" title="基礎值（已分配的屬性點）">${state.stats[k]}</span>${
             bonus > 0 ? `<span class="stat-seg" style="color:#4fc3f7" title="${statJobSourceTitle(k, bonus)}">+${bonus}</span>` : ''}${
-            gear !== 0 ? `<span class="stat-seg" style="color:var(--gold-soft)" title="${statGearSourceTitle(k)}">${gear > 0 ? '+' : ''}${gear}</span>` : ''}</div>
+            gear !== 0 ? `<span class="stat-seg" style="color:var(--gold-soft)" title="${statGearSourceTitle(k)}">${gear > 0 ? '+' : ''}${gear}</span>` : ''}${
+            skillV !== 0 ? `<span class="stat-seg" style="color:#a5d6a7" title="${statListTitle('技能加成　合計 ' + (skillV > 0 ? '+' : '') + skillV, bd.skillSrc)}">${skillV > 0 ? '+' : ''}${skillV}</span>` : ''}${
+            buffV !== 0 ? `<span class="stat-seg" style="color:#ffb74d" title="${statListTitle('BUFF 加成　合計 ' + (buffV > 0 ? '+' : '') + buffV, bd.buffSrc)}">${buffV > 0 ? '+' : ''}${buffV}</span>` : ''}${
+            pctV !== 0 ? `<span class="stat-seg" style="color:#ce93d8" title="${statPctTitle(bd.pctSrc, pctV)}">${pctV > 0 ? '+' : ''}${pctV}</span>` : ''}</div>
           <div class="stat-cost">-${cost}</div>
           <button class="btn-tiny" ${canAfford ? '' : 'disabled'} onclick="allocateStat('${k}');renderCharacterTab();renderTopBar();">+</button>
         </div>`;
@@ -2471,7 +2598,7 @@ function renderCharacterTab() {
       <div>完全迴避：${state.perfectDodge}%</div>
       <div>武器屬性：${(() => { const wId = getEquipBaseItemId('weapon'); const w = wId ? ITEMS[wId] : null; const el = w && w.element ? w.element : 'none'; return ELEMENT_ICONS[el] + ' ' + ELEMENT_NAMES[el]; })()}</div>
     </div>
-    <p class="stat-formula-hint">數值公式參考 RO 正式版邏輯調整：ATK=STR+(STR/10)²+DEX/5+LUK/5；HIT=175+等級+DEX；FLEE=100+等級+AGI；DEF 採比例減傷而非直接相減。屬性點數規則對齊官方對照表：每級獲得 floor((等級-1)/5)+3 點；加點消耗隨數值升高而增加（1~10 花2點、11~20花3點...以此類推）。</p>`;
+    <p class="stat-formula-hint">數值公式參考 RO 正式版邏輯調整：ATK=${state._atkUsesDex ? 'DEX+(DEX/10)²+STR/5+LUK/5（弓／樂器／鞭以 DEX 為主屬性）' : 'STR+(STR/10)²+DEX/5+LUK/5'}；HIT=175+等級+DEX；FLEE=100+等級+AGI；DEF 採比例減傷而非直接相減。屬性點數規則對齊官方對照表：每級獲得 floor((等級-1)/5)+3 點；加點消耗隨數值升高而增加（1~10 花2點、11~20花3點...以此類推）。</p>`;
 }
 
 /* ---------------- 轉職樹（簽名視覺元素） ---------------- */
@@ -2679,71 +2806,126 @@ function isJobUnlocked(jobId) {
   return false;
 }
 
-/* ---------------- 裝備精煉 UI ---------------- */
-function doRefineSlot(slotKey) {
+/* ---------------- 裝備精煉 UI ----------------
+   原本是 confirm() 彈窗，每敲一次 +1 就要被打斷一次，連續精煉很難用。
+   改成畫在裝備分頁下方的常駐面板：材料自己選，按鈕可以一直按，結果直接寫在面板上。
+------------------------------------------------- */
+let _refineMatChoice = {};   // slotKey → 選定的材料 key（換裝備時會自動失效）
+let _refineLog = [];         // 最近幾次的結果，畫在面板底下
+let _refineLogFor = null;    // 這份紀錄是哪一件裝備的，換一件就清掉免得看混
+
+function refineContext(slotKey) {
   const itemId = getEquipBaseItemId(slotKey);
-  if (!itemId) return;
+  if (!itemId) return null;
   const item = ITEMS[itemId];
-  const currentLevel = getRefinementLevel(slotKey);
   const isArmor = item.type === 'armor';
   const weaponLv = isArmor ? 0 : getRefineWeaponLv(item);
+  const level = getRefinementLevel(slotKey);
+  // 這件裝備「用得上」的材料（不管身上有沒有），讓玩家知道該去湊什麼
+  const mats = Object.entries(REFINEMENT_MATERIALS)
+    .filter(([, m]) => (isArmor ? m.usableArmor : m.usableWeaponLv.includes(weaponLv)))
+    .map(([key, m]) => {
+      const invRow = state.inventory.find(r => r.item === m.id && !r.instanceId);
+      return { key, mat: m, qty: invRow ? invRow.qty : 0 };
+    });
+  return {
+    itemId, item, isArmor, weaponLv, level, mats,
+    maxed: level >= REFINEMENT_MAX,
+    cost: getRefinementCost(level),
+    safe: getRefinementSafeLevel(weaponLv, isArmor),
+    lvTag: isArmor ? '防具' : `Lv${weaponLv} 武器`
+  };
+}
 
-  if (currentLevel >= REFINEMENT_MAX) {
-    showToast(`${item.name} 已達最大精煉 +${REFINEMENT_MAX}！`);
-    return;
-  }
+// 選定的材料：玩家選過就用玩家選的（前提是還有庫存），否則挑第一個有庫存的
+function currentRefineMat(slotKey, ctx) {
+  const picked = _refineMatChoice[slotKey];
+  const hit = ctx.mats.find(m => m.key === picked && m.qty > 0);
+  if (hit) return hit;
+  return ctx.mats.find(m => m.qty > 0) || null;
+}
 
-  // 這件裝備「用得上」的材料（不管身上有沒有），拿來給玩家看該去湊什麼
-  const usableMats = Object.entries(REFINEMENT_MATERIALS).filter(([, mat]) =>
-    isArmor ? mat.usableArmor : mat.usableWeaponLv.includes(weaponLv));
-  // 其中身上真的有的
-  const availableMats = usableMats.filter(([, mat]) => {
-    const invRow = state.inventory.find(r => r.item === mat.id && !r.instanceId);
-    return invRow && invRow.qty >= 1;   // 一次只消耗 1 個，剩 1 個當然也能精煉
-  });
+function setRefineMat(slotKey, key) {
+  _refineMatChoice[slotKey] = key;
+  showRefinePanel(slotKey);
+}
 
-  if (availableMats.length === 0) {
-    // 只說「沒有材料」會讓人搞不懂——身上明明有一堆礦，卻是等級對不上。把該用什麼講清楚。
-    const need = usableMats.map(([, m]) => m.name).join('、');
-    showToast(need
-      ? `沒有可用的精煉材料！${isArmor ? '防具' : `Lv${weaponLv} 武器`}要用：${need}`
-      : '這件裝備沒有對應的精煉材料！');
-    return;
-  }
+function showRefinePanel(slotKey) {
+  const el = document.getElementById('tab-equip');
+  if (!el) return;
+  const ctx = refineContext(slotKey);
+  if (!ctx) { renderEquipTab(); return; }
 
-  // +11 以上官方是 100,000z，這裡不能寫死 REFINEMENT_COST，否則過了 +10
-  // 前端放行、engine 端卻因為錢不夠回 false，變成假的「精煉失敗」
-  const cost = getRefinementCost(currentLevel);
-  if (state.gold < cost) {
-    showToast(`鋅幣不足！需要 ${cost.toLocaleString()} 鋅幣`);
-    return;
-  }
+  // 用「基底道具」當 key，不能用 state.equip[slotKey]——第一次精煉成功時
+  // 那件裝備會從 itemId 變成 instanceId，key 一變紀錄就當場被清掉
+  const logKey = slotKey + ':' + ctx.itemId;
+  if (_refineLogFor !== logKey) { _refineLog = []; _refineLogFor = logKey; }
 
-  // 顯示材料選擇
-  const matList = availableMats.map(([key, mat]) => {
-    const invRow = state.inventory.find(r => r.item === mat.id && !r.instanceId);
-    const rate = getRefinementSuccessRate(currentLevel, weaponLv, key);
-    const safe = getRefinementSafeLevel(weaponLv, isArmor);
-    const penalty = getRefinementFailPenalty(key);
-    const penaltyText = penalty === 'none' ? '無懲罰' : (currentLevel >= safe ? '降3級或損壞' : '不降級');
-    return `${mat.name} (x${invRow ? invRow.qty : 0}) - 成功率 ${rate}%, ${penaltyText}`;
-  }).join('\n');
+  const sel = currentRefineMat(slotKey, ctx);
+  const rate = ctx.maxed ? 0 : getRefinementSuccessRate(ctx.level, ctx.weaponLv, sel ? sel.key : null);
+  const canPay = state.gold >= ctx.cost;
+  const canRefine = !ctx.maxed && !!sel && canPay;
 
-  const lvTag = isArmor ? '防具' : `Lv${weaponLv} 武器`;
-  const msg = `精煉 ${item.name}（${lvTag}） +${currentLevel}→+${currentLevel + 1}\n花費 ${cost.toLocaleString()} 鋅幣\n\n可用材料：\n${matList}\n\n選擇材料後點擊確定`;
+  const matBtns = ctx.mats.length
+    ? ctx.mats.map(m => {
+        const on = sel && sel.key === m.key;
+        const penalty = m.mat.failPenalty === 'none'
+          ? '失敗無懲罰'
+          : (ctx.level >= ctx.safe ? '失敗降3級或損壞' : '失敗不降級');
+        const r = getRefinementSuccessRate(ctx.level, ctx.weaponLv, m.key);
+        return `<button class="refine-mat${on ? ' active' : ''}${m.qty <= 0 ? ' out' : ''}"
+          ${m.qty <= 0 ? 'disabled' : ''} onclick="setRefineMat('${slotKey}','${m.key}')">
+          <span class="refine-mat-name">${m.mat.name}</span>
+          <span class="refine-mat-qty${m.qty <= 0 ? ' zero' : ''}">×${m.qty}</span>
+          <span class="refine-mat-note">成功率 ${r}%・${penalty}</span>
+        </button>`;
+      }).join('')
+    : `<div class="equip-pick-empty">這件裝備沒有對應的精煉材料。</div>`;
 
-  // 簡化版：自動使用第一個可用材料
-  if (confirm(msg)) {
-    const matKey = availableMats[0][0];
-    const success = refineItem(slotKey, matKey);
-    if (success) {
-      showToast(`🔨 精煉成功！${item.name} +${currentLevel + 1}`);
-    } else {
-      showToast(`💥 精煉失敗！${item.name} 維持 +${currentLevel}`);
-    }
-    refreshEquipViews();
-    renderTopBar();
-  }
+  let hint = '';
+  if (ctx.maxed) hint = `已達最大精煉 +${REFINEMENT_MAX}。`;
+  else if (!sel) hint = `身上沒有可用的材料。${ctx.lvTag}要用：${ctx.mats.map(m => m.mat.name).join('、') || '（無）'}`;
+  else if (!canPay) hint = `鋅幣不足，需要 ${ctx.cost.toLocaleString()} z。`;
+
+  el.innerHTML = `
+    <h3 class="panel-title">🔨 精煉　${ctx.level > 0 ? `+${ctx.level} ` : ''}${getItemDisplayName(ctx.itemId)}</h3>
+    <button class="btn-small" onclick="renderEquipTab()">← 返回裝備欄</button>
+    <div class="refine-panel">
+      <div class="refine-head">
+        <span class="refine-step">${ctx.maxed ? `<b>+${ctx.level}</b>（已達上限）` : `+${ctx.level} → <b>+${ctx.level + 1}</b>`}</span>
+        <span class="refine-meta">${ctx.lvTag}・安全等級 +${ctx.safe}</span>
+        <span class="refine-meta">費用 ${ctx.cost.toLocaleString()} z（持有 ${state.gold.toLocaleString()} z）</span>
+      </div>
+      <div class="refine-mats">${matBtns}</div>
+      <div class="refine-actions">
+        <button class="btn-small" ${canRefine ? '' : 'disabled'} onclick="doRefineSlot('${slotKey}')">
+          精煉（成功率 ${rate}%）
+        </button>
+        ${hint ? `<span class="refine-hint">${hint}</span>` : ''}
+      </div>
+      ${_refineLog.length ? `<div class="refine-log">${_refineLog.map(l => `<div>${l}</div>`).join('')}</div>` : ''}
+    </div>`;
+}
+
+function doRefineSlot(slotKey) {
+  const ctx = refineContext(slotKey);
+  if (!ctx) return;
+  // 從別處（舊入口）直接呼叫時，先把面板打開再說
+  if (ctx.maxed) { showToast(`${ctx.item.name} 已達最大精煉 +${REFINEMENT_MAX}！`); showRefinePanel(slotKey); return; }
+  const sel = currentRefineMat(slotKey, ctx);
+  if (!sel || state.gold < ctx.cost) { showRefinePanel(slotKey); return; }
+
+  const before = ctx.level;
+  const success = refineItem(slotKey, sel.key);
+  const after = getRefinementLevel(slotKey);
+  const name = ctx.item.name;
+  _refineLog.unshift(success
+    ? `🔨 成功　${name} +${before} → +${after}（${sel.mat.name}）`
+    : `💥 失敗　${name} +${before} → +${after}（${sel.mat.name}）`);
+  _refineLog = _refineLog.slice(0, 8);
+
+  showRefinePanel(slotKey);   // 停在面板上，才能連續按
+  renderTopBar();
 }
 
 /* ---------------- 露天商店 UI ---------------- */

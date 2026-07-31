@@ -232,9 +232,10 @@ function canDualWield(jobId) { return jobId === 'assassin'; }
    （官方 RO 規則：弓本身無屬性，實際打出去的屬性由箭矢決定）。
    每次普攻消耗 1 支，用完會自動從背包補同一種，沒有就停手。
 ------------------------------------------------- */
+// 只有真的弓要箭。樂器在本作的 weaponType 也是 'bow'（分類壓縮的產物），
+// 但官方樂器是詩人專用、不吃箭，所以這裡要看還原後的官方分類而不是 weaponType。
 function isBowWeapon(itemId) {
-  const w = itemId ? ITEMS[itemId] : null;
-  return !!(w && w.weaponType === 'bow');
+  return aspdCategoryOf(itemId) === 'bow';
 }
 function needsAmmo() { return isBowWeapon(getEquipBaseItemId('weapon')); }
 function isAmmoItem(itemId) {
@@ -426,6 +427,20 @@ function equippedStatBonus(stat) {
   return total;
 }
 
+/* buff 是誰給的。大部分 buff 身上有 skillId，查得到就用技能名，
+   查不到才退回一個看得懂的中文標籤（總比畫面上出現 "statpct" 好）。 */
+const BUFF_TYPE_LABELS = {
+  blessing: '天使之賜福', flatstat: '大聲吶喊', agiflat: '加速術',
+  lukflat: '幸運之頌歌', statpct: '心神凝聚'
+};
+function buffSourceLabel(b) {
+  if (b.skillId && typeof findSkillById === 'function') {
+    const sk = findSkillById(b.skillId);
+    if (sk) return sk.name;
+  }
+  return BUFF_TYPE_LABELS[b.type] || b.type;
+}
+
 function recomputeDerived(fullHeal) {
   const job = currentJob();
   const s = state.stats;
@@ -453,8 +468,19 @@ function recomputeDerived(fullHeal) {
   // state.maxHp/maxSp 上，若在此處就用未套用加成的newMaxHp夾住hp，會在每次呼叫(tickBuffs每100ms
   // 都會呼叫一次)把hp錯誤地砍回未加成的較低數值——夾住的動作統一移到函式最後，用最終數值執行。
 
+  /* 素質加成一律記帳到 skillSrc/buffSrc，角色分頁才有辦法把「這 +10 是哪來的」列出來。
+     沒有這份帳，鶚梟之眼的 DEX+10、心神凝聚的 DEX/AGI% 都只會默默混進戰鬥數值，
+     玩家在角色分頁完全看不到數字，會以為技能沒效果。 */
+  const skillFlat = { str: 0, agi: 0, vit: 0, int: 0, dex: 0, luk: 0 };
+  const buffFlat  = { str: 0, agi: 0, vit: 0, int: 0, dex: 0, luk: 0 };
+  const skillSrc = {}, buffSrc = {};
+  const addSrc = (bag, flat, stat, v, name) => {
+    if (!v) return;
+    flat[stat] += v;
+    (bag[stat] = bag[stat] || []).push({ name, v });
+  };
+
   // 被動技能 STR/INT/DEX 固定加成（必須在衍生數值計算之前，避免直接修改 state.stats 導致膨脹）
-  let passiveStrBonus = 0, passiveIntBonus = 0, passiveDexBonus = 0;
   const passiveJobsEarly = getAllLearnedJobs();
   for (const jid of passiveJobsEarly) {
     const jd = JOB_TREE[jid];
@@ -462,62 +488,96 @@ function recomputeDerived(fullHeal) {
     jd.skills.forEach(sk => {
       const lv = state.learnedSkills[sk.id];
       if (!lv || sk.type !== 'passive') return;
+      const label = `${sk.name} Lv${lv}`;
       if (sk.passiveStat === 'dexFlat') {
         const val = Array.isArray(sk.mult) ? sk.mult[lv - 1] : sk.mult;
-        passiveDexBonus += Math.round(val);
+        addSrc(skillSrc, skillFlat, 'dex', Math.round(val), label);
       } else if (sk.passiveStat === 'triStatBonus') {
         // 物品鑑定：STR/INT/DEX 同時加成
-        const val = Array.isArray(sk.mult) ? sk.mult[lv - 1] : sk.mult;
-        passiveStrBonus += Math.round(val);
-        passiveIntBonus += Math.round(val);
-        passiveDexBonus += Math.round(val);
+        const val = Math.round(Array.isArray(sk.mult) ? sk.mult[lv - 1] : sk.mult);
+        addSrc(skillSrc, skillFlat, 'str', val, label);
+        addSrc(skillSrc, skillFlat, 'int', val, label);
+        addSrc(skillSrc, skillFlat, 'dex', val, label);
       }
       // 武器保有：附加固定STR加成
       if (sk.strBonus) {
         const sb = Array.isArray(sk.strBonus) ? sk.strBonus[lv - 1] : sk.strBonus;
-        passiveStrBonus += Math.round(sb);
+        addSrc(skillSrc, skillFlat, 'str', Math.round(sb), label);
       }
       // 怪物情報：附加固定INT加成
       if (sk.intBonus) {
         const ib = Array.isArray(sk.intBonus) ? sk.intBonus[lv - 1] : sk.intBonus;
-        passiveIntBonus += Math.round(ib);
+        addSrc(skillSrc, skillFlat, 'int', Math.round(ib), label);
       }
     });
   }
-  // 大聲吶喊buff：STR 固定加成
-  let buffStrBonus = 0;
-  state.buffs.forEach(b => { if (b.type === 'flatstat' && b.strBonus) buffStrBonus += b.strBonus; });
-  passiveStrBonus += buffStrBonus;
-  // 天使之賜福buff：STR/INT/DEX 同時固定加成
+
+  // buff 類的固定加成：大聲吶喊(STR)、天使之賜福(STR/INT/DEX)、加速術(AGI)、幸運之頌歌(LUK)
   state.buffs.forEach(b => {
+    const label = buffSourceLabel(b);
+    if (b.type === 'flatstat' && b.strBonus) addSrc(buffSrc, buffFlat, 'str', b.strBonus, label);
     if (b.type === 'blessing') {
-      passiveStrBonus += b.strBonus || 0;
-      passiveIntBonus += b.intBonus || 0;
-      passiveDexBonus += b.dexBonus || 0;
+      addSrc(buffSrc, buffFlat, 'str', b.strBonus || 0, label);
+      addSrc(buffSrc, buffFlat, 'int', b.intBonus || 0, label);
+      addSrc(buffSrc, buffFlat, 'dex', b.dexBonus || 0, label);
     }
+    if (b.type === 'agiflat') addSrc(buffSrc, buffFlat, 'agi', b.flatBonus || 0, label);
+    if (b.type === 'lukflat') addSrc(buffSrc, buffFlat, 'luk', b.flatBonus || 0, label);
   });
+
+  const passiveStrBonus = skillFlat.str + buffFlat.str;
+  const passiveIntBonus = skillFlat.int + buffFlat.int;
+  const passiveDexBonus = skillFlat.dex + buffFlat.dex;
+  const buffAgiBonus = buffFlat.agi;
+  const buffLukBonus = buffFlat.luk;
   state._passiveDexBonus = passiveDexBonus;
-  // 加速術buff：AGI 固定加成
-  let buffAgiBonus = 0;
-  state.buffs.forEach(b => { if (b.type === 'agiflat') buffAgiBonus += b.flatBonus || 0; });
 
   // 心神凝聚buff：DEX/AGI 百分比加成（影響下面所有衍生自DEX/AGI的數值，含攻速）
   let buffStatPct = 0;
-  state.buffs.forEach(b => { if (b.type === 'statpct') buffStatPct += b.mult; });
+  const pctSrc = [];
+  state.buffs.forEach(b => {
+    if (b.type !== 'statpct') return;
+    buffStatPct += b.mult;
+    pctSrc.push({ name: buffSourceLabel(b), v: b.mult });
+  });
   state._buffStatPct = buffStatPct;
 
-  // 幸運之頌歌buff：LUK 固定加成
-  let buffLukBonus = 0;
-  state.buffs.forEach(b => { if (b.type === 'lukflat') buffLukBonus += b.flatBonus || 0; });
-
-  // ATK：StatusATK = STR + (STR/10)² + DEX/5 + LUK/5（含職業加成與卡片加成）
+  // ATK：官方有兩套 StatusATK 公式，弓／樂器／鞭以 DEX 為主屬性、STR 退為副屬性
+  //   一般武器：STR + (STR/10)² + DEX/5 + LUK/5
+  //   弓系武器：DEX + (DEX/10)² + STR/5 + LUK/5
+  // （含職業加成與卡片加成）
   const cStr = s.str + jobBonus.str + getCardBonus('str') + equippedStatBonus('str') + passiveStrBonus;
   const cDex = Math.round((s.dex + jobBonus.dex + getCardBonus('dex') + equippedStatBonus('dex') + passiveDexBonus) * (1 + buffStatPct));
   const cLuk = s.luk + jobBonus.luk + getCardBonus('luk') + equippedStatBonus('luk') + buffLukBonus;
   const cAgi = Math.round((s.agi + jobBonus.agi + getCardBonus('agi') + equippedStatBonus('agi') + buffAgiBonus) * (1 + buffStatPct));
   const cVit = s.vit + jobBonus.vit + getCardBonus('vit') + equippedStatBonus('vit');
   const cInt = s.int + jobBonus.int + getCardBonus('int') + equippedStatBonus('int') + passiveIntBonus;
-  const statusAtk = cStr + Math.floor((cStr / 10) ** 2) + Math.floor(cDex / 5) + Math.floor(cLuk / 5);
+  /* 角色分頁要用的素質明細：base / 職業 / 裝備卡片 / 技能 / buff 各佔多少，
+     以及百分比 buff 最後實際加了幾點（四捨五入後的差額，跟戰鬥用的數字一致）。 */
+  const STAT_TOTALS = { str: cStr, agi: cAgi, vit: cVit, int: cInt, dex: cDex, luk: cLuk };
+  state._statBreakdown = {};
+  ['str', 'agi', 'vit', 'int', 'dex', 'luk'].forEach(k => {
+    const gear = equippedStatBonus(k) + getCardBonus(k);
+    const flat = s[k] + jobBonus[k] + gear + skillFlat[k] + buffFlat[k];
+    state._statBreakdown[k] = {
+      base: s[k],
+      job: jobBonus[k],
+      gear,
+      skill: skillFlat[k],
+      buff: buffFlat[k],
+      pct: STAT_TOTALS[k] - flat,          // 心神凝聚之類的 % 加成實際多出來的點數
+      pctSrc: (k === 'dex' || k === 'agi') ? pctSrc : [],
+      skillSrc: skillSrc[k] || [],
+      buffSrc: buffSrc[k] || [],
+      total: STAT_TOTALS[k]
+    };
+  });
+
+  const dexAtk = isDexAtkWeapon(getEquipBaseItemId('weapon'));
+  const atkMain = dexAtk ? cDex : cStr;
+  const atkSub = dexAtk ? cStr : cDex;
+  const statusAtk = atkMain + Math.floor((atkMain / 10) ** 2) + Math.floor(atkSub / 5) + Math.floor(cLuk / 5);
+  state._atkUsesDex = dexAtk;
   state.atk = Math.round(statusAtk * job.atkMod) + equippedAtk();
   // 大聲吶喊buff：ATK 固定加成（於狀態ATK算完後直接加）
   let buffAtkFlat = 0;
@@ -541,6 +601,9 @@ function recomputeDerived(fullHeal) {
   // 完全迴避（無視命中判定）與暴擊率（無視閃避判定）
   state.perfectDodge = Math.floor(cLuk / 10);
   state.critRate = Math.min(50, 4 + Math.floor(cLuk / 3));
+  // 拳刃：暴擊率加倍（官方特性，也是刺客拿拳刃而不是雙短劍的主要理由）
+  state._katarEquipped = isKatarWeapon(getEquipBaseItemId('weapon'));
+  if (state._katarEquipped) state.critRate = Math.min(100, state.critRate * KATAR_CRIT_MULT);
 
   // ASPD 初始計算（不含 buff，buff 在 tick 時動態套用）
   // 官方計算機用的是「總 AGI/DEX」（含職業、裝備、卡片、buff），先寄存給 computeAspd() 用
@@ -985,6 +1048,8 @@ function recomputeDerived(fullHeal) {
   state.cardRaceDmgReduce = {};
   state.cardHpRegenPct = 0;
   state.cardSpRegenPct = 0;
+  // 黑蛇卡片：賦予二刀連擊，且不受「只有短劍能觸發」的限制
+  state.hasSideWinderDoubleAttack = allEquippedCards().includes('side_winder_card');
   const CARD_BONUS_MAPS = {
     'eleDmg_': 'cardEleDmgBonus',
     'raceDmg_': 'cardRaceDmgBonus',
@@ -1066,8 +1131,11 @@ function applyPoisonDot(mon, monDef, rawDmgPerTick) {
     logMsg(`🚫 ${monDef.name} 對毒免疫！`);
     return;
   }
+  const wasPoisoned = mon.poisonDotEnd && Date.now() < mon.poisonDotEnd;
   mon.poisonDotPerTick = Math.round(rawDmgPerTick * elemMult);
   mon.poisonDotEnd = Date.now() + 3000;
+  // 只有從沒中毒變成中毒才出聲，續毒不重放
+  if (!wasPoisoned && typeof playStatusSound === 'function') playStatusSound('poison');
 }
 function tickPoisonDot() {
   if (!state.monsters || state.monsters.length === 0) return;
@@ -1092,11 +1160,14 @@ function tickPoisonDot() {
    additive=true 時會疊加時長（滑動/睡魔/定位陷阱共用），否則直接覆蓋（衝鋒箭） */
 function applyStun(mon, sec, additive) {
   const now = Date.now();
+  const wasStunned = mon.stunnedUntil && now < mon.stunnedUntil;
   if (additive) {
     mon.stunnedUntil = Math.max(now, mon.stunnedUntil || 0) + sec * 1000;
   } else {
     mon.stunnedUntil = now + sec * 1000;
   }
+  // 只有從沒暈到暈才出聲，續暈不重放
+  if (!wasStunned && typeof playStatusSound === 'function') playStatusSound('stun');
 }
 
 // 冰凍術/石化術：被反制暈眩的目標，之後只要受到我方魔法傷害就會提前甦醒
@@ -1851,8 +1922,7 @@ function playerAttack() {
     return;
   }
   state._noAmmoWarned = false;
-  // 攻擊音效 + 動畫
-  if (typeof playAttackSound === 'function') playAttackSound();
+  // 攻擊動畫（音效分兩種：被閃過放揮空、打中放命中，各自在下面觸發）
   if (typeof playAttackAnim === 'function') playAttackAnim();
   const target = state.monsters[0]; // 攻擊第一隻怪物
   const monDef = MONSTERS[target.defId];
@@ -1867,6 +1937,8 @@ function playerAttack() {
     const hitPct = hitChancePctVsMonster(effectiveHitWithBuff(), monDef);
     if (Math.random() * 100 > hitPct) {
       logMsg(`你的攻擊被 ${monDef.name} 閃避了！`);
+      // 揮空音效
+      if (typeof playAttackSound === 'function') playAttackSound();
       // 攻擊 MISS 飄字（玩家頭上）
       if (typeof showPlayerFloat === 'function') showPlayerFloat('MISS', 'miss');
       return;
@@ -1928,12 +2000,24 @@ function playerAttack() {
   const dmg = mitigateDamage(raw, monDefVal) + raceFlatBonus(monDef);
   target.hp -= dmg;
   logMsg(`你對 ${monDef.name} 造成 ${dmg} 點傷害${isCrit ? '（暴擊！無視閃避）' : ''}`);
-  // 命中音效
-  if (typeof playHitSound === 'function') playHitSound();
+  // 命中音效（暴擊改放 Critical.ogg）
+  if (typeof playHitSound === 'function') playHitSound(isCrit);
 
   if (target.hp <= 0) {
     killMonster(monDef, target);
     return;
+  }
+
+  // 拳刃：普攻命中後附加一段傷害（本作 21%），獨立跳字、獨立放命中音效
+  if (state._katarEquipped) {
+    const katarDmg = mitigateDamage(raw * (KATAR_BONUS_DMG_PCT / 100), monDefVal);
+    target.hp -= katarDmg;
+    logMsg(`🗡️ 拳刃附加了 ${katarDmg} 點傷害！`);
+    if (typeof playHitSound === 'function') playHitSound();
+    if (target.hp <= 0) {
+      killMonster(monDef, target);
+      return;
+    }
   }
 
   // 怒爆之火：普攻期間額外附加一段火屬性傷害
@@ -1949,13 +2033,19 @@ function playerAttack() {
     }
   }
 
-  // 二刀連擊：被動技能，有機率發動第二段攻擊
-  const daLv = state.learnedSkills['doubleattack'] || 0;
-  if (daLv > 0) {
-    const daSkill = findSkillById('doubleattack');
-    const daChance = daSkill.doubleAttackChance ? daSkill.doubleAttackChance[daLv - 1] : 10;
+  /* 二刀連擊：技能版官方限定短劍才會觸發（拿拳刃／劍都不會動）。
+     黑蛇卡片給的那份不受武器限制——那張卡本來就是給拿不了短劍的職業用的，
+     而且卡片說明寫「習得二刀連擊後依技能等級決定機率」，所以兩者取等級高的那個。 */
+  const daSkillLv = state.learnedSkills['doubleattack'] || 0;
+  const daFromCard = !!state.hasSideWinderDoubleAttack;
+  const daByWeapon = daSkillLv > 0 && isDaggerWeapon(atkWeaponId);
+  const daLv = Math.max(daSkillLv, daFromCard ? 1 : 0);
+  if (daLv > 0 && (daFromCard || daByWeapon)) {
+    // 只靠卡片觸發時玩家可能根本不是盜賊系，findSkillById() 查不到，要直接翻技能表
+    const daSkill = findSkillById('doubleattack') || JOB_TREE.thief.skills.find(s => s.id === 'doubleattack');
+    const daChance = daSkill && daSkill.doubleAttackChance ? daSkill.doubleAttackChance[daLv - 1] : 7;
     if (Math.random() * 100 < daChance) {
-      const daMult = daSkill.mult ? daSkill.mult[daLv - 1] : 1.0;
+      const daMult = daSkill && daSkill.mult ? daSkill.mult[daLv - 1] : 1.0;
       const daRaw = raw * daMult;
       const daDmg = mitigateDamage(daRaw, monDefVal);
       target.hp -= daDmg;
@@ -2623,6 +2713,8 @@ function castSkill(skillId) {
   if (zenyCost > 0) state.gold -= zenyCost;
   const cd = Array.isArray(sk.cooldown) ? sk.cooldown[lv - 1] : sk.cooldown;
   state.cooldowns[skillId] = cd * 1000;
+  // 技能音效：確定放得出來（SP/鋅幣/冷卻都過了）才出聲
+  if (typeof playSkillSound === 'function') playSkillSound(sk, lv);
 
   const mult = Array.isArray(sk.mult) ? sk.mult[lv - 1] : sk.mult;
   // 'magic_aoe'（例如火球術、雷爆術、光獵、怒雷強擊）先前漏判，導致誤用ATK而非MATK計算傷害
@@ -2650,6 +2742,7 @@ function castSkill(skillId) {
         const hitPct = hitChancePctVsMonster(effectiveHit, def);
         if (Math.random() * 100 > hitPct) {
           logMsg(`「${sk.name}」被 ${def.name} 閃避了！`);
+          if (typeof playAttackSound === 'function') playAttackSound();   // 物理技能揮空
           if (typeof showPlayerFloat === 'function') showPlayerFloat('MISS', 'miss');
           break;
         }
@@ -2690,6 +2783,8 @@ function castSkill(skillId) {
       const dmg = mitigateDamage(baseDmgStat * skillMult * elemMult * sizeMult * (1 + skEleDmgBonus), def.def) + raceFlatBonus(def);
       target.hp -= dmg;
       logMsg(`⚡ 「${sk.name}」Lv${lv} 造成 ${dmg} 點傷害！`);
+      // 物理技能也是拿武器打的，命中一樣放武器的命中音（法術有自己的音效）
+      if (sk.type !== 'magic' && typeof playHitSound === 'function') playHitSound();
       // 冰凍術/石化術：魔法傷害命中會提前喚醒被反制暈眩的目標
       if (sk.type === 'magic') wakeIfFrozen(target);
       // 雷鳴術：命中必定使目標暈眩
@@ -2805,7 +2900,7 @@ function castSkill(skillId) {
       const dur = Array.isArray(sk.duration) ? sk.duration[lv - 1] : sk.duration;
       const statBonus = Array.isArray(sk.statBonus) ? sk.statBonus[lv - 1] : sk.statBonus;
       const hitBonus = Array.isArray(sk.hitBonus) ? sk.hitBonus[lv - 1] : sk.hitBonus;
-      state.buffs.push({ type: 'blessing', strBonus: statBonus, intBonus: statBonus, dexBonus: statBonus, msRemaining: dur * 1000 });
+      state.buffs.push({ type: 'blessing', strBonus: statBonus, intBonus: statBonus, dexBonus: statBonus, msRemaining: dur * 1000, skillId: sk.id });
       state.buffs.push({ type: 'hit', mult: 1, flatBonus: hitBonus, msRemaining: dur * 1000 });
       logMsg(`✨ 「${sk.name}」Lv${lv} 發動，STR/INT/DEX與HIT上升！`);
       break;
@@ -2819,7 +2914,7 @@ function castSkill(skillId) {
     case 'buff_lukflat': {
       const dur = Array.isArray(sk.duration) ? sk.duration[lv - 1] : sk.duration;
       const lukBonus = Array.isArray(sk.lukBonus) ? sk.lukBonus[lv - 1] : sk.lukBonus;
-      state.buffs.push({ type: 'lukflat', mult: 1, flatBonus: lukBonus, msRemaining: dur * 1000 });
+      state.buffs.push({ type: 'lukflat', mult: 1, flatBonus: lukBonus, msRemaining: dur * 1000, skillId: sk.id });
       logMsg(`🍀 「${sk.name}」Lv${lv} 發動，LUK上升！`);
       break;
     }
@@ -2959,7 +3054,7 @@ function castSkill(skillId) {
       // 加速術：附加AGI固定加成
       if (sk.agiFlatBonus) {
         const agiBonus = Array.isArray(sk.agiFlatBonus) ? sk.agiFlatBonus[lv - 1] : sk.agiFlatBonus;
-        state.buffs.push({ type: 'agiflat', mult: 1, flatBonus: agiBonus, msRemaining: dur * 1000 });
+        state.buffs.push({ type: 'agiflat', mult: 1, flatBonus: agiBonus, msRemaining: dur * 1000, skillId: sk.id });
       }
       logMsg(`💨 「${sk.name}」Lv${lv} 發動，攻速上升！`);
       break;
@@ -3359,6 +3454,8 @@ const NPC_SHOPS = {
     name: '武器商人',
     icon: '⚔️',
     items: ['knife', 'cutter', 'main_gauche', 'dirk', 'dagger', 'stiletto', 'gladius', 'damascus', 'cinquedea', 'kindling_dagger', 'obsidian_dagger', 'item_1249', 'jujube_dagger', 'coward', 'sword', 'falchion', 'blade', 'lapier', 'tsurugi', 'haedonggum', 'saber', 'slayer', 'bastard_sword', 'two_hand_sword', 'broad_sword', 'spear', 'pike', 'lance', 'guisarme', 'glaive', 'halberd', 'axe', 'battle_axe', 'hammer', 'buster', 'two_handed_axe', 'club', 'mace', 'smasher', 'flail', 'morning_star', 'sword_mace', 'chain', 'stunner', 'bow', 'composite_bow', 'great_bow', 'cross_bow', 'arbalest', 'kakkung', 'hunter_bow', 'repeting_cross_bow', 'waghnakh', 'knuckle_duster', 'hora', 'fist', 'claw', 'finger', 'violin', 'mandolin', 'lute', 'guitar', 'harp', 'guh_moon_goh',
+      // 拳刃：刺客專用，官方商店賣的就是這條線
+      'jur', 'jur_', 'katar', 'katar_', 'jamadhar', 'jamadhar_',
       // 箭矢：弓箭手系列的消耗品，跟弓放同一家店
       'arrow', 'iron_arrow', 'steel_arrow', 'silver_arrow', 'fire_arrow', 'crystal_arrow', 'arrow_of_wind', 'stone_arrow'],
     getItems() {

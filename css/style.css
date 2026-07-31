@@ -495,6 +495,47 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-deep); co
   100% { opacity: 0; transform: scale(0.8) translateY(-80px); }
 }
 
+/* 暴擊星爆：15 張圖輪播，整組（星爆圖＋黃色數字）一起往上飄並淡出。
+   飄動掛在外層，圖與數字各自只負責自己的置中，兩者就會鎖在一起移動。 */
+.crit-burst {
+  position: fixed;
+  pointer-events: none;
+  z-index: 9999;
+  animation: critBurstFloat 0.9s ease-out forwards;
+}
+.crit-burst-img {
+  display: block;
+  width: 96px;
+  height: 66px;
+  margin: -33px 0 0 -48px;   /* 以自身中心對齊外層的定位點 */
+  image-rendering: pixelated;
+}
+.crit-burst-num {
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-weight: 900;
+  font-size: 26px;
+  color: #ffd83d;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.95), 0 0 8px rgba(255,200,40,0.65);
+  white-space: nowrap;
+  -webkit-font-smoothing: antialiased;
+  transform: translate(-50%, -50%);
+  animation: critNumPop 0.25s ease-out;
+}
+/* 節奏比照原本的飄字：先快後慢往上 72px，最後三成才淡掉 */
+@keyframes critBurstFloat {
+  0%       { opacity: 1; transform: translateY(0); }
+  25%      { opacity: 1; transform: translateY(-14px); }
+  70%      { opacity: 1; transform: translateY(-48px); }
+  100%     { opacity: 0; transform: translateY(-72px); }
+}
+/* 數字起手放大彈一下，位置維持在圖正中央 */
+@keyframes critNumPop {
+  0%   { transform: translate(-50%, -50%) scale(1.8); }
+  100% { transform: translate(-50%, -50%) scale(1); }
+}
+
 /* 暴擊閃光效果 */
 .crit-flash-overlay {
   position: fixed;
@@ -871,6 +912,38 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-deep); co
 .ammo-qty { color: var(--gold-soft); font-variant-numeric: tabular-nums; }
 .ammo-qty.zero { color: var(--crimson-soft); }
 .ammo-warn { color: var(--crimson-soft); font-size: 11px; }
+
+/* ---- 精煉面板（取代原本的 confirm 彈窗，可以一直按） ---- */
+.refine-panel {
+  margin: 10px 0;
+  padding: 10px;
+  background: var(--bg-panel-2); border: 1px solid var(--line); border-radius: 4px;
+}
+.refine-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.refine-step { font-size: 15px; color: var(--ink); }
+.refine-step b { color: var(--gold); }
+.refine-meta { font-size: 11px; color: var(--ink-dim); }
+.refine-mats { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.refine-mat {
+  display: flex; flex-direction: column; gap: 2px; align-items: flex-start;
+  min-width: 150px; padding: 6px 8px; cursor: pointer;
+  background: var(--bg-panel); color: var(--ink);
+  border: 1px solid var(--line); border-radius: 4px;
+  font-family: inherit; text-align: left;
+}
+.refine-mat:hover:not(:disabled) { border-color: var(--gold-soft); }
+.refine-mat.active { border-color: var(--gold); background: var(--bg-panel-3, var(--bg-panel)); }
+.refine-mat:disabled, .refine-mat.out { opacity: 0.45; cursor: not-allowed; }
+.refine-mat-name { font-size: 12px; }
+.refine-mat-qty { font-size: 11px; color: var(--gold-soft); font-variant-numeric: tabular-nums; }
+.refine-mat-qty.zero { color: var(--crimson-soft); }
+.refine-mat-note { font-size: 10px; color: var(--ink-dim); }
+.refine-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.refine-hint { font-size: 11px; color: var(--crimson-soft); }
+.refine-log {
+  margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--line);
+  font-size: 11px; color: var(--ink-dim); line-height: 1.7;
+}
 
 .equip-pick-head { display: flex; align-items: center; gap: 8px; margin: 10px 0 8px; flex-wrap: wrap; }
 .equip-pick-empty { color: var(--ink-dim); font-size: 13px; padding: 16px 0; text-align: center; }
