@@ -1104,22 +1104,34 @@ function recomputeDerived(fullHeal) {
   state.cardRaceCrit = {};      // 對某種族的 CRI 加點（點數，不是%）
   state.cardExpRace = {};       // 擊殺某種族的經驗加成（比例）
   state.cardSpOnKillRace = {};  // 近戰擊殺某種族回復的 SP（點數）
-  // 自動念咒：依觸發時機分兩籃，戰鬥時直接取用不必再掃卡片
+  state.itemHealBonus = {};     // 指定道具的回復量加成（道具id → %）
+  // 自動念咒與異常狀態：都依觸發時機分籃，戰鬥時直接取用不必再掃卡片
   state.cardAutoSpells = { attack: [], hit: [] };
+  state.cardAilments = { attack: [], hit: [], magic: [] };
+  state.cardKillDrops = [];
   {
     const lo = buildLoadout();
     lo.cards.forEach(cardId => {
       const c = CARDS[cardId];
-      if (!c || !c.autoSpell) return;
-      c.autoSpell.forEach(e => {
+      if (!c) return;
+      // 條件式的那幾條（精煉、職業、同時裝了哪張卡、素質門檻）共用 condMet()
+      const pass = e => {
+        if (!e.when) return true;
+        const host = (lo.cardHosts[cardId] || [])[0] || null;
+        return condMet(e.when, host, lo);
+      };
+      (c.autoSpell || []).forEach(e => {
         // 自動念咒也可以帶條件（例：鴞裊首領要跟鴞裊男爵一起裝備才會放雷擊術）
-        if (e.when) {
-          const host = (lo.cardHosts[cardId] || [])[0] || null;
-          if (!condMet(e.when, host, lo)) return;
-        }
+        if (!pass(e)) return;
         const bucket = state.cardAutoSpells[e.on];
         if (bucket) bucket.push(e);
       });
+      (c.ailment || []).forEach(e => {
+        if (!pass(e)) return;
+        const bucket = state.cardAilments[e.on];
+        if (bucket) bucket.push(e);
+      });
+      (c.killDrop || []).forEach(e => { if (pass(e)) state.cardKillDrops.push(e); });
     });
   }
   state.cardHpRegenPct = 0;
@@ -1154,6 +1166,12 @@ function recomputeDerived(fullHeal) {
       if (k.startsWith('spOnKillRace_')) {
         const r = k.slice(13);
         state.cardSpOnKillRace[r] = (state.cardSpOnKillRace[r] || 0) + v;
+        continue;
+      }
+      // 指定道具的回復量加成（啤酒企鵝的果汁、雪怪的冰淇淋），值就是百分比不用再除
+      if (k.startsWith('itemHeal_')) {
+        const it = k.slice(9);
+        state.itemHealBonus[it] = (state.itemHealBonus[it] || 0) + v;
         continue;
       }
       // raceDmgReduce_ 必須排在 raceDmg_ 前面比對，否則會被前者的前綴先吃掉
@@ -1205,9 +1223,12 @@ function cardTargetDmgMult(monDef) {
    magic=true 時軟防歸零。官方魔法傷害根本不看 DEF（看的是 MDEF），軟防那種固定扣血
    更是物理專用。本作還沒有魔防資料，所以魔法暫時沿用硬防那半邊維持原本的手感，
    但不能連軟防也扣——那會讓魔法的持續傷害每一跳都先被砍掉幾十點。
-   官方原始檔其實有 mdef 欄位（"5+0" 這種格式），要正式做魔防時從那裡匯入。 */
-function defOf(mon, scale, magic) {
-  const s = scale === undefined ? 1 : scale;
+   官方原始檔其實有 mdef 欄位（"5+0" 這種格式），要正式做魔防時從那裡匯入。
+
+   inst 是「場上那一隻」的實體（不是 MONSTERS 的定義），有傳的話會套上異常狀態
+   對防禦的修正（石化 +25%、中毒 −25%）。 */
+function defOf(mon, scale, magic, inst) {
+  const s = (scale === undefined ? 1 : scale) * (inst ? ailDefMult(inst) : 1);
   return [(mon.def || 0) * s, magic ? 0 : (mon.defSoft || 0) * s];
 }
 
@@ -1335,8 +1356,13 @@ function monsterFleeOf(def) { return def.flee || (80 + def.level * 4); }
    fleeReq：玩家FLEE要達到這個值，迴避這隻怪的攻擊就是95%（RO迴避上限95%）；比例=玩家FLEE/fleeReq*100%，上限95%、下限5%
    沒有hitReq/fleeReq資料的怪物（尚未套用新資料）退回舊制monDef.hit/monDef.flee當作門檻值，維持相容
 ------------------------------------------------- */
-function hitChancePctVsMonster(playerHit, monDef) {
-  const threshold = monDef.hitReq || monsterFleeOf(monDef);
+function hitChancePctVsMonster(playerHit, monDef, inst) {
+  let threshold = monDef.hitReq || monsterFleeOf(monDef);
+  // 黑暗讓怪物的迴避下降（門檻變低＝更好打中）；冰凍與睡眠則是必定命中
+  if (inst) {
+    if (ailAlwaysHit(inst)) return 100;
+    threshold = Math.max(1, threshold * ailFleeMult(inst));
+  }
   return Math.min(100, Math.max(5, Math.round(100 * playerHit / threshold)));
 }
 function dodgeChancePctFromMonster(playerFlee, monDef, hitDebuff) {
@@ -1378,7 +1404,311 @@ function tickPoisonDot() {
   }
 }
 
+/* ---------------- 怪物異常狀態 ----------------
+   官方 pre-RE 的核心異常狀態共 10 種，這裡全部收進同一張表。以前本作只有「暈眩」
+   一個欄位（`mon.stunnedUntil`），冰凍、石化都硬塞在裡面，分不出是哪一種。
+
+   資料放在 `mon.ail = { 狀態: 結束時間戳 }`。無法行動類的狀態**同時**寫進
+   `mon.stunnedUntil`，這樣既有那些讀 stunnedUntil 的地方（怪物攻擊判定、
+   冰凍術甦醒）一行都不用改。
+
+   刻意的偏離：
+   - **混亂**官方是「移動方向隨機」，本作沒有移動概念，改成無法行動 1~3 秒（隨機）
+   - **沉默**官方是「無法使用技能」，本作怪物目前只會平A，所以掛得上但沒有效果，
+     等怪物技能做出來（見 docs/BUGS.md #29）就會自動生效
+   - **黑暗**只做「怪物命中下降」與「怪物迴避下降」，官方的視野縮小無從表現
+   - **詛咒**官方是 LUK 歸 0 + ATK -25% + 移速下降，對怪物只有 ATK 那項有意義
+------------------------------------------------- */
+const MON_AILMENTS = {
+  stun:      { name: '昏迷', icon: '💫', sec: 3, immobile: true },
+  freeze:    { name: '冰凍', icon: '🧊', sec: 4, immobile: true, alwaysHit: true, immuneElement: ['water'], immuneRace: ['undead'] },
+  stone:     { name: '石化', icon: '🗿', sec: 5, immobile: true, defMult: 1.25, immuneElement: ['earth'] },
+  sleep:     { name: '睡眠', icon: '💤', sec: 6, immobile: true, alwaysHit: true, dmgTakenMult: 1.5, breakOnHit: true, immuneRace: ['undead'] },
+  confusion: { name: '混亂', icon: '😵', secMin: 1, secMax: 3, immobile: true },
+  blind:     { name: '黑暗', icon: '🌑', sec: 8, hitPenaltyPct: 25, fleePenaltyPct: 25 },
+  curse:     { name: '詛咒', icon: '💀', sec: 8, atkMult: 0.75, immuneRace: ['undead'] },
+  bleed:     { name: '出血', icon: '🩸', sec: 8, dotPctMaxHp: 1, immuneRace: ['undead', 'formless'] },
+  poison:    { name: '中毒', icon: '☠️', sec: 3, defMult: 0.75, immuneElement: ['poison'] },
+  silence:   { name: '沉默', icon: '🤐', sec: 8 },
+};
+
+function ailImmune(monDef, type) {
+  const A = MON_AILMENTS[type];
+  if (!A || !monDef) return true;
+  if (A.immuneElement && A.immuneElement.includes(monDef.element || 'none')) return true;
+  if (A.immuneRace && A.immuneRace.includes(monDef.race)) return true;
+  return false;
+}
+
+/* 掛上一個異常狀態。回傳有沒有真的掛上去。
+   同一種狀態重複觸發是「取較長的那個」而不是疊加——不然被連續攻擊時會無限延長。
+   BOSS 階級的持續時間減半（官方 MVP 對狀態異常有高抗性，本作用減半代替完全免疫，
+   免得那些卡片對 BOSS 完全失效）。 */
+function applyAilment(mon, monDef, type, opts) {
+  const A = MON_AILMENTS[type];
+  if (!A || !mon || mon.hp <= 0) return false;
+  if (ailImmune(monDef, type)) return false;
+
+  let sec = (opts && opts.sec) || (A.secMin != null ? A.secMin + Math.random() * (A.secMax - A.secMin) : A.sec);
+  if (monDef.isBoss) sec *= 0.5;
+
+  const now = Date.now();
+  mon.ail = mon.ail || {};
+  const had = mon.ail[type] && now < mon.ail[type];
+  mon.ail[type] = Math.max(mon.ail[type] || 0, now + sec * 1000);
+  if (A.immobile) mon.stunnedUntil = Math.max(mon.stunnedUntil || 0, mon.ail[type]);
+  if (A.dotPctMaxHp) mon.bleedNextTick = mon.bleedNextTick || now;
+
+  if (!had) {
+    logMsg(`${A.icon} ${monDef.name} ${A.name}了！（${sec.toFixed(1)}秒）`);
+    if (typeof playStatusSound === 'function') playStatusSound(A.immobile ? 'stun' : 'poison');
+  }
+  return true;
+}
+
+function ailActive(mon, type) {
+  return !!(mon && mon.ail && mon.ail[type] && Date.now() < mon.ail[type]);
+}
+// 目前掛著的狀態清單（顯示與除錯用）
+function ailList(mon) {
+  if (!mon || !mon.ail) return [];
+  const now = Date.now();
+  return Object.keys(mon.ail).filter(t => mon.ail[t] > now && MON_AILMENTS[t]);
+}
+function ailFold(mon, key, init) {
+  let v = init;
+  ailList(mon).forEach(t => { const x = MON_AILMENTS[t][key]; if (x != null) v *= x; });
+  return v;
+}
+const ailAtkMult = mon => ailFold(mon, 'atkMult', 1);          // 詛咒
+const ailDefMult = mon => ailFold(mon, 'defMult', 1);          // 石化↑／中毒↓
+const ailDmgTakenMult = mon => ailFold(mon, 'dmgTakenMult', 1); // 睡眠
+const ailAlwaysHit = mon => ailList(mon).some(t => MON_AILMENTS[t].alwaysHit);   // 冰凍／睡眠
+// 黑暗：怪物的命中與迴避各降一截，回傳「要打幾折」
+function ailHitMult(mon) {
+  let v = 1;
+  ailList(mon).forEach(t => { const p = MON_AILMENTS[t].hitPenaltyPct; if (p) v *= (1 - p / 100); });
+  return v;
+}
+function ailFleeMult(mon) {
+  let v = 1;
+  ailList(mon).forEach(t => { const p = MON_AILMENTS[t].fleePenaltyPct; if (p) v *= (1 - p / 100); });
+  return v;
+}
+// 睡眠：受到任何傷害就醒（官方規則）
+function ailBreakOnDamage(mon, monDef) {
+  ailList(mon).forEach(t => {
+    if (!MON_AILMENTS[t].breakOnHit) return;
+    delete mon.ail[t];
+    if (MON_AILMENTS[t].immobile) mon.stunnedUntil = Date.now();
+    if (monDef) logMsg(`${MON_AILMENTS[t].icon} ${monDef.name} 被打醒了！`);
+  });
+}
+
+/* 出血：每秒扣最大 HP 的固定比例，**無視防禦**（官方出血是直接扣血）。
+   跟中毒分開跑，因為中毒的每跳傷害是從技能傷害推導的，出血則是純比例。 */
+function tickBleed() {
+  if (!state.monsters || state.monsters.length === 0) return;
+  const now = Date.now();
+  for (let i = state.monsters.length - 1; i >= 0; i--) {
+    const mon = state.monsters[i];
+    if (!ailActive(mon, 'bleed')) { delete mon.bleedNextTick; continue; }
+    if (now < (mon.bleedNextTick || 0)) continue;
+    mon.bleedNextTick = now + 1000;
+    const monDef = MONSTERS[mon.defId];
+    const dmg = Math.max(1, Math.round(mon.maxHp * MON_AILMENTS.bleed.dotPctMaxHp / 100));
+    mon.hp -= dmg;
+    if (!_dpsPaused && state && state.dpsTracker) state.dpsTracker.damage += dmg;
+    logMsg(`🩸 出血對 ${monDef.name} 造成 ${dmg} 點傷害！`);
+    if (mon.hp <= 0) killMonster(monDef, mon);
+  }
+}
+
+/* ---------------- 卡片附加掉落 ----------------
+   資料寫在 `CARDS[x].killDrop = [{ race?, items?, pool?, chance }]`：
+     race   限定種族，省略代表任何魔物
+     items  候選道具 id 陣列，隨機挑一個
+     pool   改用分類池（'food' 食品類／'elementResist' 屬性抵抗藥水）
+     chance 百分比。本作的規範是**限定種族 5%、不限種族 1%**
+   跟 autoSpell / ailment 一樣支援 when（目前沒有卡片用到，留著格式一致）。 */
+const ITEM_POOLS = {
+  // 食品：有回血值的道具，扣掉藥水藥草那一類（那是藥品不是食品）
+  food: () => Object.keys(ITEMS).filter(k => ITEMS[k].heal > 0 && !/药水|藥水|药草|藥草/.test(ITEMS[k].name)),
+  elementResist: () => Object.keys(ITEMS).filter(k => /属性抵抗药水$/.test(ITEMS[k].name)),
+};
+const _itemPoolCache = {};
+function itemPool(name) {
+  if (!_itemPoolCache[name]) _itemPoolCache[name] = (ITEM_POOLS[name] || (() => []))();
+  return _itemPoolCache[name];
+}
+
+function tryCardKillDrops(monDef) {
+  if (!state.cardKillDrops || !state.cardKillDrops.length) return;
+  state.cardKillDrops.forEach(e => {
+    if (e.race && monDef.race !== e.race) return;
+    if (Math.random() * 100 >= e.chance) return;
+    const pool = e.pool ? itemPool(e.pool) : e.items;
+    if (!pool || !pool.length) return;
+    const id = pool[Math.floor(Math.random() * pool.length)];
+    if (!ITEMS[id]) return;
+    addItem(id, 1);
+    logMsg(`🎁 卡片效果！額外獲得了 ${ITEMS[id].name}！`);
+  });
+}
+
+/* ---------------- 箱子 ----------------
+   神秘箱子：從「全部道具扣掉卡片」均勻抽一件。裝備天然就佔 20%，不必另外做權重。
+             三轉裝備與 1z 雜物都留在池子裡——這個箱子的定位就是賭博。
+   禮物箱　：從 500z ~ 3,000,000z 的道具裡抽，但**權重 1/√售價**。
+             均勻抽的話期望值 15,432z（現在整體收入的 8.8 倍），加權後降到 1,871z，
+             300 萬的世界之星鑽石照樣抽得到，只是機率壓下來了。
+   兩個池子都只建一次，之後查快取。 */
+const BOX_ITEM_NAMES = ['神秘箱子', '礼物箱'];   // 箱子不會開出箱子（同名的另一份也一起擋掉）
+const EQUIP_TYPES = ['armor', 'weapon', 'ammo'];
+
+/* 能不能進箱子的道具池。
+   `ITEMS` 有 23,407 筆，裡面混著大量沒翻譯完或本作根本取得不到的東西：
+   韓文名（손목 아대）、日文假名、以及完全沒有漢字的英文名（Costume Engineer Cap）。
+   使用者要求把這些擋掉，只留有中文名的道具。過濾後剩 14,509 件。 */
+function boxEligible(k) {
+  const it = ITEMS[k];
+  if (!it || CARDS[k] || /卡片$/.test(it.name)) return false;
+  if (it.boxOpen || BOX_ITEM_NAMES.includes(it.name)) return false;
+  const n = it.name || '';
+  if (/[가-힯ᄀ-ᇿ]/.test(n)) return false;    // 韓文
+  if (/[぀-ヿ]/.test(n)) return false;         // 日文假名
+  if (!/[一-鿿]/.test(n)) return false;        // 完全沒有漢字（英文名）
+  return true;
+}
+
+const BOX_POOLS = {
+  /* 神秘箱子：過濾之後裝備的天然占比會從 20% 跳到 31%（被擋掉的多半是雜物而不是裝備），
+     所以改成兩段抽：先擲 20% 決定要不要給裝備，再從對應的子池裡均勻抽。
+     三轉裝與 1z 雜物照樣留在池子裡——這個箱子的定位就是賭博。 */
+  any: {
+    build: () => Object.keys(ITEMS).filter(boxEligible),
+    split: { rate: 0.2, pick: k => EQUIP_TYPES.includes(ITEMS[k].type) },
+  },
+  /* 禮物箱：售價 500z~3,000,000z，權重 1/√售價。
+     均勻抽的期望值是 15,432z（全系 1% 等於每 10 分鐘 8.3 個箱子，收入會變成 8.8 倍），
+     因為價格帶前 5% 的那 35 件吃掉了 83% 的期望值。加權之後降到 1,800z 上下，
+     300 萬的世界之星鑽石照樣抽得到，只是機率壓到 0.005%。 */
+  valuable: {
+    build: () => Object.keys(ITEMS).filter(k => {
+      if (!boxEligible(k)) return false;
+      const s = ITEMS[k].sell || 0;
+      return s >= 500 && s <= 3000000;
+    }),
+    weight: id => 1 / Math.sqrt(ITEMS[id].sell || 1),
+  },
+};
+/* ---------------- 卡冊 ----------------
+   一條「花錢換運氣」的鏈：道具商人賣 500 萬的**未解封的卡冊** → 開出某一種卡冊 → 再開出卡片。
+
+     未解封的卡冊    → 9 種卡冊之一（具有魔力的卡片冊權重壓到很低）
+     老舊收集冊      → 全部 553 張卡，**王卡權重壓很低**
+     老舊收集冊(部位) → 只開該部位能插的卡（含任意部位卡），王卡一樣壓低
+     具有魔力的卡片冊 → 全部 553 張**完全平均**，王卡機率最高，是這條鏈的頭獎
+
+   王卡的判定：從 MONSTER_CARD_DROPS 反查來源怪，怪是 BOSS 階級就算。
+   MVP 30 張、迷你王 39 張。 */
+const CARD_ALBUM_WEIGHT = { mvp: 0.02, miniBoss: 0.1, normal: 1 };
+let _bossCardKind = null;
+function bossCardKind(cardId) {
+  if (!_bossCardKind) {
+    _bossCardKind = {};
+    for (const [monKey, d] of Object.entries(MONSTER_CARD_DROPS)) {
+      const m = MONSTERS[monKey];
+      if (m && m.isBoss) _bossCardKind[d.card] = m.isMvp ? 'mvp' : 'miniBoss';
+    }
+  }
+  return _bossCardKind[cardId] || 'normal';
+}
+/* 可以從卡冊開出來的卡片。兩道過濾：
+   1. `CARDS` 裡有 108 筆其實是**附魔石**（STR+1、DEF+6、流溢Lv3、魔神的幸運精髓1…），
+      沒有任何怪物會掉，也不該從卡冊開出來——用名稱結尾是不是「卡片」來擋
+   2. 有 3 張卡片沒有對應的 ITEMS 條目，addItem 進不了背包
+   剩下 445 張，其中 MVP 卡 30 張、迷你王卡 39 張。 */
+const cardDrawable = () => Object.keys(CARDS).filter(k => ITEMS[k] && /卡片$/.test(CARDS[k].name));
+const cardWeight = id => CARD_ALBUM_WEIGHT[bossCardKind(id)];
+
+const ALBUM_ITEMS = {
+  old_card_album: 10,          // 老舊收集冊：全部卡片
+  old_c_album_helm: 5, old_c_album_armor: 5, old_c_album_shield: 5,
+  old_c_album_garment: 5, old_c_album_shoes: 5, old_c_album_acc: 5,
+  old_c_album_weapon: 5,       // 部位限定：命中率高，權重中等
+  magic_card_album: 1,         // 完全平均的那本，權重壓到 1/46 ≈ 2%
+};
+// 部位限定卡冊 → 卡片的 slot
+const ALBUM_SLOT = {
+  old_c_album_helm: 'headgear', old_c_album_armor: 'armor', old_c_album_shield: 'shield',
+  old_c_album_garment: 'garment', old_c_album_shoes: 'footgear', old_c_album_acc: 'accessory',
+  old_c_album_weapon: 'weapon',
+};
+
+Object.assign(BOX_POOLS, {
+  album: {
+    build: () => Object.keys(ALBUM_ITEMS).filter(k => ITEMS[k]),
+    weight: id => ALBUM_ITEMS[id],
+  },
+  card: { build: cardDrawable, weight: cardWeight },
+  cardFlat: { build: cardDrawable },     // 完全平均
+});
+Object.entries(ALBUM_SLOT).forEach(([album, slot]) => {
+  BOX_POOLS['card_' + slot] = {
+    build: () => cardDrawable().filter(k => CARDS[k].slot === slot || CARDS[k].slot === 'any'),
+    weight: cardWeight,
+  };
+});
+
+const _boxCache = {};
+function boxPool(kind) {
+  if (_boxCache[kind]) return _boxCache[kind];
+  const spec = BOX_POOLS[kind];
+  if (!spec) return null;
+  const all = spec.build();
+  const mk = ids => {
+    let cum = null, total = ids.length;
+    if (spec.weight) {
+      cum = new Float64Array(ids.length);
+      let acc = 0;
+      ids.forEach((id, i) => { acc += spec.weight(id); cum[i] = acc; });
+      total = acc;
+    }
+    return { ids, cum, total };
+  };
+  const p = mk(all);
+  if (spec.split) {
+    p.split = spec.split.rate;
+    p.hit = mk(all.filter(spec.split.pick));
+    p.miss = mk(all.filter(k => !spec.split.pick(k)));
+  }
+  return (_boxCache[kind] = p);
+}
+function drawFromSub(p) {
+  if (!p.ids.length) return null;
+  if (!p.cum) return p.ids[Math.floor(Math.random() * p.ids.length)];
+  // 加權抽：在累積權重上二分搜尋
+  const r = Math.random() * p.total;
+  let lo = 0, hi = p.ids.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (p.cum[mid] < r) lo = mid + 1; else hi = mid;
+  }
+  return p.ids[lo];
+}
+function drawFromBox(kind) {
+  const p = boxPool(kind);
+  if (!p || !p.ids.length) return null;
+  if (p.split != null) {
+    const sub = Math.random() < p.split ? p.hit : p.miss;
+    if (sub.ids.length) return drawFromSub(sub);
+  }
+  return drawFromSub(p);
+}
+
 /* ---------------- 暈眩 ----------------
+   技能造成的暈眩走這條（不吃 BOSS 減半，維持既有平衡），卡片造成的走 applyAilment()。
    additive=true 時會疊加時長（滑動/睡魔/定位陷阱共用），否則直接覆蓋（衝鋒箭） */
 function applyStun(mon, sec, additive) {
   const now = Date.now();
@@ -1388,6 +1718,9 @@ function applyStun(mon, sec, additive) {
   } else {
     mon.stunnedUntil = now + sec * 1000;
   }
+  // 一併登記成正式的異常狀態，讓畫面上的狀態圖示看得到
+  mon.ail = mon.ail || {};
+  mon.ail.stun = Math.max(mon.ail.stun || 0, mon.stunnedUntil);
   // 只有從沒暈到暈才出聲，續暈不重放
   if (!wasStunned && typeof playStatusSound === 'function') playStatusSound('stun');
 }
@@ -1396,8 +1729,25 @@ function applyStun(mon, sec, additive) {
 function wakeIfFrozen(mon) {
   if (mon && mon.frozenByProc) {
     mon.stunnedUntil = Date.now();
+    if (mon.ail) { delete mon.ail.stun; delete mon.ail.freeze; }
     mon.frozenByProc = false;
   }
+}
+
+/* 卡片觸發的異常狀態。trigger：'attack' 普攻命中後／'hit' 被打到後／'magic' 魔法技能命中後。
+   type 可以寫成 'stun+curse+blind+stone'，代表隨機挑一種（火焰顱骨卡片）。 */
+function tryCardAilments(trigger, mon) {
+  if (!mon || !state.cardAilments) return;
+  const list = state.cardAilments[trigger];
+  if (!list || !list.length) return;
+  const monDef = MONSTERS[mon.defId];
+  if (!monDef) return;
+  list.forEach(e => {
+    if (Math.random() * 100 >= e.chance) return;
+    const pool = String(e.type).split('+');
+    const type = pool[Math.floor(Math.random() * pool.length)];
+    applyAilment(mon, monDef, type);
+  });
 }
 
 /* ---------------- 獵人陷阱：被動觸發（攻擊時機率/固定觸發，各自獨立冷卻）---------------- */
@@ -1641,6 +1991,8 @@ function gameTick() {
     tryAutoCastSupportSkills();
     // 中毒持續傷害：每秒跳一次
     tickPoisonDot();
+    // 出血持續傷害：每秒扣最大HP的固定比例
+    tickBleed();
     // 解毒被動：玩家中毒時自動解除（目前遊戲尚無玩家中毒機制，此為預留掛鉤）
     if (state.hasAutoDetox && state.playerPoisoned) {
       const readyAt = state.autoDetoxReadyAt || 0;
@@ -2224,7 +2576,7 @@ function playerAttack() {
   const effectiveCritRate = Math.min(100, state.critRate * critBuff.mult + critBuff.flatBonus + raceCrit);
   const isCrit = Math.random() * 100 < effectiveCritRate;
   if (!isCrit) {
-    const hitPct = hitChancePctVsMonster(effectiveHitWithBuff(), monDef);
+    const hitPct = hitChancePctVsMonster(effectiveHitWithBuff(), monDef, target);
     if (Math.random() * 100 > hitPct) {
       logMsg(`你的攻擊被 ${monDef.name} 閃避了！`);
       // 揮空音效
@@ -2280,10 +2632,14 @@ function playerAttack() {
 
   // 卡片增傷：對特定屬性/種族/體型的怪物額外增傷
   raw *= cardTargetDmgMult(monDef);
+  // 異常狀態：睡眠中的目標受到的傷害增加（官方規則）
+  raw *= ailDmgTakenMult(target);
 
   // Apply monster debuff (provoke reduces defense)
-  let monDefVal = monDef.def;
-  let monSoftVal = monDef.defSoft || 0;
+  // 異常狀態對防禦的修正（石化 +25%、中毒 −25%）跟破防 debuff 疊乘
+  const ailDef = ailDefMult(target);
+  let monDefVal = monDef.def * ailDef;
+  let monSoftVal = (monDef.defSoft || 0) * ailDef;
   if (target.debuffDef && target.debuffDefEnd && Date.now() < target.debuffDefEnd) {
     monDefVal = Math.round(monDefVal * target.debuffDef);
     monSoftVal = Math.round(monSoftVal * target.debuffDef);
@@ -2299,6 +2655,8 @@ function playerAttack() {
   target.hp -= dmg;
   logMsg(`你對 ${monDef.name} 造成 ${dmg} 點傷害${isCrit ? '（暴擊！無視閃避與防禦）' : ''}`);
   applyCardLeech(dmg);
+  ailBreakOnDamage(target, monDef);   // 睡眠被打就醒
+  tryCardAilments('attack', target);
   tryAutoSpells('attack', target);
   // 命中音效（暴擊改放 Critical.ogg）
   if (typeof playHitSound === 'function') playHitSound(isCrit);
@@ -2454,9 +2812,11 @@ function playerAttack() {
 function monsterAttackSingle(mon) {
   const monDef = MONSTERS[mon.defId];
 
-  // 暈眩中無法攻擊（例如衝鋒箭擊退效果）
+  // 無法行動類的異常狀態（昏迷／冰凍／石化／睡眠／混亂）都寫在 stunnedUntil 上
   if (mon.stunnedUntil && Date.now() < mon.stunnedUntil) {
-    logMsg(`💫 ${monDef.name} 還在暈眩中，無法攻擊！`);
+    const by = ailList(mon).filter(t => MON_AILMENTS[t].immobile)[0];
+    const A = by ? MON_AILMENTS[by] : MON_AILMENTS.stun;
+    logMsg(`${A.icon} ${monDef.name} 還在${A.name}中，無法攻擊！`);
     return;
   }
 
@@ -2473,6 +2833,9 @@ function monsterAttackSingle(mon) {
     delete mon.debuffHit;
     delete mon.debuffHitEnd;
   }
+  // 黑暗：怪物命中下降，換算成同一個門檻扣減
+  const blindMult = ailHitMult(mon);
+  if (blindMult < 1) hitDebuff += Math.round((monDef.fleeReq || monsterHitOf(monDef)) * (1 - blindMult));
   const dodgePct = dodgeChancePctFromMonster(effectiveFleeWithBuff(), monDef, hitDebuff);
   if (Math.random() * 100 < dodgePct) {
     logMsg(`你迴避了 ${monDef.name} 的攻擊！`);
@@ -2516,6 +2879,8 @@ function monsterAttackSingle(mon) {
   }
 
   let raw = monDef.atk * (0.85 + Math.random() * 0.3);
+  // 詛咒：怪物 ATK 下降
+  raw *= ailAtkMult(mon);
 
   // 屬性相剋
   const elemMult = getElementMultiplier(monDef.element || 'none', 'none');
@@ -2610,6 +2975,8 @@ function monsterAttackSingle(mon) {
   tryOnHitStunProc2(mon, monDef);
   // 長矛刺擊：被攻擊時機率反擊
   trySpearCounterProc(mon, monDef);
+  // 卡片的受擊反擊型異常狀態（惡魔女僕那一大類「受到物理傷害時讓敵人得到XX」）
+  tryCardAilments('hit', mon);
   // 卡片自動念咒（受擊觸發）：放在最後，此時玩家確定還活著、傷害也結算完了
   tryAutoSpells('hit', mon);
 }
@@ -2792,6 +3159,8 @@ function killMonster(def, monObj) {
     const bonusName = ITEMS[bonus.item] ? ITEMS[bonus.item].name : bonus.item;
     logMsg(`💰 貪婪發動！額外獲得了 ${bonusName}！`);
   }
+  // 卡片附加掉落（箱子、料理、精煉素材那一批）
+  tryCardKillDrops(def);
   // 卡片掉落
   const cardDrop = MONSTER_CARD_DROPS[monKey];
   if (cardDrop && Math.random() < cardDrop.chance) {
@@ -3181,7 +3550,7 @@ function castSkill(skillId, opts) {
         if (sk.id === 'bash' && sk.hitBonus) {
           effectiveHit += Array.isArray(sk.hitBonus) ? sk.hitBonus[lv - 1] : sk.hitBonus;
         }
-        const hitPct = hitChancePctVsMonster(effectiveHit, def);
+        const hitPct = hitChancePctVsMonster(effectiveHit, def, target);
         if (Math.random() * 100 > hitPct) {
           logMsg(`「${sk.name}」被 ${def.name} 閃避了！`);
           if (typeof playAttackSound === 'function') playAttackSound();   // 物理技能揮空
@@ -3221,11 +3590,14 @@ function castSkill(skillId, opts) {
       if ((sk.id === 'mammonite' || sk.id === 'cartattack') && state.cartDmgBonusMult) {
         skillMult *= (1 + state.cartDmgBonusMult);
       }
-      const dmg = mitigateDamage(skillBaseDamage(useMag, def, elemMult) * skillMult * (1 + skEleDmgBonus), ...defOf(def, 1, useMag)) + raceFlatBonus(def);
+      const dmg = mitigateDamage(skillBaseDamage(useMag, def, elemMult) * skillMult * (1 + skEleDmgBonus) * ailDmgTakenMult(target), ...defOf(def, 1, useMag, target)) + raceFlatBonus(def);
       target.hp -= dmg;
       logMsg(`⚡ 「${sk.name}」Lv${lv} 造成 ${dmg} 點傷害！`);
       // 物理技能也是拿武器打的，命中一樣放武器的命中音（法術有自己的音效）
       if (sk.type !== 'magic' && typeof playHitSound === 'function') playHitSound();
+      ailBreakOnDamage(target, def);   // 睡眠被打就醒
+      // 卡片的「魔法攻擊時對敵人施以XX」
+      if (useMag) tryCardAilments('magic', target);
       // 冰凍術/石化術：魔法傷害命中會提前喚醒被反制暈眩的目標
       if (sk.type === 'magic') wakeIfFrozen(target);
       // 雷鳴術：命中必定使目標暈眩
@@ -3258,7 +3630,7 @@ function castSkill(skillId, opts) {
         const monDef = MONSTERS[mon.defId];
         // 命中判定：物理範圍技能對每隻怪物個別判定，法術範圍技能無視閃避
         if (sk.type !== 'magic_aoe') {
-          const hitPct = hitChancePctVsMonster(effectiveHitWithBuff(), monDef);
+          const hitPct = hitChancePctVsMonster(effectiveHitWithBuff(), monDef, mon);
           if (Math.random() * 100 > hitPct) {
             combatLogBuf.push(`  → ${monDef.name} 閃避了！`);
             continue;
@@ -3275,10 +3647,12 @@ function castSkill(skillId, opts) {
           const strBonusPct = Math.min(1, state.stats.str / 120) * (strScaleMax / 100);
           aoeMult *= (1 + strBonusPct);
         }
-        let dmg = mitigateDamage(skillBaseDamage(useMag, monDef, monElemMult) * aoeMult * (1 + monEleDmgBonus), ...defOf(monDef, 1, useMag)) + raceFlatBonus(monDef);
+        let dmg = mitigateDamage(skillBaseDamage(useMag, monDef, monElemMult) * aoeMult * (1 + monEleDmgBonus) * ailDmgTakenMult(mon), ...defOf(monDef, 1, useMag, mon)) + raceFlatBonus(monDef);
         // 鋼製喙：閃電衝擊額外固定傷害（不受倍率影響）
         if (sk.id === 'blitzbeat' && state.falconFlatBonus) dmg += state.falconFlatBonus;
         mon.hp -= dmg;
+        ailBreakOnDamage(mon, monDef);   // 睡眠被打就醒
+        if (useMag) tryCardAilments('magic', mon);
         // 冰凍術/石化術：魔法傷害命中會提前喚醒被反制暈眩的目標
         if (sk.type === 'magic_aoe') wakeIfFrozen(mon);
         // 怒雷強擊：範圍技附加機率暈眩
@@ -3414,7 +3788,7 @@ function castSkill(skillId, opts) {
       const target = state.monsters[0];
       const def = MONSTERS[target.defId];
       // 命中判定：中毒類技能屬於物理技能
-      const dotHitPct = hitChancePctVsMonster(effectiveHitWithBuff(), def);
+      const dotHitPct = hitChancePctVsMonster(effectiveHitWithBuff(), def, target);
       if (Math.random() * 100 > dotHitPct) {
         logMsg(`「${sk.name}」被 ${def.name} 閃避了！`);
         if (typeof showPlayerFloat === 'function') showPlayerFloat('MISS', 'miss');
@@ -3422,7 +3796,7 @@ function castSkill(skillId, opts) {
       }
       const elemMult = getElementMultiplierVsMonster(skElement, def);
       const dotEleDmgBonus = cardTargetDmgMult(def) - 1;
-      const dmg = mitigateDamage(skillBaseDamage(useMag, def, elemMult) * mult * (1 + dotEleDmgBonus), ...defOf(def, 0.6));
+      const dmg = mitigateDamage(skillBaseDamage(useMag, def, elemMult) * mult * (1 + dotEleDmgBonus) * ailDmgTakenMult(target), ...defOf(def, 0.6, false, target));
       target.hp -= dmg;
       logMsg(`☠️ 「${sk.name}」Lv${lv} 造成 ${dmg} 點持續傷害！`);
       if (target.hp <= 0) killMonster(def, target);
@@ -3433,14 +3807,14 @@ function castSkill(skillId, opts) {
       if (!state.monsters || state.monsters.length === 0) break;
       const target = state.monsters[0];
       const def = MONSTERS[target.defId];
-      const hitPct = hitChancePctVsMonster(effectiveHitWithBuff(), def);
+      const hitPct = hitChancePctVsMonster(effectiveHitWithBuff(), def, target);
       if (Math.random() * 100 > hitPct) {
         logMsg(`「${sk.name}」被 ${def.name} 閃避了！`);
         if (typeof showPlayerFloat === 'function') showPlayerFloat('MISS', 'miss');
         break;
       }
       const elemMult = getElementMultiplierVsMonster(skElement, def);
-      const dmg = mitigateDamage(skillBaseDamage(useMag, def, elemMult) * mult, ...defOf(def));
+      const dmg = mitigateDamage(skillBaseDamage(useMag, def, elemMult) * mult * ailDmgTakenMult(target), ...defOf(def, 1, false, target));
       target.hp -= dmg;
       logMsg(`⚡ 「${sk.name}」Lv${lv} 造成 ${dmg} 點傷害！`);
       if (target.hp <= 0) { killMonster(def, target); break; }
@@ -3511,7 +3885,7 @@ function castSkill(skillId, opts) {
       const target = state.monsters[0];
       const def = MONSTERS[target.defId];
       // 命中判定：整招視為一次判定，miss 時兩段都不生效
-      const mhHitPct = hitChancePctVsMonster(effectiveHitWithBuff(), def);
+      const mhHitPct = hitChancePctVsMonster(effectiveHitWithBuff(), def, target);
       if (Math.random() * 100 > mhHitPct) {
         logMsg(`「${sk.name}」被 ${def.name} 閃避了！`);
         if (typeof showPlayerFloat === 'function') showPlayerFloat('MISS', 'miss');
@@ -3520,7 +3894,7 @@ function castSkill(skillId, opts) {
       const elemMult = getElementMultiplierVsMonster(skElement, def);
       const mhEleDmgBonus = cardTargetDmgMult(def) - 1;
       // 第一段：單體傷害
-      const dmg1 = mitigateDamage(skillBaseDamage(useMag, def, elemMult) * mult * (1 + mhEleDmgBonus), ...defOf(def)) + raceFlatBonus(def);
+      const dmg1 = mitigateDamage(skillBaseDamage(useMag, def, elemMult) * mult * (1 + mhEleDmgBonus) * ailDmgTakenMult(target), ...defOf(def, 1, false, target)) + raceFlatBonus(def);
       target.hp -= dmg1;
       pendingFloatTargetId = target.id;
       logMsg(`⚡ 「${sk.name}」Lv${lv} 第一段對 ${def.name} 造成 ${dmg1} 點傷害！`);
@@ -3534,7 +3908,7 @@ function castSkill(skillId, opts) {
         const monDef = MONSTERS[mon.defId];
         const monElemMult = getElementMultiplierVsMonster(skElement, monDef);
         const mon2EleDmgBonus = cardTargetDmgMult(monDef) - 1;
-        const dmg2 = mitigateDamage(skillBaseDamage(useMag, monDef, monElemMult) * mult2 * (1 + mon2EleDmgBonus), ...defOf(monDef)) + raceFlatBonus(monDef);
+        const dmg2 = mitigateDamage(skillBaseDamage(useMag, monDef, monElemMult) * mult2 * (1 + mon2EleDmgBonus) * ailDmgTakenMult(mon), ...defOf(monDef, 1, false, mon)) + raceFlatBonus(monDef);
         mon.hp -= dmg2;
         combatLogBuf.push(`  → 對 ${monDef.name} 造成 ${dmg2} 點範圍傷害！`);
         // AoE 飄字：直接找怪物 DOM 元素
@@ -3562,7 +3936,7 @@ function castSkill(skillId, opts) {
       const target = state.monsters[0];
       const def = MONSTERS[target.defId];
       // 命中判定：整招視為一次判定
-      const dmHitPct = hitChancePctVsMonster(effectiveHitWithBuff(), def);
+      const dmHitPct = hitChancePctVsMonster(effectiveHitWithBuff(), def, target);
       if (Math.random() * 100 > dmHitPct) {
         logMsg(`「${sk.name}」被 ${def.name} 閃避了！`);
         if (typeof showPlayerFloat === 'function') showPlayerFloat('MISS', 'miss');
@@ -3573,7 +3947,7 @@ function castSkill(skillId, opts) {
       const hits = Array.isArray(sk.hits) ? sk.hits[lv - 1] : (sk.hits || 1);
       let totalDmg = 0;
       for (let i = 0; i < hits; i++) {
-        const dmg = mitigateDamage(skillBaseDamage(useMag, def, elemMult) * mult * (1 + multiEleDmgBonus), ...defOf(def)) + raceFlatBonus(def);
+        const dmg = mitigateDamage(skillBaseDamage(useMag, def, elemMult) * mult * (1 + multiEleDmgBonus) * ailDmgTakenMult(target), ...defOf(def, 1, false, target)) + raceFlatBonus(def);
         totalDmg += dmg;
         target.hp -= dmg;
         if (target.hp <= 0) break;
@@ -3588,11 +3962,11 @@ function castSkill(skillId, opts) {
       const target = state.monsters[0];
       const def = MONSTERS[target.defId];
       // 命中判定：miss 時不造成傷害，但衝鋒生怪效果仍然發動
-      const scHitPct = hitChancePctVsMonster(effectiveHitWithBuff(), def);
+      const scHitPct = hitChancePctVsMonster(effectiveHitWithBuff(), def, target);
       if (Math.random() * 100 <= scHitPct) {
         const elemMult = getElementMultiplierVsMonster(skElement, def);
         const scEleDmgBonus = cardTargetDmgMult(def) - 1;
-        const dmg = mitigateDamage(skillBaseDamage(useMag, def, elemMult) * mult * (1 + scEleDmgBonus), ...defOf(def));
+        const dmg = mitigateDamage(skillBaseDamage(useMag, def, elemMult) * mult * (1 + scEleDmgBonus) * ailDmgTakenMult(target), ...defOf(def, 1, false, target));
         target.hp -= dmg;
         logMsg(`⚡ 「${sk.name}」Lv${lv} 造成 ${dmg} 點傷害！`);
         if (target.hp <= 0) killMonster(def, target);
@@ -3929,7 +4303,9 @@ const NPC_SHOPS = {
     items: ['red_potion', 'orange_potion', 'yellow_potion', 'white_potion',
             'blue_potion',
             'refine_stone',
-            'center_potion', 'awakening_potion', 'berserk_potion'],
+            'center_potion', 'awakening_potion', 'berserk_potion',
+            // 未解封的卡冊：500 萬一本，開出卡冊再開出卡片。純粹是給後期消耗金錢的玩法
+            'sealed_card_album'],
     getItems() {
       return this.items.filter(id => ITEMS[id]);
     }
@@ -4053,6 +4429,24 @@ function useItem(itemId) {
   const row = state.inventory.find(r => r.item === itemId && !r.instanceId);
   if (!def || !row) return false;
   if (def.type === 'consumable' || def.type === 'material') {
+    /* 箱子：開出一件隨機道具。裝備一律進背包不自動穿，
+       不然抽到武器會把身上那把換掉（而且個體化裝備的插卡會跟著消失）。 */
+    if (def.boxOpen) {
+      const got = drawFromBox(def.boxOpen);
+      if (!got) { logMsg(`⚠️ ${def.name} 打不開（道具池是空的）。`); return false; }
+      removeItem(itemId, 1);
+      addItem(got, 1);
+      const g = ITEMS[got];
+      // 卡片跟高價道具各自有自己的「中大獎」提示
+      const kind = CARDS[got] ? bossCardKind(got) : null;
+      const rare = kind === 'mvp' || kind === 'miniBoss' || (g.sell || 0) >= 50000;
+      const tag = kind === 'mvp' ? '👑👑 MVP 卡片！' : kind === 'miniBoss' ? '👑 迷你王卡片！'
+        : rare ? '🎊🎊 大獎！' : '📦';
+      const price = (!CARDS[got] && g.sell >= 500) ? `（售價 ${g.sell.toLocaleString()}z）` : '';
+      logMsg(`${tag} 打開 ${def.name}，獲得了 ${g.name}${price}！`);
+      saveGame();
+      return true;
+    }
     // 攻速藥水：不是回復類，直接掛一個 aspd buff。先擋職業/等級限制
     if (def.aspdPct) {
       const block = aspdPotionBlockReason(itemId);
@@ -4070,8 +4464,11 @@ function useItem(itemId) {
     // HP 與 SP 要各自判斷：蜂蜜／蜂膠／天地樹果實這類是兩種都回，不能用 else if
     let healed = false;
     if (def.heal) {
-      // 快速恢復：HP恢復道具效果加成
-      const boostedHeal = Math.round(def.heal * (1 + (state.hpItemEffectBonusPct || 0) / 100));
+      /* 快速恢復（技能）是所有 HP 道具通吃的加成；
+         卡片那批（啤酒企鵝的果汁 +50%、雪怪的冰淇淋 +100%）是**指定道具**才生效，
+         所以另外查一張 道具id → 加成% 的表，兩者相加。 */
+      const perItemPct = (state.itemHealBonus && state.itemHealBonus[itemId]) || 0;
+      const boostedHeal = Math.round(def.heal * (1 + ((state.hpItemEffectBonusPct || 0) + perItemPct) / 100));
       state.hp = Math.min(state.maxHp, state.hp + boostedHeal);
       healed = true;
     }
@@ -4555,6 +4952,7 @@ function skillSpCost(sk, lv) {
      jobLine                職業血脈，例如 'thief' 代表盜賊系列（含刺客、流氓…）
      withCards              需要同時裝備的其他卡片（陣列，全部都要有）
      withItems              需要同時裝備的其他道具
+     statMin                加點素質門檻，例 { vit: 77 }（不含裝備加成）
 ------------------------------------------------- */
 
 /* 目前身上有什麼：一次算好，條件判斷全部拿這個查 */
@@ -4590,6 +4988,14 @@ function condMet(when, host, lo) {
   if (when.weaponReq && !weaponReqMet(when.weaponReq)) return false;
   if (when.withCards && !when.withCards.every(c => lo.cards.has(c))) return false;
   if (when.withItems && !when.withItems.every(i => lo.items.has(i))) return false;
+  /* 素質門檻（官方寫「VIT77以上」「純粹AGI90以上」那種）。
+     這裡看的是**加點的基礎素質**，不含裝備加成——官方的「純粹」就是這個意思，
+     而且加成表是在 recomputeDerived() 裡算的，拿總素質判斷會變成循環相依。 */
+  if (when.statMin) {
+    for (const [k, v] of Object.entries(when.statMin)) {
+      if ((state.stats[k] || 0) < v) return false;
+    }
+  }
   return true;
 }
 

@@ -648,6 +648,7 @@ function renderMonster() {
         <div class="monster-name" style="font-size:${isTarget ? '12' : '10'}px;">${def.name} Lv.${def.level} <span class="monster-element elem-${def.element}">${elemIcon}</span></div>
         <div class="monster-hp-bar" style="width:${isTarget ? 80 : 56}px;"><div id="monster-hp-bar-${mon.id}" class="monster-hp-fill" style="width:${pct(mon.hp, mon.maxHp)}%"></div></div>
         <div id="monster-hp-text-${mon.id}" style="font-size:10px;color:var(--ink-dim);">${Math.floor(mon.hp)}/${mon.maxHp}</div>
+        <div id="monster-ail-${mon.id}" class="monster-ail"></div>
       </div>`;
   });
   html += '</div>';
@@ -663,6 +664,13 @@ function updateMonsterHp() {
     const hpText = document.getElementById(`monster-hp-text-${mon.id}`);
     if (hpBar) hpBar.style.width = pct(mon.hp, mon.maxHp) + '%';
     if (hpText) hpText.textContent = `${Math.max(0, mon.hp)}/${mon.maxHp}`;
+    // 異常狀態圖示（跟著 HP 條一起刷新，不用另外開一條計時器）
+    const ailEl = document.getElementById(`monster-ail-${mon.id}`);
+    if (ailEl && typeof ailList === 'function') {
+      const list = ailList(mon);
+      const html = list.map(t => `<span title="${MON_AILMENTS[t].name}">${MON_AILMENTS[t].icon}</span>`).join('');
+      if (ailEl.innerHTML !== html) ailEl.innerHTML = html;
+    }
   });
 }
 
@@ -1880,6 +1888,7 @@ function describeCondition(when) {
   if (when.weaponReq) bits.push(`裝備${(typeof weaponReqName === 'function' && weaponReqName(when.weaponReq)) || when.weaponReq}`);
   if (when.withCards) bits.push(when.withCards.map(c => (CARDS[c] || {}).name || c).join('、') + ' 同時裝備');
   if (when.withItems) bits.push(when.withItems.map(i => (ITEMS[i] || {}).name || i).join('、') + ' 同時裝備');
+  if (when.statMin) bits.push(Object.entries(when.statMin).map(([k, v]) => `${k.toUpperCase()} ${v} 以上`).join('、'));
   return bits.join('且') + '時';
 }
 
@@ -1903,6 +1912,20 @@ function describeCardBonus(card) {
     const cond = a.when ? describeCondition(a.when) + '，' : '';
     out.push(`${cond}${when} ${a.chance}% 自動念咒：${sk ? sk.name.split(' ')[0] : a.skill} Lv${a.lv}`);
   });
+  (card.ailment || []).forEach(a => {
+    const when = a.on === 'hit' ? '受擊時' : (a.on === 'magic' ? '魔法命中時' : '攻擊時');
+    const cond = a.when ? describeCondition(a.when) + '，' : '';
+    const names = String(a.type).split('+').map(t => (typeof MON_AILMENTS !== 'undefined' && MON_AILMENTS[t]) ? MON_AILMENTS[t].icon + MON_AILMENTS[t].name : t);
+    const what = names.length > 1 ? `${names.join('／')} 隨機一種` : names[0];
+    out.push(`${cond}${when} ${a.chance}% 使敵人${what}`);
+  });
+  (card.killDrop || []).forEach(d => {
+    const RACE = { insect: '昆蟲', brute: '動物', humanoid: '人型', demon: '惡魔', undead: '不死', plant: '植物', fish: '魚貝', formless: '無形', angel: '天使', dragon: '龍族' };
+    const who = d.race ? `擊殺${RACE[d.race] || d.race}系` : '擊殺任何魔物';
+    const POOL = { food: '食品類道具', elementResist: '屬性抵抗藥水' };
+    const what = d.pool ? POOL[d.pool] || d.pool : (d.items || []).map(i => (ITEMS[i] || {}).name || i).join('／');
+    out.push(`${who}時 ${d.chance}% 額外掉落：${what}`);
+  });
   (card.condBonus || []).forEach(cb => {
     const inner = [];
     for (const [k, v] of Object.entries(cb.bonus || {})) {
@@ -1916,6 +1939,10 @@ function describeCardBonus(card) {
 function formatCardBonus(k, v, all) {
   if (CARD_BONUS_LABELS[k]) return `${CARD_BONUS_LABELS[k]} ${signed(v, CARD_PCT_KEYS.includes(k))}`;
   if (k === 'ignoreSizePenalty') return '無視體型修正（一律100%傷害）';
+  if (k.startsWith('itemHeal_')) {
+    const it = k.slice(9);
+    return `使用${(ITEMS[it] || {}).name || it}時回復量 ${signed(v, 1)}`;
+  }
   if (k.startsWith('perStat_')) {
     const p = k.split('_');   // perStat, from, per, to
     return `每 ${p[2]} 點基礎${(p[1] || '').toUpperCase()} → ${(p[3] || '').toUpperCase()} +${v}`;
@@ -2047,7 +2074,13 @@ function renderCompareBadge(itemId, newRefine) {
   return `<div class="inv-compare">對比 ${curName}：${parts.join('')}</div>`;
 }
 
-function setInvCategory(c) { invCategory = c; invSub = 'all'; renderInventoryTab(); }
+// 不認識的分類就退回第一類：下面 renderInventoryTab() 有一處 INV_CATEGORIES.find(...).name，
+// 傳進沒有的 key 會直接讓整個背包分頁掛掉
+function setInvCategory(c) {
+  invCategory = INV_CATEGORIES.some(x => x.key === c) ? c : INV_CATEGORIES[0].key;
+  invSub = 'all';
+  renderInventoryTab();
+}
 function setInvSub(s) { invSub = s; renderInventoryTab(); }
 function setInvSort(s) { invSort = s; renderInventoryTab(); }
 function onInvSearch(v) {

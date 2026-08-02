@@ -325,6 +325,18 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-deep); co
   background: linear-gradient(90deg, var(--crimson), var(--crimson-soft));
   transition: width 0.2s ease;
 }
+/* 異常狀態圖示：跟在 HP 數字下面，沒有狀態時整列不佔高度 */
+.monster-slot .monster-ail {
+  display: flex;
+  justify-content: center;
+  gap: 2px;
+  font-size: 13px;
+  line-height: 1;
+  min-height: 0;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
+}
+.monster-slot .monster-ail:not(:empty) { margin-top: 2px; }
+.monster-slot.target .monster-ail { font-size: 16px; }
 .monster-slot.target {
   /* transform handled by inline style */
 }
