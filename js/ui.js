@@ -205,6 +205,7 @@ function onTickUI() {
       updateMonsterHp();
     }
     renderSkillBar();
+    updateSkillAura();
     // 即時更新角色分頁的 BUFF 倒數
     if (activeTab === 'character') updateBuffCountdown();
   }
@@ -391,6 +392,64 @@ function stopAnim() {
   if (animTimer) { clearInterval(animTimer); animTimer = null; }
 }
 
+/* ---------------- 技能特效 ----------------
+   一招一組設定：施放瞬間疊一張詠唱姿勢的圖，效果持續中則讓角色本體發光。
+   sprite 只有騎士男女兩張，所以要限定職業；別的職業學到同名技能也不會誤用。
+   光芒本身跟 sprite 無關，是掛在 .player-sprite 上的 CSS class，
+   讀存檔進來時 buff 還在的話也會自動亮起來（靠 onTickUI 每 tick 對齊）。
+------------------------------------------------- */
+const SKILL_FX = {
+  twohandquicken: {
+    jobs: ['knight'],
+    sprite: gender => `images/effects/twohandquicken/knight_${gender}.png`,
+    spriteMs: 900,
+    auraClass: 'aura-quicken',
+  },
+};
+
+// 先預載，免得第一次施放時圖還沒到、閃一下才出現
+Object.values(SKILL_FX).forEach(fx => {
+  if (!fx.sprite) return;
+  ['male', 'female'].forEach(g => { const im = new Image(); im.src = fx.sprite(g); });
+});
+
+function skillFxFor(skillId) {
+  const fx = SKILL_FX[skillId];
+  if (!fx) return null;
+  if (fx.jobs && !fx.jobs.includes(state.jobId)) return null;
+  return fx;
+}
+
+/* 施放瞬間：在角色身上疊一張詠唱姿勢，播完自己移除。由 castSkill() 呼叫。 */
+function showSkillCastEffect(sk) {
+  if (!sk) return;
+  const fx = skillFxFor(sk.id);
+  if (!fx || !fx.sprite) return;
+  const host = document.getElementById('player-sprite');
+  if (!host) return;
+  // 連續施放時只留最新一張，不要疊成一團
+  host.querySelectorAll('.skill-cast-sprite').forEach(el => el.remove());
+  const img = document.createElement('img');
+  img.className = 'skill-cast-sprite';
+  img.src = fx.sprite((state && state.gender) || 'male');
+  img.alt = '';
+  host.appendChild(img);
+  setTimeout(() => img.remove(), fx.spriteMs);
+}
+
+/* 持續時間內的光芒：每個 tick 對照 buff 是否還在，決定 class 加或拿掉。
+   比對 skillId 而不是 buff type——攻速藥水也是 type:'aspd'，比 type 會讓喝藥也發光。 */
+function updateSkillAura() {
+  const host = document.getElementById('player-sprite');
+  if (!host || !state) return;
+  Object.keys(SKILL_FX).forEach(skillId => {
+    const fx = SKILL_FX[skillId];
+    if (!fx.auraClass) return;
+    const on = !!skillFxFor(skillId) && state.buffs.some(b => b.skillId === skillId);
+    host.classList.toggle(fx.auraClass, on);
+  });
+}
+
 /* ---------------- 音效 ----------------
    WAV/ 底下分四個資料夾：
      物理攻擊揮空 — 每次普攻都放，依裝備的武器種類挑檔
@@ -442,6 +501,12 @@ const SFX_BOLT_GAP_MS = 130;
 const SFX_MAGIC_BY_ELEMENT = { fire: '其餘火系', water: '其餘冰系', wind: '其餘雷系', earth: '石系' };
 const SFX_MAGIC_TYPES = ['magic', 'magic_aoe', 'field_aoe_magic'];
 const SFX_HEAL_TYPES = ['heal', 'heal_over_time', 'field_heal'];
+
+/* 有專屬音檔的技能。放在 WAV/技能/ 底下，檔名直接寫死對應，
+   跟三系箭術那組不同——這裡是一招一個檔，不照等級連放。 */
+const SFX_SKILL = {
+  twohandquicken: 'WAV/' + encodeURIComponent('技能') + '/knight_twohandquicken.wav',
+};
 
 const SFX_STATUS = { poison: '中毒', stun: '暈眩', silence: '沉默' };
 const SFX_STATUS_GAP_MS = 300;   // AoE 一次讓好幾隻中毒/暈眩，不要疊成噪音
@@ -502,6 +567,8 @@ function playHitSound(isCrit) {
    物理技能沒有專屬音檔，交給普攻那組處理，這裡不出聲。 */
 function playSkillSound(sk, lv) {
   if (!sk) return;
+  // 有專屬音檔的技能優先，不再往下走箭術／屬性那幾條規則
+  if (SFX_SKILL[sk.id]) { playSfx(SFX_SKILL[sk.id]); return; }
   const bolt = SFX_MAGIC_BOLT[sk.id];
   if (bolt) {
     const url = sfxUrl(SFX_DIR_MAGIC, bolt);
@@ -759,6 +826,65 @@ function renderLog() {
 let selectedRegionId = null; // 目前下拉選單一選中的地區
 let selectedKingdomId = null; // 目前選中的王國
 
+/* 地圖產出面板：左邊是拿目前素質推算這張圖的產出（不用先去打），
+   右邊是從上次重置到現在的實測值。兩者算法不同，數字不會完全一致是正常的。 */
+function fmtNum(n) {
+  if (!isFinite(n)) return '—';
+  if (n >= 1e8) return (n / 1e8).toFixed(2) + '億';
+  if (n >= 1e4) return (n / 1e4).toFixed(1) + '萬';
+  if (n >= 100) return Math.round(n).toLocaleString();
+  return (Math.round(n * 10) / 10).toString();
+}
+function fmtDur(sec) {
+  const s = Math.floor(sec);
+  if (s < 60) return s + ' 秒';
+  const m = Math.floor(s / 60);
+  if (m < 60) return m + ' 分 ' + (s % 60) + ' 秒';
+  return Math.floor(m / 60) + ' 小時 ' + (m % 60) + ' 分';
+}
+
+function renderMapYieldBox(mapObj) {
+  const est = typeof estimateMapYield === 'function' ? estimateMapYield(mapObj) : null;
+  const act = typeof dpsStats === 'function' ? dpsStats() : null;
+  const isHere = mapObj.id === state.mapId;
+  // 樣本太少時比值會亂跳，滿 10 秒才顯示，否則寫「統計中」
+
+  const estRows = est ? `
+    <div class="yield-row"><span>DPS</span><b>${fmtNum(est.dps)}</b></div>
+    <div class="yield-row"><span>擊殺／10分</span><b>${fmtNum(est.killsPer10m)}${est.spawnCapped ? ' <small style="color:var(--ink-dim)" title="殺得比補怪快，每隻之間會多等一次生怪的時間">(含等怪時間)</small>' : ''}</b></div>
+    <div class="yield-row"><span>經驗／10分</span><b>${fmtNum(est.expPer10m)}</b></div>
+    <div class="yield-row"><span>職業經驗／10分</span><b>${fmtNum(est.jobExpPer10m)}</b></div>
+    <div class="yield-row"><span>金錢／10分</span><b>${fmtNum(est.goldPer10m)}z</b></div>`
+    : '<div class="yield-empty">無法估算</div>';
+
+  const actRows = (act && act.sec >= 10) ? `
+    <div class="yield-row"><span>DPS</span><b>${fmtNum(act.dps)}</b></div>
+    <div class="yield-row"><span>擊殺數</span><b>${fmtNum(act.kills)}</b></div>
+    <div class="yield-row"><span>經驗／10分</span><b>${fmtNum(act.expPer10m)}</b></div>
+    <div class="yield-row"><span>職業經驗／10分</span><b>${fmtNum(act.jobExpPer10m)}</b></div>
+    <div class="yield-row"><span>金錢／10分</span><b>${fmtNum(act.goldPer10m)}z</b></div>`
+    : '<div class="yield-empty">統計中…（滿 10 秒後顯示）</div>';
+
+  return `
+  <div class="map-yield-box">
+    <div class="map-yield-head">
+      <span class="map-yield-title">📊 產出估算</span>
+      <button class="yield-reset-btn" onclick="resetDpsTracker();renderMapTab();">↺ 重置統計</button>
+    </div>
+    <div class="map-yield-cols">
+      <div class="yield-col">
+        <div class="yield-col-title">預估${isHere ? '' : '（此圖）'}</div>
+        ${estRows}
+      </div>
+      <div class="yield-col">
+        <div class="yield-col-title">實測 · ${act ? fmtDur(act.sec) : '—'}</div>
+        ${actRows}
+      </div>
+    </div>
+    <div class="map-yield-hint">預估以普通攻擊推算，已計入命中率、暴擊、屬性／體型與防禦；技能傷害未計入，實戰通常會更高。</div>
+  </div>`;
+}
+
 function renderMapTab() {
   const el = document.getElementById('tab-map');
   if (!selectedRegionId) {
@@ -822,12 +948,20 @@ function renderMapTab() {
       <div class="map-preview-body">${monsterPreview}</div>
       ${!isCity ? '<div class="map-preview-hint">怪物強度不設限，越級挑戰有風險，也可能有意外的收穫——探索本身就是樂趣！</div>' : ''}
     </div>
+    ${!isCity ? renderMapYieldBox(currentMapObj) : ''}
     ${!isCity && MVP_MAP_DATA[currentMapObj.id] ? `
     <label style="display:flex;align-items:center;gap:8px;margin:10px 0;cursor:pointer;font-size:14px;">
       <input type="checkbox" ${state.mvpMode ? 'checked' : ''} onchange="toggleMvpMode(this.checked)" style="width:18px;height:18px;cursor:pointer;">
-      <span>🎯 MVP 模式（20% 機率出 Boss）</span>
+      <span>🎯 BOSS 模式（20% 機率出 BOSS 階級魔物）</span>
     </label>
-    <div style="font-size:11px;color:var(--ink-dim);margin-top:-6px;margin-bottom:8px;">此地圖可遭遇 MVP：${MVP_MAP_DATA[currentMapObj.id].map(id => { const m = MONSTERS[id]; return m ? m.icon + m.name : id; }).join('、')}</div>
+    <div style="font-size:11px;color:var(--ink-dim);margin-top:-6px;margin-bottom:8px;">此地圖可遭遇：${
+      // 正牌 MVP 排前面，迷你王排後面，兩者官方就是互斥的兩類
+      MVP_MAP_DATA[currentMapObj.id]
+        .map(id => MONSTERS[id] ? { id, m: MONSTERS[id] } : null).filter(Boolean)
+        .sort((a, b) => (b.m.isMvp ? 1 : 0) - (a.m.isMvp ? 1 : 0))
+        .map(({ m }) => `${m.icon}${m.name}<span style="opacity:.7">（${m.isMvp ? 'MVP' : '迷你王'}）</span>`)
+        .join('、')
+    }</div>
     ` : ''}
     ${isCity ? `
     <div class="town-npcs">
@@ -1202,8 +1336,8 @@ function toggleAutoSupportSkill(skillId, enabled) {
 // 遇怪模式切換
 function setEncounterMode(mode) {
   state.encounterMode = mode;
-  state.maxMonsters = mode === 'melee' ? 5 : 1;
   state.lastSpawnTime = 0; // 重置生怪計時
+  recomputeDerived(false);  // maxMonsters 由遇怪模式推導，改完要重算
   saveGame();
   renderAutoBattleTab();
 }
@@ -1335,7 +1469,10 @@ function renderSkillBar() {
     const spCost = Array.isArray(sk.spCost) ? sk.spCost[lv - 1] : sk.spCost;
     const enoughSp = state.sp >= spCost;
     const cdSec = state.cooldowns[sk.id] ? Math.ceil(state.cooldowns[sk.id] / 1000) : 0;
-    return `<button class="skill-btn" title="${sk.desc}" ${(!ready || !enoughSp) ? 'disabled' : ''} onclick="castSkill('${sk.id}')">
+    // 武器限定技能：拿錯武器就把按鈕鎖起來，並在 tooltip 說明原因（免得只是灰掉不知道為什麼）
+    const weaponOk = weaponReqMet(sk.requiresWeapon);
+    const tip = weaponOk ? sk.desc : `${sk.desc}\n⚠️ 目前武器不符：需要${weaponReqName(sk.requiresWeapon)}`;
+    return `<button class="skill-btn" title="${tip}" ${(!ready || !enoughSp || !weaponOk) ? 'disabled' : ''} onclick="castSkill('${sk.id}')">
       <span class="skill-btn-name">${sk.name}</span>
       <span class="skill-btn-lv">Lv${lv}</span>
       <span class="skill-btn-cost">${spCost} SP</span>
@@ -1624,17 +1761,18 @@ function renderCodexDetail(id) {
             <span>${ELEMENT_ICONS[d.element] || '⚪'} ${ELEMENT_NAMES[d.element] || d.element || '無'}</span>
             ${d.race ? `<span>${RACE_LABELS[d.race] || d.race}</span>` : ''}
             ${d.size ? `<span>${SIZE_LABELS[d.size] || d.size}</span>` : ''}
-            ${d.isBoss ? '<span class="codex-mvp">MVP</span>' : ''}
+            ${d.isMvp ? '<span class="codex-mvp">MVP</span>'
+              : (d.isBoss ? '<span class="codex-miniboss">迷你王</span>' : '')}
           </div>
           <div class="codex-detail-kills">累計擊殺 <b>${kills}</b></div>
         </div>
       </div>
       <div class="codex-detail-stats">
-        <span>HP ${d.hp}</span><span>ATK ${d.atk}</span><span>DEF ${d.def}</span>
+        <span>HP ${d.hp}</span><span>ATK ${d.atk}</span><span title="硬防（比例減傷）＋軟防（固定扣血）">DEF ${d.def}${d.defSoft ? '+' + d.defSoft : ''}</span>
         <span>EXP ${d.exp}</span><span>JOB ${d.jobExp}</span>
       </div>
       <div class="codex-detail-sec">出沒地圖</div>
-      <div class="codex-maps">${maps.length ? maps.map(m => `<span>${m}</span>`).join('') : '<span class="dim">無（MVP 專屬）</span>'}</div>
+      <div class="codex-maps">${maps.length ? maps.map(m => `<span>${m}</span>`).join('') : `<span class="dim">無（${d.isBoss ? '需開啟 BOSS 模式' : '目前無地圖配置'}）</span>`}</div>
       <div class="codex-detail-sec">掉落物</div>
       <div class="codex-drops">${cardRow}${dropRows || (cardRow ? '' : '<div class="dim">沒有掉落物</div>')}</div>
     </div>`;
@@ -1678,10 +1816,7 @@ function renderCodexDetail(id) {
     : '';
 
   // 卡片的機制效果直接從 bonus 欄位列出，才是引擎真正吃到的數值
-  const bonusBits = [];
-  if (card && card.bonus) {
-    for (const [k, v] of Object.entries(card.bonus)) bonusBits.push(formatCardBonus(k, v));
-  }
+  const bonusBits = card ? describeCardBonus(card) : [];
 
   return `<div class="codex-detail">
     <button class="codex-detail-close" onclick="toggleCodexDetail('${id}')">✕</button>
@@ -1715,21 +1850,94 @@ const CARD_BONUS_LABELS = {
   str: 'STR', agi: 'AGI', vit: 'VIT', int: 'INT', dex: 'DEX', luk: 'LUK',
   atk: 'ATK', matk: 'MATK', def: 'DEF', hit: 'HIT', flee: 'FLEE',
   critRate: '暴擊率', perfectDodge: '完全迴避', hp: 'MaxHP', sp: 'MaxSP',
-  hpPct: 'MaxHP', spPct: 'MaxSP', hpRegenPct: 'HP恢復力', spRegenPct: 'SP恢復力'
+  hpPct: 'MaxHP', spPct: 'MaxSP', hpRegenPct: 'HP恢復力', spRegenPct: 'SP恢復力',
+  allStat: '全素質', aspdPct: '攻擊速度', aspdFlat: 'ASPD', critDmgPct: '暴擊傷害',
+  bossDmgPct: '對首領類傷害', allTargetDmgPct: '物理傷害', rangedDmgPct: '遠距離傷害',
+  rangedDmgTakenPct: '受遠距離傷害', bossDmgTakenPct: '受首領類傷害',
+  normalDmgTakenPct: '受一般魔物傷害', spCostPct: '技能SP消耗', defPct: 'DEF',
+  rangedCritRate: '遠距離攻擊暴擊率'
 };
 function cardArtSrc(cardId) {
   const it = ITEMS[cardId];
   return `images/cards/${it ? it.imgId : cardId}.jpg`;
 }
-function formatCardBonus(k, v) {
-  const pctKeys = ['hpPct', 'spPct', 'hpRegenPct', 'spRegenPct'];
-  if (CARD_BONUS_LABELS[k]) return `${CARD_BONUS_LABELS[k]} +${v}${pctKeys.includes(k) ? '%' : ''}`;
-  if (k.startsWith('eleDmg_')) return `對${ELEMENT_NAMES[k.slice(7)] || k.slice(7)}屬性傷害 +${v}%`;
-  if (k.startsWith('eleReduce_')) return `受${ELEMENT_NAMES[k.slice(10)] || k.slice(10)}屬性傷害 -${v}%`;
-  if (k.startsWith('raceDmgReduce_')) return `受${RACE_LABELS[k.slice(14)] || k.slice(14)}傷害 -${v}%`;
-  if (k.startsWith('raceDmg_')) return `對${RACE_LABELS[k.slice(8)] || k.slice(8)}傷害 +${v}%`;
-  if (k.startsWith('sizeDmg_')) return `對${SIZE_LABELS[k.slice(8)] || k.slice(8)}傷害 +${v}%`;
-  return `${k} +${v}`;
+/* 百分比型的加成鍵，顯示時要帶 % */
+const CARD_PCT_KEYS = [
+  'hpPct', 'spPct', 'hpRegenPct', 'spRegenPct', 'aspdPct', 'critDmgPct',
+  'bossDmgPct', 'allTargetDmgPct', 'rangedDmgPct', 'rangedDmgTakenPct',
+  'bossDmgTakenPct', 'normalDmgTakenPct', 'spCostPct', 'defPct'
+];
+/* 數值一律帶正負號，減益卡片才不會顯示成「MaxHP +-25%」 */
+function signed(v, pct) { return (v > 0 ? '+' : '') + v + (pct ? '%' : ''); }
+
+/* 條件式加成的前綴文字，例如「+9以上時：」「盜賊系列時：」「與大嘴鳥卡片同時裝備時：」 */
+function describeCondition(when) {
+  if (!when) return '';
+  const bits = [];
+  if (when.refineMin != null) bits.push(`+${when.refineMin} 以上`);
+  if (when.refineMax != null) bits.push(`+${when.refineMax} 以下`);
+  if (when.jobLine) bits.push(`${(JOB_TREE[when.jobLine] || {}).name || when.jobLine}系列`);
+  if (when.weaponReq) bits.push(`裝備${(typeof weaponReqName === 'function' && weaponReqName(when.weaponReq)) || when.weaponReq}`);
+  if (when.withCards) bits.push(when.withCards.map(c => (CARDS[c] || {}).name || c).join('、') + ' 同時裝備');
+  if (when.withItems) bits.push(when.withItems.map(i => (ITEMS[i] || {}).name || i).join('、') + ' 同時裝備');
+  return bits.join('且') + '時';
+}
+
+/* 一張卡片的完整效果字串陣列：無條件 → 依精煉 → 條件式 */
+function describeCardBonus(card) {
+  const out = [];
+  if (card.bonus) {
+    for (const [k, v] of Object.entries(card.bonus)) {
+      const s = formatCardBonus(k, v, card.bonus);
+      if (s) out.push(s);
+    }
+  }
+  if (card.perRefine) {
+    for (const [k, v] of Object.entries(card.perRefine)) {
+      out.push(`每精煉 1 階：${formatCardBonus(k, v, card.perRefine)}`);
+    }
+  }
+  (card.autoSpell || []).forEach(a => {
+    const sk = (typeof findSkillAnywhere === 'function') ? findSkillAnywhere(a.skill) : null;
+    const when = a.on === 'hit' ? '受擊時' : '攻擊時';
+    const cond = a.when ? describeCondition(a.when) + '，' : '';
+    out.push(`${cond}${when} ${a.chance}% 自動念咒：${sk ? sk.name.split(' ')[0] : a.skill} Lv${a.lv}`);
+  });
+  (card.condBonus || []).forEach(cb => {
+    const inner = [];
+    for (const [k, v] of Object.entries(cb.bonus || {})) {
+      const s = formatCardBonus(k, v, cb.bonus);
+      if (s) inner.push(s);
+    }
+    if (inner.length) out.push(`${describeCondition(cb.when)}：${inner.join('、')}`);
+  });
+  return out;
+}
+function formatCardBonus(k, v, all) {
+  if (CARD_BONUS_LABELS[k]) return `${CARD_BONUS_LABELS[k]} ${signed(v, CARD_PCT_KEYS.includes(k))}`;
+  if (k === 'ignoreSizePenalty') return '無視體型修正（一律100%傷害）';
+  if (k.startsWith('perStat_')) {
+    const p = k.split('_');   // perStat, from, per, to
+    return `每 ${p[2]} 點基礎${(p[1] || '').toUpperCase()} → ${(p[3] || '').toUpperCase()} +${v}`;
+  }
+  if (k.startsWith('eleDmg_')) return `對${ELEMENT_NAMES[k.slice(7)] || k.slice(7)}屬性傷害 ${signed(v, 1)}`;
+  if (k.startsWith('eleReduce_')) return `受${ELEMENT_NAMES[k.slice(10)] || k.slice(10)}屬性傷害 ${signed(-v, 1)}`;
+  if (k.startsWith('raceDmgReduce_')) return `受${RACE_LABELS[k.slice(14)] || k.slice(14)}傷害 ${signed(-v, 1)}`;
+  if (k.startsWith('raceDmg_')) return `對${RACE_LABELS[k.slice(8)] || k.slice(8)}傷害 ${signed(v, 1)}`;
+  if (k.startsWith('raceCrit_')) return `對${RACE_LABELS[k.slice(9)] || k.slice(9)}暴擊率 ${signed(v)}`;
+  if (k.startsWith('expRace_')) return `擊殺${RACE_LABELS[k.slice(8)] || k.slice(8)}經驗 ${signed(v, 1)}`;
+  if (k.startsWith('spOnKillRace_')) return `近戰擊殺${RACE_LABELS[k.slice(13)] || k.slice(13)}回復 ${v} SP`;
+  if (k.startsWith('skillDmg_')) {
+    const sk = (typeof findSkillAnywhere === 'function') ? findSkillAnywhere(k.slice(9)) : null;
+    return `${sk ? sk.name.split(' ')[0] : k.slice(9)} 傷害 ${signed(v, 1)}`;
+  }
+  // 吸血／吸SP 的機率與比例是一組，機率那個鍵不單獨成句
+  if (k === 'lifeStealChance' || k === 'spStealChance') return '';
+  if (k === 'lifeStealPct') return `${(all && all.lifeStealChance) || 0}% 機率吸取傷害的 ${v}% 成HP`;
+  if (k === 'spStealPct') return `${(all && all.spStealChance) || 0}% 機率吸取傷害的 ${v}% 成SP`;
+  if (k.startsWith('sizeDmgReduce_')) return `受${SIZE_LABELS[k.slice(14)] || k.slice(14)}傷害 ${signed(-v, 1)}`;
+  if (k.startsWith('sizeDmg_')) return `對${SIZE_LABELS[k.slice(8)] || k.slice(8)}傷害 ${signed(v, 1)}`;
+  return `${k} ${signed(v)}`;
 }
 
 /* ---------------- NPC 商店分頁 ---------------- */
@@ -2270,10 +2478,8 @@ function renderInventoryTab() {
       let cardBonus = '';
       if (isCard) {
         const cd = CARDS[row.item];
-        const bonusKeys = Object.keys(cd.bonus || {});
-        cardBonus = bonusKeys.length
-          ? bonusKeys.map(k => formatCardBonus(k, cd.bonus[k])).join('、')
-          : (cd.desc || '');
+        const bits = describeCardBonus(cd);
+        cardBonus = bits.length ? bits.join('、') : (cd.desc || '');
       }
       const slotTag = def.slots ? ` <span class="inv-slots">[${def.slots}]</span>` : '';
       const locked = isItemLocked(row.item);
