@@ -325,7 +325,17 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-deep); co
   background: linear-gradient(90deg, var(--crimson), var(--crimson-soft));
   transition: width 0.2s ease;
 }
-/* 異常狀態圖示：跟在 HP 數字下面，沒有狀態時整列不佔高度 */
+/* 玩家的異常狀態圖示：跟在 HP／SP 條旁邊，沒有狀態時整列不佔高度 */
+.hud-ail {
+  display: flex;
+  gap: 3px;
+  font-size: 14px;
+  line-height: 1;
+  min-height: 0;
+}
+.hud-ail:not(:empty) { margin: 2px 0; }
+
+/* 怪物的異常狀態圖示：跟在 HP 數字下面，沒有狀態時整列不佔高度 */
 .monster-slot .monster-ail {
   display: flex;
   justify-content: center;
@@ -666,6 +676,58 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-deep); co
   font-size: 20px;
 }
 
+/* 魔法傷害的數字照施法屬性上色。顏色與下面的 .element-float 同一套，
+   但這裡是傷害數字，所以只換顏色與光暈，字級維持原本的 22px。
+   無屬性魔法不會拿到這些 class，看起來跟物理傷害一樣。 */
+.damage-float.ele-fire    { color: #ff4b30; text-shadow: 1px 1px 2px rgba(0,0,0,0.9), 0 0 8px rgba(255,75,48,0.7); }
+.damage-float.ele-water   { color: #3ba7ff; text-shadow: 1px 1px 2px rgba(0,0,0,0.9), 0 0 8px rgba(59,167,255,0.7); }
+.damage-float.ele-wind    { color: #2fdc6e; text-shadow: 1px 1px 2px rgba(0,0,0,0.9), 0 0 8px rgba(47,220,110,0.7); }
+.damage-float.ele-earth   { color: #d2a63c; text-shadow: 1px 1px 2px rgba(0,0,0,0.9), 0 0 8px rgba(210,166,60,0.7); }
+.damage-float.ele-poison  { color: #b45cff; text-shadow: 1px 1px 2px rgba(0,0,0,0.9), 0 0 8px rgba(180,92,255,0.7); }
+.damage-float.ele-holy    { color: #ffe066; text-shadow: 1px 1px 2px rgba(0,0,0,0.9), 0 0 8px rgba(255,224,102,0.7); }
+.damage-float.ele-shadow  { color: #8f7bd8; text-shadow: 1px 1px 2px rgba(0,0,0,0.9), 0 0 8px rgba(143,123,216,0.7); }
+.damage-float.ele-ghost   { color: #7fe6e0; text-shadow: 1px 1px 2px rgba(0,0,0,0.9), 0 0 8px rgba(127,230,224,0.7); }
+.damage-float.ele-undead  { color: #9aa88c; text-shadow: 1px 1px 2px rgba(0,0,0,0.9), 0 0 8px rgba(154,168,140,0.7); }
+
+/* ---------------- 屬性克制飄字 ----------------
+   比傷害數字大一號、位置再高一截，顏色跟著攻擊方的屬性走。 */
+.element-float {
+  position: fixed;
+  z-index: 9999;
+  pointer-events: none;
+  transform: translateX(-50%);
+  font-size: 30px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  white-space: nowrap;
+  color: #fff;
+  -webkit-text-stroke: 1px rgba(0,0,0,0.85);
+  text-shadow: 0 2px 4px rgba(0,0,0,0.9);
+  animation: elementFloatUp 1.4s ease-out forwards;
+}
+/* 被克時縮小一點、透明一些——是壞消息，不該比克制還搶眼 */
+.element-float.weak { font-size: 22px; opacity: 0.9; }
+.element-float.immune { font-size: 24px; color: #b0b0b0; }
+
+.element-float.ele-fire    { color: #ff4b30; text-shadow: 0 2px 4px rgba(0,0,0,0.9), 0 0 14px rgba(255,75,48,0.85); }
+.element-float.ele-water   { color: #3ba7ff; text-shadow: 0 2px 4px rgba(0,0,0,0.9), 0 0 14px rgba(59,167,255,0.85); }
+.element-float.ele-wind    { color: #2fdc6e; text-shadow: 0 2px 4px rgba(0,0,0,0.9), 0 0 14px rgba(47,220,110,0.85); }
+.element-float.ele-earth   { color: #d2a63c; text-shadow: 0 2px 4px rgba(0,0,0,0.9), 0 0 14px rgba(210,166,60,0.85); }
+.element-float.ele-poison  { color: #b45cff; text-shadow: 0 2px 4px rgba(0,0,0,0.9), 0 0 14px rgba(180,92,255,0.8); }
+.element-float.ele-holy    { color: #ffe066; text-shadow: 0 2px 4px rgba(0,0,0,0.9), 0 0 14px rgba(255,224,102,0.85); }
+.element-float.ele-shadow  { color: #8f7bd8; text-shadow: 0 2px 4px rgba(0,0,0,0.9), 0 0 14px rgba(143,123,216,0.8); }
+.element-float.ele-ghost   { color: #7fe6e0; text-shadow: 0 2px 4px rgba(0,0,0,0.9), 0 0 14px rgba(127,230,224,0.8); }
+.element-float.ele-undead  { color: #9aa88c; text-shadow: 0 2px 4px rgba(0,0,0,0.9), 0 0 14px rgba(154,168,140,0.8); }
+.element-float.ele-none    { color: #e8e8e8; }
+
+@keyframes elementFloatUp {
+  0%   { opacity: 0; transform: translateX(-50%) translateY(6px) scale(0.6); }
+  18%  { opacity: 1; transform: translateX(-50%) translateY(-6px) scale(1.25); }
+  32%  { opacity: 1; transform: translateX(-50%) translateY(-12px) scale(1); }
+  75%  { opacity: 1; transform: translateX(-50%) translateY(-34px) scale(1); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-58px) scale(1); }
+}
+
 @keyframes floatUp {
   0% { opacity: 1; transform: translateY(0); }
   30% { opacity: 1; transform: translateY(-25px); }
@@ -921,16 +983,21 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-deep); co
   font-weight: 700;
 }
 /* ---- 裝備分頁：上半裝備欄釘住不動，下半可選清單自己捲 ---- */
-/* .tab-content 是外層捲動容器，這裡用 sticky 把裝備欄黏在頂端；
-   負的 top 是為了抵銷 .tab-content 的 16px padding，讓它真的貼齊上緣 */
-.equip-fixed {
+/* .tab-content 是外層捲動容器，這裡用 sticky 把「裝備欄 + 武器/防具切換鈕」
+   一起黏在頂端；負的 top 是為了抵銷 .tab-content 的 16px padding，讓它真的貼齊上緣。
+   兩者包在同一個容器裡而不是各自 sticky——分開做的話切換鈕的 top 必須等於
+   裝備欄的實際高度，而那個高度會隨外觀面板與裝備數量變動，只能靠 JS 量。 */
+.equip-sticky {
   position: sticky;
   top: -16px;
   z-index: 5;
   background: var(--bg-panel);
+  border-bottom: 1px solid var(--line);
+}
+.equip-fixed {
+  background: var(--bg-panel);
   padding: 12px 0 8px;
   margin-top: -12px;
-  border-bottom: 1px solid var(--line);
 }
 /* 裝備分頁裡的格子縮小一點，才空得出下方選單的位置 */
 .equip-fixed .ro-equip-grid { gap: 4px; margin-bottom: 8px; max-width: 300px; }
@@ -942,7 +1009,9 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-deep); co
 .equip-fixed .ro-equip-slot .slot-cards { margin-top: 1px; }
 
 .equip-fixed-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.equip-fixed-head .panel-title { margin: 0; }
+.equip-fixed-head .panel-title { margin: 0; display: flex; align-items: center; gap: 6px; }
+.equip-collapse-btn { padding: 0 6px; line-height: 1.4; font-size: 11px; }
+.equip-fixed.collapsed { padding-bottom: 4px; }
 .equip-skin-select { font-size: 11px; padding: 2px 4px; max-width: 150px; }
 
 /* ---- RO 原版底圖裝備視窗 ---- */
@@ -1040,7 +1109,11 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-deep); co
   font-size: 11px; color: var(--ink-dim); line-height: 1.7;
 }
 
-.equip-pick-head { display: flex; align-items: center; gap: 8px; margin: 10px 0 8px; flex-wrap: wrap; }
+.equip-pick-head {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 8px 0; margin: 0;   /* 在 .equip-sticky 裡面，用 padding 撐開才不會露出底下的內容 */
+  background: var(--bg-panel);
+}
 .equip-pick-empty { color: var(--ink-dim); font-size: 13px; padding: 16px 0; text-align: center; }
 .equip-pick-row {
   display: flex; align-items: center; gap: 8px;
@@ -1415,5 +1488,7 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-deep); co
   font-size: 10px; color: var(--ink-dim); margin-top: 4px;
 }
 .inv-compare.same { color: var(--ink-dim); font-style: italic; }
-.cmp-up { color: #6dd47e; font-variant-numeric: tabular-nums; }
-.cmp-down { color: var(--crimson-soft); font-variant-numeric: tabular-nums; }
+/* 一次可能列出好幾項（ATK/DEF/最大HP/攻速…），彼此要留空隙才讀得開 */
+.cmp-up, .cmp-down { display: inline-block; margin-right: 10px; font-variant-numeric: tabular-nums; }
+.cmp-up { color: #6dd47e; }
+.cmp-down { color: var(--crimson-soft); }

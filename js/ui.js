@@ -270,6 +270,14 @@ function renderTopBar() {
   const jobBtn = document.getElementById('btn-jobchange-alert');
   const canAny = job.next.some(canJobChange);
   jobBtn.classList.toggle('hidden', !canAny);
+
+  // 玩家身上的異常狀態圖示：掛在 HP 條旁邊，沒有狀態時整塊不佔位
+  const ailEl = document.getElementById('hud-ail');
+  if (ailEl && typeof playerAilList === 'function') {
+    const html = playerAilList()
+      .map(t => `<span title="${PLAYER_AILMENTS[t].name}">${PLAYER_AILMENTS[t].icon}</span>`).join('');
+    if (ailEl.innerHTML !== html) ailEl.innerHTML = html;
+  }
 }
 
 function setBar(barId, textId, val, max, label) {
@@ -676,8 +684,20 @@ function updateMonsterHp() {
 
 /* ---------------- 傷害飄字系統 ---------------- */
 let damageFloatId = 0;
-let pendingFloatTargetId = null; // AoE 設定此值讓飄字定位到指定怪物 instanceId
+let pendingFloatTargetId = null; // showDamageFloatAt() 用來把飄字釘在指定怪物身上；只有本檔會動它
 let _floatDelayMs = 0; // 累積延遲，讓連續飄字錯開
+
+/* 把飄字打在**指定的那一隻怪**身上（範圍技、多段技用）。
+
+   engine.js 以前是自己 `pendingFloatTargetId = mon.id`（跨檔案寫 ui.js 的變數），
+   而且另外兩處乾脆自己 createElement 拼一顆飄字出來——等於同一件事有三份實作，
+   偏移錯開、暴擊特效、存活時間都對不上。統一走這支。 */
+function showDamageFloatAt(monsterInstanceId, dmg, type, element) {
+  const prev = pendingFloatTargetId;
+  pendingFloatTargetId = monsterInstanceId;
+  try { showDamageFloat(dmg, type, element); }
+  finally { pendingFloatTargetId = prev; }
+}
 
 // 在玩家頭上顯示飄字
 function showPlayerFloat(dmg, type) {
@@ -701,6 +721,35 @@ function showPlayerFloat(dmg, type) {
   }
 }
 
+/* 屬性克制／被克／免疫時，在怪物頭上打一行**加大的**屬性飄字。
+
+   顏色跟著「攻擊方的屬性」走（火紅、水藍、風綠、地土黃…），
+   跟傷害數字的綠/紫是兩回事——那個只表示賺到或吃虧，這個是告訴你打的是什麼屬性。
+   位置比傷害數字再高一截，免得跟它疊在一起。 */
+const ELEMENT_FLOAT_LABEL = {
+  none: '無', water: '水', earth: '地', fire: '火', wind: '風',
+  poison: '毒', holy: '聖', shadow: '暗', ghost: '念', undead: '不死',
+};
+function showElementFloat(monsterInstanceId, element, mult) {
+  let targetEl = monsterInstanceId != null ? document.getElementById('monster-slot-' + monsterInstanceId) : null;
+  if (!targetEl) targetEl = document.querySelector('.monster-slot.target');
+  if (!targetEl) return;
+
+  const el = document.createElement('div');
+  el.className = 'element-float ele-' + (element || 'none');
+  if (mult === 0) el.classList.add('immune');
+  else if (mult < 1) el.classList.add('weak');
+  const name = ELEMENT_FLOAT_LABEL[element] || ELEMENT_FLOAT_LABEL.none;
+  el.textContent = mult === 0 ? `${name} 免疫` : `${name} ×${Math.round(mult * 100)}%`;
+
+  const rect = targetEl.getBoundingClientRect();
+  el.style.position = 'fixed';
+  el.style.left = (rect.left + rect.width / 2) + 'px';
+  el.style.top = (rect.top - 44) + 'px';
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1400);
+}
+
 function showDamageFloat(dmg, type, element) {
   // 找到目標怪物 DOM 元素來取得座標
   let targetEl = null;
@@ -720,6 +769,11 @@ function showDamageFloat(dmg, type, element) {
   else if (type === 'element-good') el.classList.add('element-good');
   else if (type === 'element-bad') el.classList.add('element-bad');
   else if (type === 'element-immune') el.classList.add('element-immune');
+  /* 魔法傷害的數字照施法屬性上色（火紅、水藍、風綠、地土黃…），
+     跟怪物頭上那行屬性飄字同一套顏色。
+     **無屬性不加 class**——依使用者要求，維持跟物理傷害一模一樣的白字。
+     資料裡的無屬性有兩種寫法：`SKILLS` 用 `neutral`（57 個），`ITEMS` 用 `none`（46 件），兩個都要擋。 */
+  else if (element && element !== 'none' && element !== 'neutral') el.classList.add('ele-' + element);
 
   el.textContent = dmg;
 
@@ -1052,24 +1106,21 @@ function renderAutoBattleTab() {
   const currentPrimary = state.autoPotion.primary || '';
   const currentFallback = state.autoPotion.fallback || 'red_potion';
 
-  // 下拉1：背包回復道具（消耗品/材料中可回復HP/SP的）
+  /* 下拉1：背包回復道具。只認結構化欄位——以前還會用 desc 有沒有「恢復」字樣補一票進來，
+     但 useItem() 已經不再從 desc 猜回復量了，那種道具選進來只會每次都用失敗。 */
   const invHealItems = state.inventory.filter(row => {
     if (row.instanceId) return false;
     const d = ITEMS[row.item];
-    if (!d) return false;
-    if (d.heal || d.restoreSp) return true;
-    if (d.type !== 'consumable' && d.type !== 'material') return false;
-    const desc = d.desc || '';
-    const hasHealText = (desc.includes('恢復') || desc.includes('恢复')) && (desc.includes('HP') || desc.includes('SP'));
-    return hasHealText;
+    return !!d && !!(d.heal || d.restoreSp || d.healPct || d.restoreSpPct);
   });
   const invOptions = invHealItems.map(row => {
     const def = ITEMS[row.item];
-    let effect = '';
-    if (def.heal) effect = `恢復${def.heal}HP`;
-    else if (def.restoreSp) effect = `恢復${def.restoreSp}SP`;
-    else effect = '回復道具';
-    return `<option value="${row.item}" ${currentPrimary === row.item ? 'selected' : ''}>${def.name} (${effect}) x${row.qty}</option>`;
+    const bits = [];
+    if (def.heal) bits.push(`恢復${def.heal}HP`);
+    if (def.healPct) bits.push(`恢復${def.healPct}%HP`);
+    if (def.restoreSp) bits.push(`恢復${def.restoreSp}SP`);
+    if (def.restoreSpPct) bits.push(`恢復${def.restoreSpPct}%SP`);
+    return `<option value="${row.item}" ${currentPrimary === row.item ? 'selected' : ''}>${def.name} (${bits.join('、')}) x${row.qty}</option>`;
   }).join('');
 
   // 下拉2：4種固定藥水
@@ -1086,11 +1137,12 @@ function renderAutoBattleTab() {
   const invSpItems = state.inventory.filter(row => {
     if (row.instanceId) return false;
     const d = ITEMS[row.item];
-    return d && d.restoreSp > 0;
+    return !!d && (d.restoreSp > 0 || d.restoreSpPct > 0);
   });
   const invSpOptions = invSpItems.map(row => {
     const def = ITEMS[row.item];
-    return `<option value="${row.item}" ${spCfg.primary === row.item ? 'selected' : ''}>${def.name} (恢復${def.restoreSp}SP) x${row.qty}</option>`;
+    const eff = def.restoreSp ? `恢復${def.restoreSp}SP` : `恢復${def.restoreSpPct}%SP`;
+    return `<option value="${row.item}" ${spCfg.primary === row.item ? 'selected' : ''}>${def.name} (${eff}) x${row.qty}</option>`;
   }).join('');
   const aspdCfg = state.autoAspdPotion || { enabled: false, items: [] };
   const spFallbackDef = ITEMS['blue_potion'];
@@ -1776,7 +1828,7 @@ function renderCodexDetail(id) {
         </div>
       </div>
       <div class="codex-detail-stats">
-        <span>HP ${d.hp}</span><span>ATK ${d.atk}</span><span title="硬防（比例減傷）＋軟防（固定扣血）">DEF ${d.def}${d.defSoft ? '+' + d.defSoft : ''}</span>
+        <span>HP ${d.hp}</span><span title="官方 renewal：傷害 = ATK×(0.8~1.2) + STR + 等級">ATK ${Math.round(d.atk * 0.8 + (d.mobStr || 0) + (d.level || 0))}~${Math.round(d.atk * 1.2 + (d.mobStr || 0) + (d.level || 0))}</span><span title="硬防（比例減傷）＋軟防（固定扣血）">DEF ${d.def}${d.defSoft ? '+' + d.defSoft : ''}</span><span title="魔防：魔法傷害看的是這個，硬魔防比例減傷、軟魔防固定扣血">MDEF ${d.mdef || 0}${d.mdefSoft ? '+' + d.mdefSoft : ''}</span>
         <span>EXP ${d.exp}</span><span>JOB ${d.jobExp}</span>
       </div>
       <div class="codex-detail-sec">出沒地圖</div>
@@ -1808,7 +1860,9 @@ function renderCodexDetail(id) {
     if (typeof d[k] === 'number' && d[k] !== 0) statBits.push(`${k.toUpperCase()} ${d[k] > 0 ? '+' : ''}${d[k]}`);
   });
   if (d.heal) statBits.push(`回復 ${d.heal} HP`);
+  if (d.healPct) statBits.push(`回復 ${d.healPct}% HP`);
   if (d.restoreSp) statBits.push(`回復 ${d.restoreSp} SP`);
+  if (d.restoreSpPct) statBits.push(`回復 ${d.restoreSpPct}% SP`);
 
   // 卡片插圖：只在詳情展開時才出現在 DOM，等同延遲載入，一次也只會抓一張
   const illustration = card
@@ -1964,6 +2018,15 @@ function formatCardBonus(k, v, all) {
   if (k === 'spStealPct') return `${(all && all.spStealChance) || 0}% 機率吸取傷害的 ${v}% 成SP`;
   if (k.startsWith('sizeDmgReduce_')) return `受${SIZE_LABELS[k.slice(14)] || k.slice(14)}傷害 ${signed(-v, 1)}`;
   if (k.startsWith('sizeDmg_')) return `對${SIZE_LABELS[k.slice(8)] || k.slice(8)}傷害 ${signed(v, 1)}`;
+  // 魔物家族／指名單一隻怪的增傷（哥布靈首領、獸人女戰士、熔岩巨石那幾張）
+  if (k.startsWith('familyDmg_')) {
+    const f = typeof MONSTER_FAMILIES !== 'undefined' ? MONSTER_FAMILIES[k.slice(10)] : null;
+    return `對${f ? f.name + '族' : k.slice(10)}傷害 ${signed(v, 1)}`;
+  }
+  if (k.startsWith('monDmg_')) {
+    const m = MONSTERS[k.slice(7)];
+    return `對${m ? m.name : k.slice(7)}傷害 ${signed(v, 1)}`;
+  }
   return `${k} ${signed(v)}`;
 }
 
@@ -1982,7 +2045,9 @@ const INV_CATEGORIES = [
 const WEAPON_TYPE_LABELS = {
   // knuckle 原本被標成「拳刃」——拳刃是 katar，knuckle 是拳套，兩種不同武器
   dagger: '匕首', sword: '單手劍', tsword: '雙手劍', spear: '矛',
-  mace: '鈍器', bow: '弓', knuckle: '拳套', katar: '拳刃', rod: '法杖'
+  mace: '鈍器', bow: '弓', knuckle: '拳套', katar: '拳刃', rod: '法杖',
+  // 少了這兩個，94 本書與 142 把槍會全部掉進背包的「其他」分類裡
+  book: '書', gun: '槍'
 };
 const ARMOR_TYPE_LABELS = {
   headgear: '頭飾', leather: '鎧甲', shield: '盾牌',
@@ -2063,15 +2128,35 @@ function compareEquip(itemId, newRefine) {
   });
   return { slot, curId, curRef, rows };
 }
-function renderCompareBadge(itemId, newRefine) {
+/* 換裝比較：優先顯示**角色實際數值**會怎麼變（ATK/DEF/最大HP/命中…）。
+
+   以前只比「裝備欄位上寫的數字」，那跟真正打出來的傷害是兩回事：
+   武器 ATK 要經過精煉曲線、卡片與條件式加成（#19）、素質衍生的 ATK 也會跟著動。
+   現在走 engine.js 的 previewEquipDelta()——暫時穿上去重算一次再還原，數字保證跟實戰一致。
+   穿不上的（職業／等級擋住）沒辦法模擬，退回舊的「只比裝備本身數值」並標明原因。 */
+function renderCompareBadge(itemId, newRefine, instanceId) {
+  const slot = targetSlotOf(itemId);
+  if (!slot) return '';
+  const curId = getEquipBaseItemId(slot);
+  const curRef = getRefinementLevel(slot);
+  const curName = curId ? `${curRef > 0 ? '+' + curRef + ' ' : ''}${getItemDisplayName(curId)}` : '（空欄位）';
+
+  const prev = typeof previewEquipDelta === 'function' ? previewEquipDelta(itemId, instanceId) : null;
+  if (prev) {
+    if (!prev.changes.length) return `<div class="inv-compare same">對比 ${curName}：角色數值沒有變化</div>`;
+    const parts = prev.changes.map(c =>
+      `<span class="cmp-${c.delta > 0 ? 'up' : 'down'}">${c.label} ${c.delta > 0 ? '▲+' : '▼'}${c.delta}</span>`
+    );
+    return `<div class="inv-compare">對比 ${curName}：${parts.join('')}</div>`;
+  }
+
   const cmp = compareEquip(itemId, newRefine);
   if (!cmp || !cmp.rows.length) return '';
   const parts = cmp.rows.filter(r => r.diff !== 0).map(r =>
     `<span class="cmp-${r.diff > 0 ? 'up' : 'down'}">${r.label} ${r.diff > 0 ? '▲+' : '▼'}${r.diff}</span>`
   );
   if (!parts.length) return `<div class="inv-compare same">與目前裝備數值相同</div>`;
-  const curName = cmp.curId ? `${cmp.curRef > 0 ? '+' + cmp.curRef + ' ' : ''}${getItemDisplayName(cmp.curId)}` : '（空欄位）';
-  return `<div class="inv-compare">對比 ${curName}：${parts.join('')}</div>`;
+  return `<div class="inv-compare">（穿不上，只比裝備數值）對比 ${curName}：${parts.join('')}</div>`;
 }
 
 // 不認識的分類就退回第一類：下面 renderInventoryTab() 有一處 INV_CATEGORIES.find(...).name，
@@ -2119,6 +2204,10 @@ const EQUIPWIN_POS = {
 };
 function getEquipSkin() { return (state && state.equipSkin) || 'grid'; }
 function setEquipSkin(v) { state.equipSkin = v; saveGame(); renderEquipTab(); }
+/* 裝備欄摺疊：釘住的區塊（裝備欄 286px + 切換鈕 46px）在 1280×720 會吃掉分頁高度的 65%，
+   下面的清單只剩兩列。摺起來就只剩標題列，換裝備時再展開。預設展開，狀態寫進存檔。 */
+function getEquipPanelCollapsed() { return !!(state && state.equipPanelCollapsed); }
+function toggleEquipPanel() { state.equipPanelCollapsed = !state.equipPanelCollapsed; saveGame(); renderEquipTab(); }
 
 function buildEquipPanelHtml() {
   return getEquipSkin() === 'grid' ? buildEquipGridHtml() : buildEquipWinHtml();
@@ -2350,10 +2439,16 @@ function refreshEquipViews() {
 /* 這件裝備目前這個職業穿不穿得上。
    reqJob 寫的是「本職」名稱（例：日本刀是 swordsman/merchant/thief），
    而二轉職業穿得下一轉的裝備，所以要比對整條職業鏈（騎士＝novice→swordsman→knight）。
-   沒寫 reqJob 的視為全職業通用。 */
+   沒寫 reqJob 的視為全職業通用。
+
+   武器還要多過一關**武器分類**：官方有些武器沒寫職業限制，靠的是「這個職業能不能用書／槍」
+   這條規則擋（預言錄就是這種，reqJob 空白但騎士拿不動書）。
+   只看 reqJob 的話，清單會列出按下去才被 equipBlockReason() 打回票的東西。 */
 function canJobEquip(def) {
-  if (!def || !def.reqJob || !def.reqJob.length) return true;
-  return getAllLearnedJobs().some(j => def.reqJob.includes(j));
+  if (!def) return false;
+  if (def.reqJob && def.reqJob.length && !getAllLearnedJobs().some(j => def.reqJob.includes(j))) return false;
+  if (def.type === 'weapon' && typeof jobCanUseWeapon === 'function' && !jobCanUseWeapon(state.jobId, def.id)) return false;
+  return true;
 }
 
 function renderEquipTab() {
@@ -2395,26 +2490,35 @@ function renderEquipTab() {
           <div class="equip-pick-name">${refine > 0 ? `<span class="slot-refine">+${refine}</span> ` : ''}${getItemDisplayName(r.item)}${d.slots ? ` <span class="inv-slots">[${d.slots}]</span>` : ''}</div>
           <div class="equip-pick-stats">${bits.join('　')}</div>
           ${cards.length ? `<div class="equip-pick-cards">🃏 ${cards.map(id => CARDS[id] ? CARDS[id].name : id).join('、')}</div>` : ''}
-          ${renderCompareBadge(r.item, refine)}
+          ${renderCompareBadge(r.item, refine, r.instanceId)}
         </div>
         <button class="btn-small" onclick="${action};renderEquipTab();renderTopBar();">裝備</button>
       </div>`;
     }).join('') : `<div class="equip-pick-empty">背包裡沒有${currentJob().name}穿得上的${equipPickCat === 'weapon' ? '武器' : '防具'}。</div>`;
 
+    /* 裝備欄與「武器／防具」切換鈕包在同一個 sticky 容器裡。
+       以前只有 .equip-fixed 是 sticky，切換鈕會跟著清單一起捲走——
+       清單一長就得先捲回最上面才能換分類。 */
     el.innerHTML = `
-      <div class="equip-fixed">
-        <div class="equip-fixed-head">
-          <h3 class="panel-title">裝備欄</h3>
-          <select class="ab-select equip-skin-select" onchange="setEquipSkin(this.value)" title="切換裝備視窗外觀">
-            ${EQUIP_SKINS.map(s => `<option value="${s.key}" ${getEquipSkin() === s.key ? 'selected' : ''}>${s.name}</option>`).join('')}
-          </select>
+      <div class="equip-sticky">
+        <div class="equip-fixed${getEquipPanelCollapsed() ? ' collapsed' : ''}">
+          <div class="equip-fixed-head">
+            <h3 class="panel-title">
+              <button class="btn-small ghost equip-collapse-btn" onclick="toggleEquipPanel()"
+                title="${getEquipPanelCollapsed() ? '展開裝備欄' : '收合裝備欄，讓下面的清單看得更多'}">${getEquipPanelCollapsed() ? '▶' : '▼'}</button>
+              裝備欄
+            </h3>
+            <select class="ab-select equip-skin-select" onchange="setEquipSkin(this.value)" title="切換裝備視窗外觀">
+              ${EQUIP_SKINS.map(s => `<option value="${s.key}" ${getEquipSkin() === s.key ? 'selected' : ''}>${s.name}</option>`).join('')}
+            </select>
+          </div>
+          ${getEquipPanelCollapsed() ? '' : buildEquipPanelHtml()}
         </div>
-        ${buildEquipPanelHtml()}
-      </div>
-      <div class="equip-pick-head">
-        <button class="btn-small ${equipPickCat === 'weapon' ? 'active' : 'ghost'}" onclick="setEquipPickCat('weapon')">⚔️ 武器</button>
-        <button class="btn-small ${equipPickCat === 'armor' ? 'active' : 'ghost'}" onclick="setEquipPickCat('armor')">🛡️ 防具</button>
-        <span class="equip-pick-stats">${currentJob().name}可裝備 ${rows.length} 件</span>
+        <div class="equip-pick-head">
+          <button class="btn-small ${equipPickCat === 'weapon' ? 'active' : 'ghost'}" onclick="setEquipPickCat('weapon')">⚔️ 武器</button>
+          <button class="btn-small ${equipPickCat === 'armor' ? 'active' : 'ghost'}" onclick="setEquipPickCat('armor')">🛡️ 防具</button>
+          <span class="equip-pick-stats">${currentJob().name}可裝備 ${rows.length} 件</span>
+        </div>
       </div>
       ${listHtml}
       <div id="ro-equip-tooltip" class="ro-equip-tooltip"></div>`;
@@ -2471,7 +2575,10 @@ function renderInventoryTab() {
       const def = ITEMS[row.item];
       const displayName = getItemDisplayName(row.item);
       const isCard = !!CARDS[row.item];
-      const canUse = def.type === 'consumable' || def.type === 'weapon' || def.type === 'armor';
+      // 消耗品要真的有效果才給「使用」鈕——沒有效果的按下去只會得到一句警告
+      const usableConsumable = def.type === 'consumable' &&
+        !!(def.heal || def.restoreSp || def.healPct || def.restoreSpPct || def.boxOpen || def.aspdPct);
+      const canUse = usableConsumable || def.type === 'weapon' || def.type === 'armor';
       const elemTag = def.element ? ` ${ELEMENT_ICONS[def.element]}${ELEMENT_NAMES[def.element]}` : '';
 
       // ---- 個體裝備（精煉過或插過卡）：獨立一行，狀態跟著這一件走 ----
@@ -2492,7 +2599,7 @@ function renderInventoryTab() {
               <div class="inv-name">${iLocked ? '<span class="inv-lock-tag">🔒</span> ' : ''}${refTag}${displayName}${def.slots ? ` <span class="inv-slots">[${def.slots}]</span>` : ''}${elemTag}</div>
               <div class="inv-desc">${def.desc || ''}</div>
               ${cardsHtml}
-              ${renderCompareBadge(row.item, inst.refine)}
+              ${renderCompareBadge(row.item, inst.refine, row.instanceId)}
             </div>
           </div>
           <div class="inv-actions">
@@ -2828,7 +2935,7 @@ function renderCharacterTab() {
     <div class="derived-grid">
       <div>物理攻擊 ATK：${state.atk}${(() => { const r = getRefinementLevel('weapon'); const wId = getEquipBaseItemId('weapon'); const wLv = wId ? getRefineWeaponLv(ITEMS[wId]) : 1; return r > 0 ? ` (+${getRefinementAtkBonus(r, wLv)}精煉)` : ''; })()}</div>
       <div>魔法攻擊 MATK：${state.matkMin}~${state.matkMax}</div>
-      <div>防禦 DEF：${state.def}${(() => { let refBonus = 0; ['head_top','head_mid','head_bottom','armor','shield','garment','footgear','accessory1','accessory2'].forEach(s => { const lv = getRefinementLevel(s); if (lv > 0) refBonus += getRefinementDefBonus(lv); }); return refBonus > 0 ? ` (+${refBonus}精煉)` : ''; })()}</div>
+      <div title="硬防（裝備）走比例減傷、軟防（等級+VIT）每一擊固定扣血，兩者運算方式不同">防禦 DEF：${state.defHard || 0}+${state.defSoft || 0}${(() => { let refBonus = 0; ['head_top','head_mid','head_bottom','armor','shield','garment','footgear','accessory1','accessory2'].forEach(s => { const lv = getRefinementLevel(s); if (lv > 0) refBonus += getRefinementDefBonus(lv); }); return refBonus > 0 ? ` (+${refBonus}精煉)` : ''; })()}　<span class="dim">硬防減傷 ${Math.round((1 - (4000 + (state.defHard||0)) / (4000 + 10 * (state.defHard||0))) * 100)}%</span></div>
       <div>攻擊速度 ASPD：${state.aspd}${state.buffs.some(b => b.type === 'aspd') ? ' <span class="buff-active">BUFF</span>' : ''}</div>
       <div>攻擊間隔：${(state.attackInterval / 1000).toFixed(2)} 秒</div>
       <div>命中 HIT：${effectiveHit}${effectiveHit > state.hit ? ` <span class="buff-active">(+${effectiveHit - state.hit})</span>` : ''}</div>
