@@ -274,8 +274,16 @@ function renderTopBar() {
   // 玩家身上的異常狀態圖示：掛在 HP 條旁邊，沒有狀態時整塊不佔位
   const ailEl = document.getElementById('hud-ail');
   if (ailEl && typeof playerAilList === 'function') {
-    const html = playerAilList()
+    let html = playerAilList()
       .map(t => `<span title="${PLAYER_AILMENTS[t].name}">${PLAYER_AILMENTS[t].icon}</span>`).join('');
+    // 臨時減益（挑釁／緩緩移動／永恆之光）跟異常狀態同一排，但標成另一種底色
+    if (typeof pDebuffList === 'function') {
+      html += pDebuffList().map(k => {
+        const v = pDebuff(k);
+        const unit = k === 'fleeFlat' ? '' : '%';
+        return `<span class="p-debuff" title="${PLAYER_DEBUFF_META[k].name} ${v > 0 ? '+' : ''}${v}${unit}">${PLAYER_DEBUFF_META[k].icon}</span>`;
+      }).join('');
+    }
     if (ailEl.innerHTML !== html) ailEl.innerHTML = html;
   }
 }
@@ -676,11 +684,23 @@ function updateMonsterHp() {
     const ailEl = document.getElementById(`monster-ail-${mon.id}`);
     if (ailEl && typeof ailList === 'function') {
       const list = ailList(mon);
-      const html = list.map(t => `<span title="${MON_AILMENTS[t].name}">${MON_AILMENTS[t].icon}</span>`).join('');
+      let html = list.map(t => `<span title="${MON_AILMENTS[t].name}">${MON_AILMENTS[t].icon}</span>`).join('');
+      // 怪物自己的增益（#36）：跟異常狀態同一排，用不同底色區分
+      if (typeof monBuffList === 'function') {
+        html += monBuffList(mon).map(k =>
+          `<span class="mon-buff" title="${MON_BUFF_LABELS[k] || k}">${MON_BUFF_ICONS[k] || '✨'}</span>`).join('');
+      }
       if (ailEl.innerHTML !== html) ailEl.innerHTML = html;
     }
   });
 }
+
+/* 怪物身上的增益（#36）在 HP 條下面的圖示。鍵對應 engine.js 的 MON_BUFF_KEYS */
+const MON_BUFF_ICONS = { atkPct: '💪', aspdPct: '💨', fleeFlat: '🌀', cutPct: '🛡️', block: '🛡️', reflect: '🔁', maxRoll: '🎯' };
+const MON_BUFF_LABELS = {
+  atkPct: '攻擊力提升', aspdPct: '攻速提升', fleeFlat: '迴避提升',
+  cutPct: '受到的傷害下降', block: '自動防禦（機率完全擋下）', reflect: '反射盾', maxRoll: '傷害固定最大值',
+};
 
 /* ---------------- 傷害飄字系統 ---------------- */
 let damageFloatId = 0;
@@ -1071,35 +1091,27 @@ function renderAutoBattleTab() {
   const job = currentJob();
   const config = state.autoSkillConfig || { skillId: null, mode: 'once', spThreshold: 30 };
 
-  // 收集所有已學的主動攻擊技能（跨職業）
-  const attackSkills = [];
+  /* 收集現在能用的主動技能。走 usableSkillEntries()，所以卡片賦予的技能
+     也設得成自動施放（來源標成「卡片」）。
+     不排除 isQuest：任務技能只是「不能加點」，主動攻擊技能（衝鋒箭、手推車攻擊）
+     一樣該能設成自動施放；被動的任務技能本來就會被 type 過濾掉。 */
   const allJobs = getAllLearnedJobs();
-  for (const jobId of allJobs) {
-    const jobDef = JOB_TREE[jobId];
-    if (!jobDef) continue;
-    jobDef.skills.forEach(sk => {
-      const lv = state.learnedSkills[sk.id];
-      // 不排除 isQuest：任務技能只是「不能加點」，主動攻擊技能（衝鋒箭、手推車攻擊）
-      // 一樣該能設成自動施放；被動的任務技能本來就會被 type 過濾掉
-      if (lv && ['damage', 'magic', 'dot', 'damage_multihit', 'damage_multi', 'damage_aoe', 'magic_aoe', 'poison_proc'].includes(sk.type)) {
-        attackSkills.push({ ...sk, lv, jobName: jobDef.name });
-      }
-    });
-  }
-
-  // 收集所有已學的輔助技能（buff/debuff/heal）
-  const supportSkills = [];
-  for (const jobId of allJobs) {
-    const jobDef = JOB_TREE[jobId];
-    if (!jobDef) continue;
-    jobDef.skills.forEach(sk => {
-      const lv = state.learnedSkills[sk.id];
-      // buff_flatstat（商人的大聲吶喊）原本漏在清單外，自動戰鬥頁面就勾不到
-      if (lv && ['buff_atk', 'buff_def', 'buff_aspd', 'buff_flee', 'buff_gold', 'buff_crit', 'buff_poison', 'buff_statpct', 'buff_flatstat', 'buff_maxroll', 'buff_blessing', 'buff_shield', 'buff_sprate', 'buff_lukflat', 'buff_holyweapon', 'debuff_def', 'debuff', 'heal', 'heal_over_time', 'field_heal', 'field_aoe_magic', 'stun_field', 'multi_dot_stun'].includes(sk.type)) {
-        supportSkills.push({ ...sk, lv, jobName: jobDef.name });
-      }
-    });
-  }
+  const jobNameOf = id => {
+    for (const jid of allJobs) {
+      const jd = JOB_TREE[jid];
+      if (jd && jd.skills.some(s => s.id === id)) return jd.name;
+    }
+    return '卡片';
+  };
+  const ATTACK_TYPES = ['damage', 'magic', 'dot', 'damage_multihit', 'damage_multi', 'damage_aoe', 'magic_aoe', 'poison_proc'];
+  // buff_flatstat（商人的大聲吶喊）原本漏在清單外，自動戰鬥頁面就勾不到
+  const SUPPORT_TYPES = ['buff_atk', 'buff_def', 'buff_aspd', 'buff_flee', 'buff_gold', 'buff_crit', 'buff_poison', 'buff_statpct', 'buff_flatstat', 'buff_maxroll', 'buff_blessing', 'buff_shield', 'buff_sprate', 'buff_lukflat', 'buff_holyweapon', 'debuff_def', 'debuff', 'heal', 'heal_over_time', 'field_heal', 'field_aoe_magic', 'stun_field', 'multi_dot_stun'];
+  const attackSkills = [], supportSkills = [];
+  usableSkillEntries().forEach(({ sk, lv }) => {
+    const row = { ...sk, lv, jobName: jobNameOf(sk.id) };
+    if (ATTACK_TYPES.includes(sk.type)) attackSkills.push(row);
+    else if (SUPPORT_TYPES.includes(sk.type)) supportSkills.push(row);
+  });
 
   // 藥水設定 - 兩個下拉選單
   const hpThreshold = state.autoPotion.hpThreshold || 50;
@@ -1497,6 +1509,33 @@ function renderSkillsTab() {
     html += '</div>';
   }
 
+  /* 卡片賦予的技能（#17）：獨立一區，不混進職業區塊——它們不吃技能點、
+     不能加點、脫下裝備就沒有，跟職業技能是兩回事。
+     只列職業技能表裡沒有的那些；重複的（例如牧師本來就有治癒術）已經
+     在職業區塊顯示過，那邊的等級已經是取高的結果。 */
+  const cardOnly = Object.keys(state.cardSkills || {})
+    .filter(id => !getAllLearnedJobs().some(j => (JOB_TREE[j] || { skills: [] }).skills.some(s => s.id === id)))
+    .map(id => ({ sk: findSkillAnywhere(id), lv: state.cardSkills[id] }))
+    .filter(e => e.sk);
+  if (cardOnly.length) {
+    html += `<div class="skill-job-section expanded">
+      <div class="skill-job-header">🃏 卡片賦予的技能<span class="skill-job-tier">脫下裝備即消失</span></div>
+      <div class="skill-list">`;
+    cardOnly.forEach(({ sk, lv }) => {
+      const spCost = Array.isArray(sk.spCost) ? sk.spCost[Math.max(0, lv - 1)] || sk.spCost[0] : sk.spCost;
+      const cd = Array.isArray(sk.cooldown) ? sk.cooldown[Math.max(0, lv - 1)] || sk.cooldown[0] : sk.cooldown;
+      const typeTag = sk.type === 'passive' ? '<span class="skill-type passive">被動</span>' : '';
+      html += `<div class="skill-row learned">
+        <div class="skill-info">
+          <div class="skill-name">${sk.name} <span class="skill-tag">Lv${lv}</span> ${typeTag}</div>
+          <div class="skill-desc">${sk.desc}</div>
+          <div class="skill-cost">SP ${spCost} ・ 冷卻 ${cd}s</div>
+        </div>
+      </div>`;
+    });
+    html += '</div></div>';
+  }
+
   html += '</div>';
   el.innerHTML = html;
 }
@@ -1509,31 +1548,20 @@ function toggleJobSection(jobId) {
 
 function renderSkillBar() {
   const bar = document.getElementById('skill-bar');
-  const learned = [];
-  const allJobs = getAllLearnedJobs();
-  for (const jobId of allJobs) {
-    const job = JOB_TREE[jobId];
-    if (!job) continue;
-    job.skills.forEach(s => {
-      const lv = state.learnedSkills[s.id];
-      // 同上：任務技能只是不能加點，主動技能一樣要能手動放
-      if (lv && s.type !== 'passive') {
-        learned.push(s);
-      }
-    });
-  }
+  // 任務技能只是不能加點，主動技能一樣要能手動放；卡片賦予的技能也走同一份清單
+  const learned = usableSkillEntries().filter(e => e.sk.type !== 'passive');
   if (!learned.length) { bar.innerHTML = ''; return; }
-  bar.innerHTML = learned.map(sk => {
-    const lv = state.learnedSkills[sk.id];
+  bar.innerHTML = learned.map(({ sk, lv, fromCard }) => {
     const ready = skillReady(sk.id);
     const spCost = Array.isArray(sk.spCost) ? sk.spCost[lv - 1] : sk.spCost;
     const enoughSp = state.sp >= spCost;
     const cdSec = state.cooldowns[sk.id] ? Math.ceil(state.cooldowns[sk.id] / 1000) : 0;
     // 武器限定技能：拿錯武器就把按鈕鎖起來，並在 tooltip 說明原因（免得只是灰掉不知道為什麼）
     const weaponOk = weaponReqMet(sk.requiresWeapon);
-    const tip = weaponOk ? sk.desc : `${sk.desc}\n⚠️ 目前武器不符：需要${weaponReqName(sk.requiresWeapon)}`;
-    return `<button class="skill-btn" title="${tip}" ${(!ready || !enoughSp || !weaponOk) ? 'disabled' : ''} onclick="castSkill('${sk.id}')">
-      <span class="skill-btn-name">${sk.name}</span>
+    let tip = weaponOk ? sk.desc : `${sk.desc}\n⚠️ 目前武器不符：需要${weaponReqName(sk.requiresWeapon)}`;
+    if (fromCard) tip += '\n🃏 由卡片賦予，脫下裝備就會消失';
+    return `<button class="skill-btn${fromCard ? ' from-card' : ''}" title="${tip}" ${(!ready || !enoughSp || !weaponOk) ? 'disabled' : ''} onclick="castSkill('${sk.id}')">
+      <span class="skill-btn-name">${fromCard ? '🃏' : ''}${sk.name}</span>
       <span class="skill-btn-lv">Lv${lv}</span>
       <span class="skill-btn-cost">${spCost} SP</span>
       ${cdSec > 0 ? `<span class="skill-btn-cd">${cdSec}</span>` : ''}
@@ -1977,8 +2005,13 @@ function describeCardBonus(card) {
     const RACE = { insect: '昆蟲', brute: '動物', humanoid: '人型', demon: '惡魔', undead: '不死', plant: '植物', fish: '魚貝', formless: '無形', angel: '天使', dragon: '龍族' };
     const who = d.race ? `擊殺${RACE[d.race] || d.race}系` : '擊殺任何魔物';
     const POOL = { food: '食品類道具', elementResist: '屬性抵抗藥水' };
-    const what = d.pool ? POOL[d.pool] || d.pool : (d.items || []).map(i => (ITEMS[i] || {}).name || i).join('／');
-    out.push(`${who}時 ${d.chance}% 額外掉落：${what}`);
+    const what = d.zeny ? `${d.zeny}z`
+      : (d.pool ? POOL[d.pool] || d.pool : (d.items || []).map(i => (ITEMS[i] || {}).name || i).join('／'));
+    out.push(`${who}時 ${d.chance}% 額外${d.zeny ? '獲得' : '掉落'}：${what}`);
+  });
+  (card.grantSkill || []).forEach(g => {
+    const sk = (typeof findSkillAnywhere === 'function') ? findSkillAnywhere(g.id) : null;
+    out.push(`🃏 可使用技能：${sk ? sk.name.split(' ')[0] : g.id} Lv${g.lv}`);
   });
   (card.condBonus || []).forEach(cb => {
     const inner = [];
@@ -2019,6 +2052,11 @@ function formatCardBonus(k, v, all) {
   if (k.startsWith('sizeDmgReduce_')) return `受${SIZE_LABELS[k.slice(14)] || k.slice(14)}傷害 ${signed(-v, 1)}`;
   if (k.startsWith('sizeDmg_')) return `對${SIZE_LABELS[k.slice(8)] || k.slice(8)}傷害 ${signed(v, 1)}`;
   // 魔物家族／指名單一隻怪的增傷（哥布靈首領、獸人女戰士、熔岩巨石那幾張）
+  if (k === 'reflectPct') return `受到近距離物理攻擊時反射 ${v}% 傷害`;
+  if (k === 'hpOnMeleeKill') return `近距離物理擊殺時回復 ${v} HP`;
+  if (k === 'regenTickHp') return `每 10 秒回復 ${v} HP`;
+  if (k === 'regenTickSp') return `每 10 秒回復 ${v} SP`;
+  if (k.startsWith('magicEleDmg_')) return `${ELEMENT_NAMES[k.slice(12)] || k.slice(12)}屬性魔法傷害 ${signed(v, 1)}`;
   if (k.startsWith('familyDmg_')) {
     const f = typeof MONSTER_FAMILIES !== 'undefined' ? MONSTER_FAMILIES[k.slice(10)] : null;
     return `對${f ? f.name + '族' : k.slice(10)}傷害 ${signed(v, 1)}`;
@@ -2899,6 +2937,20 @@ function renderCharacterTab() {
   }
   buffListHtml += '</div>';
 
+  /* 生效中的裝備套裝（#20）。EQUIP_SETS 以前是空的，所以這一排從來沒東西可顯示，
+     現在有資料了就得讓玩家看得到——不然湊齊了也不知道有沒有生效。 */
+  let setListHtml = '';
+  if (typeof activeEquipSets === 'function') {
+    const sets = activeEquipSets() || [];
+    if (sets.length) {
+      setListHtml = '<div class="active-sets">' + sets.map(s => {
+        const bits = Object.entries(s.bonus || {})
+          .map(([k, v]) => formatCardBonus(k, v, s.bonus)).filter(Boolean).join('、');
+        return `<span class="set-tag" title="${bits || '依精煉階數加成'}">🧩 ${s.name}${bits ? '：' + bits : ''}</span>`;
+      }).join('') + '</div>';
+    }
+  }
+
   const jobBonus = computeJobBonuses();
   el.innerHTML = `
     <h3 class="panel-title">${job.icon} ${state.name}　<span class="job-name">${job.name}</span></h3>
@@ -2931,6 +2983,7 @@ function renderCharacterTab() {
       }).join('')}
     </div>
     <div class="stat-points-left">可分配屬性點：${state.statPoints}</div>
+    ${setListHtml}
     ${buffListHtml}
     <div class="derived-grid">
       <div>物理攻擊 ATK：${state.atk}${(() => { const r = getRefinementLevel('weapon'); const wId = getEquipBaseItemId('weapon'); const wLv = wId ? getRefineWeaponLv(ITEMS[wId]) : 1; return r > 0 ? ` (+${getRefinementAtkBonus(r, wLv)}精煉)` : ''; })()}</div>

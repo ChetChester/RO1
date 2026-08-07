@@ -334,6 +334,13 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-deep); co
   min-height: 0;
 }
 .hud-ail:not(:empty) { margin: 2px 0; }
+/* 臨時減益（挑釁／緩緩移動／永恆之光）：跟異常狀態同一排，用底色區分
+   ——那些是有名字的十種狀態，這些是純數值削弱 */
+.hud-ail .p-debuff {
+  background: rgba(200, 60, 60, 0.25);
+  border-radius: 3px;
+  padding: 0 1px;
+}
 
 /* 怪物的異常狀態圖示：跟在 HP 數字下面，沒有狀態時整列不佔高度 */
 .monster-slot .monster-ail {
@@ -346,6 +353,12 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-deep); co
   text-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
 }
 .monster-slot .monster-ail:not(:empty) { margin-top: 2px; }
+/* 怪物自己的增益（#36）：跟異常狀態同一排，加個底色區分敵我 */
+.monster-slot .monster-ail .mon-buff {
+  background: rgba(255, 200, 60, 0.22);
+  border-radius: 3px;
+  padding: 0 1px;
+}
 .monster-slot.target .monster-ail { font-size: 16px; }
 .monster-slot.target {
   /* transform handled by inline style */
@@ -516,6 +529,12 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-deep); co
 .active-buffs { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
 .buff-tag { font-size: 11px; background: #2a4a3a; color: #5dade2; padding: 3px 8px; border-radius: 10px; border: 1px solid var(--teal); }
 .buff-active { font-size: 10px; color: #5dade2; font-weight: 700; }
+/* 生效中的裝備套裝：跟 buff 分開配色——buff 會過期，套裝是穿著就有 */
+.active-sets { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+.set-tag {
+  font-size: 11px; background: #3a2f18; color: var(--gold);
+  padding: 3px 8px; border-radius: 10px; border: 1px solid var(--gold);
+}
 
 /* 轉職樹（簽名視覺） */
 .job-tree-wrap { background: #0c0e16; border: 1px solid var(--line); border-radius: 10px; padding: 8px; overflow-x: auto; }

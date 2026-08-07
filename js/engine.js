@@ -445,10 +445,92 @@ function buffSourceLabel(b) {
   return BUFF_TYPE_LABELS[b.type] || b.type;
 }
 
+/* ---------------- 卡片賦予的技能（#17）----------------
+   官方有一批卡片寫「可使用【偷竊】Lv1技能」——裝著就多一個技能可用，
+   跟職業、技能點都沒有關係（商人的技能可以出現在騎士身上）。
+   資料寫在 `CARDS[x].grantSkill = [{ id, lv }]`。
+
+   **刻意不併進 state.learnedSkills**：那份是玩家花技能點買的，要存檔、
+   轉職時要退點、重置技能時要清空。卡片給的技能脫下就沒有，混進去遲早會
+   把玩家真正學到的等級蓋掉，或在轉職時被當成自己的退成技能點。
+   所以另外開一份 `state.cardSkills`，所有「這個技能有幾級」的判斷一律走
+   `skillLv()`，取兩邊較高的那個（卡片給 Lv1、玩家學到 Lv10 就是 Lv10）。 */
+function cardGrantedSkills() {
+  const out = {};
+  if (typeof allEquippedCards !== 'function') return out;
+  allEquippedCards().forEach(cardId => {
+    const c = CARDS[cardId];
+    if (!c || !c.grantSkill) return;
+    c.grantSkill.forEach(g => {
+      if (!SKILLS[g.id]) return;                       // 本作沒有這個技能就跳過
+      const lv = Math.max(1, Math.min(SKILLS[g.id].maxLv || 1, g.lv || 1));
+      if (!out[g.id] || lv > out[g.id]) out[g.id] = lv;
+    });
+  });
+  return out;
+}
+/* 這個技能實際上有幾級：玩家學的與卡片給的取高。 */
+function skillLv(skillId) {
+  return Math.max(
+    (state.learnedSkills && state.learnedSkills[skillId]) || 0,
+    (state.cardSkills && state.cardSkills[skillId]) || 0
+  );
+}
+/* 要施放時查技能定義：先找已學職業的技能表，找不到才看是不是卡片給的。
+   （不能直接用 findSkillAnywhere，那會讓沒學過也沒卡片的技能一樣查得到。） */
+function findSkillForUse(skillId) {
+  return findSkillById(skillId)
+    || ((state.cardSkills && state.cardSkills[skillId]) ? findSkillAnywhere(skillId) : null);
+}
+/* 現在真的能用的技能清單（已學職業的 + 卡片賦予的），同一個技能只出現一次。
+   技能列、自動施放、自動輔助都走這裡，卡片給的技能才不會只有手動能用。 */
+function usableSkillEntries() {
+  const out = [];
+  const seen = new Set();
+  getAllLearnedJobs().forEach(jid => {
+    const jd = JOB_TREE[jid];
+    if (!jd) return;
+    jd.skills.forEach(sk => {
+      const lv = skillLv(sk.id);
+      if (!lv || seen.has(sk.id)) return;
+      seen.add(sk.id);
+      out.push({ sk, lv, fromCard: !(state.learnedSkills && state.learnedSkills[sk.id]) });
+    });
+  });
+  Object.keys(state.cardSkills || {}).forEach(id => {
+    if (seen.has(id)) return;
+    const sk = findSkillAnywhere(id);
+    if (!sk) return;
+    seen.add(id);
+    out.push({ sk, lv: state.cardSkills[id], fromCard: true });
+  });
+  return out;
+}
+/* 被動技能的掃描來源：已學職業的技能表（含重複，維持原本的行為）
+   ＋ 卡片賦予、但任何已學職業都沒有的技能。 */
+function passiveSourceSkills() {
+  const out = [];
+  const inJobs = new Set();
+  getAllLearnedJobs().forEach(jid => {
+    const jd = JOB_TREE[jid];
+    if (!jd) return;
+    jd.skills.forEach(sk => { out.push(sk); inJobs.add(sk.id); });
+  });
+  Object.keys(state.cardSkills || {}).forEach(id => {
+    if (inJobs.has(id)) return;
+    const sk = findSkillAnywhere(id);
+    if (sk) out.push(sk);
+  });
+  return out;
+}
+
 function recomputeDerived(fullHeal) {
   const job = currentJob();
   const s = state.stats;
   const bl = state.baseLevel;
+
+  // 卡片賦予的技能（見 cardGrantedSkills 的註解）。要在被動技能那兩圈之前算好
+  state.cardSkills = cardGrantedSkills();
 
   // 職業加成（跨職業累計繼承）
   const jobBonus = computeJobBonuses();
@@ -485,12 +567,9 @@ function recomputeDerived(fullHeal) {
   };
 
   // 被動技能 STR/INT/DEX 固定加成（必須在衍生數值計算之前，避免直接修改 state.stats 導致膨脹）
-  const passiveJobsEarly = getAllLearnedJobs();
-  for (const jid of passiveJobsEarly) {
-    const jd = JOB_TREE[jid];
-    if (!jd) continue;
-    jd.skills.forEach(sk => {
-      const lv = state.learnedSkills[sk.id];
+  {
+    passiveSourceSkills().forEach(sk => {
+      const lv = skillLv(sk.id);
       if (!lv || sk.type !== 'passive') return;
       const label = `${sk.name} Lv${lv}`;
       if (sk.passiveStat === 'dexFlat') {
@@ -742,12 +821,9 @@ function recomputeDerived(fullHeal) {
   // 雙持右手/左手傷害修正：未修練時的預設值（低於Lv1）
   state.rightHandPct = 50;
   state.leftHandPct = 30;
-  const passiveJobs = getAllLearnedJobs();
-  for (const jid of passiveJobs) {
-    const jd = JOB_TREE[jid];
-    if (!jd) continue;
-    jd.skills.forEach(sk => {
-      const lv = state.learnedSkills[sk.id];
+  {
+    passiveSourceSkills().forEach(sk => {
+      const lv = skillLv(sk.id);
       if (!lv || sk.type !== 'passive') return;
       const val = Array.isArray(sk.mult) ? sk.mult[lv - 1] : sk.mult;
       switch (sk.passiveStat) {
@@ -1099,6 +1175,9 @@ function recomputeDerived(fullHeal) {
   state.cardNormalDmgTakenPct = getCardBonus('normalDmgTakenPct');
   state.cardSpCostPct = getCardBonus('spCostPct');
   state.cardRangedCritRate = getCardBonus('rangedCritRate');
+  // 卡片反射（#17）：受到近距離物理攻擊時把 N% 傷害彈回去
+  state.cardReflectPct = getCardBonus('reflectPct');
+  state.cardHpOnMeleeKill = getCardBonus('hpOnMeleeKill');
   state.cardLifeStealChance = getCardBonus('lifeStealChance');
   state.cardLifeStealPct = getCardBonus('lifeStealPct');
   state.cardSpStealChance = getCardBonus('spStealChance');
@@ -1315,9 +1394,12 @@ let _dpsPaused = false;   // 離線估算期間暫停累計
    也沒有武器浮動、沒有熟練度，跟玩家那條鏈（#12/#28）完全是兩回事。
 
    roll：'mid' 取期望值（產出估算用），其餘正常浮動。 */
-function monsterBaseAtk(monDef, roll) {
-  const v = roll === 'mid' ? 1 : (0.8 + Math.random() * 0.4);
-  return (monDef.atk || 0) * v + (monDef.mobStr || 0) + (monDef.level || 0);
+function monsterBaseAtk(monDef, roll, mon) {
+  // BS_MAXIMIZE：傷害固定取最大值；NPC_POWERUP：整體 ATK +N%
+  const maxRoll = mon && monBuff(mon, 'maxRoll') > 0;
+  const v = roll === 'mid' ? 1 : (maxRoll ? 1.2 : 0.8 + Math.random() * 0.4);
+  const base = (monDef.atk || 0) * v + (monDef.mobStr || 0) + (monDef.level || 0);
+  return base * (1 + (mon ? monBuff(mon, 'atkPct') : 0) / 100);
 }
 
 /* ---------------- 玩家挨打的減傷（硬防／軟防拆開）----------------
@@ -1466,6 +1548,8 @@ function hitChancePctVsMonster(playerHit, monDef, inst) {
        hitReq = 怪物FLEE + 20（100% 命中的定義），所以要先剝掉那 20 再打折、再加回去。
        直接對 hitReq 打折會多扣 5 點——比例制時代無所謂，差值制下 1 點就是 1%。 */
     threshold = Math.max(1, (threshold - REQ_HIT_OFFSET) * ailFleeMult(inst) + REQ_HIT_OFFSET);
+    // 怪物自己的迴避增益（NPC_AGIUP）：加的是點數，1 點就是 1% 命中率
+    threshold += monBuff(inst, 'fleeFlat');
   }
   return Math.min(100, Math.max(5, Math.round(100 - (threshold - playerHit))));
 }
@@ -1651,6 +1735,13 @@ function tryCardKillDrops(monDef) {
   state.cardKillDrops.forEach(e => {
     if (e.race && monDef.race !== e.race) return;
     if (Math.random() * 100 >= e.chance) return;
+    // 掉的是錢不是道具（藍鼠：擊殺時機率得到一筆金幣）
+    if (e.zeny) {
+      state.gold += e.zeny;
+      if (state.dpsTracker) state.dpsTracker.gold += e.zeny;
+      logMsg(`🎁 卡片效果！額外獲得了 ${e.zeny}z！`);
+      return;
+    }
     const pool = e.pool ? itemPool(e.pool) : e.items;
     if (!pool || !pool.length) return;
     const id = pool[Math.floor(Math.random() * pool.length)];
@@ -1930,17 +2021,190 @@ function tickPlayerAilments() {
   }
 }
 
+/* ---------------- 玩家身上的臨時減益（#36）----------------
+   `mon.mbuff` 的鏡像。官方有一批怪物技能是「對玩家下暫時性的削弱」——
+   挑釁（DEF 大降、ATK 反而上升）、緩緩移動（AGI 下降）、永恆之光（下一擊必定重傷）。
+   本作原本沒有「玩家身上的臨時減益」這個容器，那 30 幾條一直躺在未對照清單。
+
+   **刻意跟異常狀態（PLAYER_AILMENTS）分開**：那個是有名字的十種狀態、有卡片抗性、
+   會擋住行動；這個是純數值增減、沒有抗性、時間到就沒了。混在一起的話「免疫昏迷」
+   的卡片會莫名其妙開始擋挑釁，而且十種狀態那張表的每個欄位都要為它加例外。
+
+   存在 `state.pdebuff = { 鍵: { v, until, once? } }`。不寫進存檔——本來就只有幾秒。
+     defPct      防禦 ±N%（硬防軟防一起）
+     atkPct      攻擊力 ±N%（挑釁官方是**加**攻擊力，所以可以是正的）
+     aspdPct     攻速 ±N%（負的＝變慢）
+     fleeFlat    迴避 ±N **點**（點數不是%，理由同 mon.mbuff 的 fleeFlat：
+                 命中判定是差值制，百分比會被放大成幾十個百分點）
+     dmgTakenPct 受到的傷害 ±N%；帶 `once` 的話下一次受傷結算完就消失 */
+const PLAYER_DEBUFF_KEYS = ['defPct', 'atkPct', 'aspdPct', 'fleeFlat', 'dmgTakenPct'];
+const PLAYER_DEBUFF_META = {
+  defPct:      { name: '防禦下降', icon: '🔻' },
+  atkPct:      { name: '攻擊力變動', icon: '💢' },
+  aspdPct:     { name: '攻速下降', icon: '🐌' },
+  fleeFlat:    { name: '迴避下降', icon: '🎯' },
+  dmgTakenPct: { name: '受傷加重', icon: '💥' },
+};
+function pDebuffAdd(key, value, sec, once) {
+  if (!PLAYER_DEBUFF_KEYS.includes(key) || !value) return;
+  state.pdebuff = state.pdebuff || {};
+  const cur = state.pdebuff[key];
+  const until = Date.now() + sec * 1000;
+  // 同一種不疊加，取「影響比較大的」那個並刷新時間（比絕對值，因為挑釁的 atkPct 是正的）
+  if (!cur || Math.abs(value) >= Math.abs(cur.v)) state.pdebuff[key] = { v: value, until, once: !!once };
+  else cur.until = Math.max(cur.until, until);
+}
+function pDebuff(key) {
+  const b = state.pdebuff && state.pdebuff[key];
+  if (!b) return 0;
+  if (Date.now() >= b.until) { delete state.pdebuff[key]; return 0; }
+  return b.v;
+}
+function pDebuffList() {
+  if (!state.pdebuff) return [];
+  return PLAYER_DEBUFF_KEYS.filter(k => pDebuff(k) !== 0);
+}
+// 永恆之光那種「只作用於下一擊」的：結算完就拔掉
+function pDebuffConsumeOnce(key) {
+  const b = state.pdebuff && state.pdebuff[key];
+  if (b && b.once) delete state.pdebuff[key];
+}
+/* 受到傷害時的防禦：把 defPct 套上去。硬防軟防一起打折，跟狂暴那條同樣的做法。 */
+function debuffedDef(hardDef, softDef) {
+  const pct = pDebuff('defPct');
+  if (!pct) return [hardDef, softDef];
+  const m = Math.max(0, 1 + pct / 100);
+  return [Math.round(hardDef * m), Math.round(softDef * m)];
+}
+// 受到的傷害倍率：異常狀態（睡眠 ×1.5）與臨時減益（永恆之光）合在一起
+function playerDmgTakenMult() {
+  return playerAilDmgTakenMult() * (1 + pDebuff('dmgTakenPct') / 100);
+}
+
 /* ---------------- 怪物技能 ----------------
    資料在 js/monster_skills.js（由 tools/import_monster_skills.js 從 rAthena 匯入）。
    每隻怪在自己攻擊的時候擲一次，命中的技能取代那一次普通攻擊。
    冷卻記在**怪物實體**上，所以同一種怪的不同隻各自獨立。 */
+/* ---------------- 怪物身上的增益（#36）----------------
+   官方有一大批「怪物對自己施加增益」的技能（NPC_POWERUP、CR_AUTOGUARD、
+   CR_REFLECTSHIELD…），本作原本完全沒有「怪物身上的 buff」這個概念，
+   所以那 80 幾條一直躺在未對照清單裡。
+
+   一律存在怪物實例的 `mon.mbuff` 上（不是怪物定義），跟怪一起消滅，不寫進存檔。
+     atkPct   攻擊力 +N%
+     aspdPct  攻擊速度 +N%（縮短攻擊間隔）
+     fleeFlat 迴避 +N 點（**點數不是%**：命中判定已經是差值制，
+              百分比會被放大成幾十個百分點，20% 就足以把命中從 46% 打到 5%）
+     cutPct   受到的傷害 −N%
+     block    機率完全擋下玩家的攻擊（自動防禦）
+     reflect  把受到的近距離傷害反彈 N% 回去
+     maxRoll  傷害固定取最大值 */
+const MON_BUFF_KEYS = ['atkPct', 'aspdPct', 'fleeFlat', 'cutPct', 'block', 'reflect', 'maxRoll'];
+function monBuffAdd(mon, key, value, sec) {
+  if (!mon || !MON_BUFF_KEYS.includes(key)) return;
+  mon.mbuff = mon.mbuff || {};
+  const cur = mon.mbuff[key];
+  const until = Date.now() + sec * 1000;
+  // 同一種增益不疊加，取較強的那個並刷新時間（不然怪會把自己疊到無敵）
+  if (!cur || value >= cur.v) mon.mbuff[key] = { v: value, until };
+  else cur.until = Math.max(cur.until, until);
+}
+function monBuff(mon, key) {
+  const b = mon && mon.mbuff && mon.mbuff[key];
+  if (!b) return 0;
+  if (Date.now() >= b.until) { delete mon.mbuff[key]; return 0; }
+  return b.v;
+}
+function monBuffList(mon) {
+  if (!mon || !mon.mbuff) return [];
+  return MON_BUFF_KEYS.filter(k => monBuff(mon, k) > 0);
+}
+/* 玩家打到怪物時，怪物身上的增益怎麼吃這一擊。
+   回傳 { dmg, blocked, reflect }——blocked 代表整下被擋掉。 */
+function monsterAbsorb(mon, dmg, isMelee) {
+  if (!mon || !mon.mbuff) return { dmg, blocked: false, reflect: 0 };
+  const blk = monBuff(mon, 'block');
+  if (blk > 0 && Math.random() * 100 < blk) return { dmg: 0, blocked: true, reflect: 0 };
+  const cut = monBuff(mon, 'cutPct');
+  const out = cut > 0 ? Math.max(1, Math.round(dmg * (1 - cut / 100))) : dmg;
+  const refPct = isMelee ? monBuff(mon, 'reflect') : 0;
+  return { dmg: out, blocked: false, reflect: refPct > 0 ? Math.max(1, Math.round(out * refPct / 100)) : 0 };
+}
+
+/* 反射盾把傷害彈回玩家身上。走玩家的硬防／軟防，但**不會把玩家打死**——
+   反射是自己打出去換來的，站著被自己的輸出反殺體驗太差（跟持續傷害同一個原則）。 */
+function takeReflectDamage(monDef, amount) {
+  const dmg = mitigatePlayerIncoming(amount, ...debuffedDef(state.defHard, state.defSoft));
+  state.hp = Math.max(1, state.hp - dmg);
+  logMsg(`🔁 ${monDef.name} 的反射盾彈回了 ${dmg} 點傷害！`);
+  if (typeof showPlayerFloat === 'function') showPlayerFloat('-' + dmg, 'element-bad');
+}
+
+/* 玩家的反射（#17 的獸人領主 30% / 獸人戰士長 5% 那批卡片）。
+   官方寫的是「受到近距離物理攻擊時，N% 的傷害反射給敵人」——
+   反射的是**已經扣完防禦的實際傷害**，而且不吃怪物的防禦（官方反射無視 DEF）。 */
+function applyPlayerReflect(mon, monDef, dmgTaken) {
+  const pct = state.cardReflectPct || 0;
+  if (!pct || !mon || dmgTaken <= 0) return;
+  const back = Math.max(1, Math.round(dmgTaken * pct / 100));
+  mon.hp -= back;
+  if (!_dpsPaused && state && state.dpsTracker) state.dpsTracker.damage += back;
+  logMsg(`🔁 反射！對 ${monDef.name} 彈回 ${back} 點傷害。`);
+  if (typeof showDamageFloatAt === 'function') showDamageFloatAt(mon.id, '-' + back, 'normal');
+  if (mon.hp <= 0) killMonster(monDef, mon);
+}
+
+/* 場上血量比例最低的「同伴」（不含自己），給 friendhpltmaxrate 用 */
+function lowestHpAlly(mon) {
+  let best = null, bestPct = 2;
+  (state.monsters || []).forEach(m => {
+    if (m === mon || m.hp <= 0 || !m.maxHp) return;
+    const p = m.hp / m.maxHp;
+    if (p < bestPct) { bestPct = p; best = m; }
+  });
+  return best;
+}
+
+/* 技能的觸發條件（官方 mob_skill_db 第 10、11 欄）。
+   以前整欄被忽略，所以死靈那條「HP 低於 30% 才補血」變成每 5 秒無條件補一次。 */
+function monsterSkillCondMet(e, mon) {
+  const c = e.cond;
+  if (!c) return true;
+  const pct = mon.maxHp ? (mon.hp / mon.maxHp) * 100 : 100;
+  if (c.hpLt != null && !(pct < c.hpLt)) return false;
+  if (c.hpIn && !(pct >= c.hpIn[0] && pct <= c.hpIn[1])) return false;
+  if (c.friendHpLt != null) {
+    const f = lowestHpAlly(mon);
+    if (!f || (f.hp / f.maxHp) * 100 >= c.friendHpLt) return false;
+  }
+  return true;
+}
+
+/* 治療量走官方公式（rAthena `skill_calc_heal()` 的 AL_HEAL 分支）：
+     floor((施法者等級 + INT) / 8) × (4 + 技能等級 × 8)
+   以前是寫死的「最大HP × 15%」，對死靈（38 萬血）等於一次補 57,000，
+   官方其實只有 floor((77+67)/8) × (4+11×8) = 18 × 92 = 1,656。
+   血越厚的怪錯得越誇張——這就是使用者回報「補血量太誇張」的成因。 */
+function monsterHealAmount(monDef, skillLv) {
+  const lv = monDef.level || 1;
+  const int_ = monDef.mobInt || 0;
+  return Math.max(1, Math.floor((lv + int_) / 8) * (4 + (skillLv || 1) * 8));
+}
+
 function monsterSkillFor(mon, monDef) {
   const list = (typeof MONSTER_SKILLS !== 'undefined') && MONSTER_SKILLS[mon.defId];
   if (!list || !list.length) return null;
   const now = Date.now();
   mon.skCd = mon.skCd || {};
   for (const e of list) {
+    // 冷卻是「同一個技能」共用的，帶條件與不帶條件的同名技能不各自計時
     if (now < (mon.skCd[e.s] || 0)) continue;
+    if (!monsterSkillCondMet(e, mon)) continue;
+    // 血已經滿了就不要浪費出手機會去補血（也避免刷一排無意義的訊息）
+    if (e.heal) {
+      const t = e.healFriend ? lowestHpAlly(mon) : mon;
+      if (!t || t.hp >= t.maxHp) continue;
+    }
     if (Math.random() * 100 >= e.rate) continue;
     mon.skCd[e.s] = now + e.cd * 1000;
     return e;
@@ -2365,8 +2629,11 @@ function gameTick() {
     state._prevHadMonsters = true;
     state.attackAccumulator += now - state.lastAttackTime;
     state.lastAttackTime = now;
-    while (state.attackAccumulator >= state.attackInterval) {
-      state.attackAccumulator -= state.attackInterval;
+    // 緩緩移動那批：攻速下降＝攻擊間隔拉長（不直接改 state.attackInterval，
+    // 那是 recomputeDerived 算出來的角色數值，改了會被下一次重算蓋掉又難追）
+    const atkInterval = state.attackInterval / Math.max(0.2, 1 + pDebuff('aspdPct') / 100);
+    while (state.attackAccumulator >= atkInterval) {
+      state.attackAccumulator -= atkInterval;
       // 昏迷／冰凍／石化／睡眠／混亂：不能攻擊。累積器照樣扣，不然解除的瞬間會一口氣連打
       if (playerImmobile()) continue;
       playerAttack();
@@ -2378,7 +2645,9 @@ function gameTick() {
       state.monsters.forEach(mon => {
         if (!mon.lastAttackTime) mon.lastAttackTime = now;
         const monDef = MONSTERS[mon.defId];
-        const interval = (monDef && monDef.atkInterval) ? monDef.atkInterval * 1000 : 1000;
+        // 怪物自己的加速增益（NPC_AGIUP / BS_ADRENALINE / KN_TWOHANDQUICKEN）縮短間隔
+        const interval = ((monDef && monDef.atkInterval) ? monDef.atkInterval * 1000 : 1000)
+          / (1 + monBuff(mon, 'aspdPct') / 100);
         if (now - mon.lastAttackTime >= interval) {
           mon.lastAttackTime = now;
           monsterAttackSingle(mon);
@@ -2406,10 +2675,24 @@ const REGEN_IDLE_SCALE = 3.5;
 const REGEN_HP_TICK_SEC = 6;
 const REGEN_SP_TICK_SEC = 8;
 function passiveRegen() {
+  /* 卡片的定時回復（闇●劍士 賽尼亞：每 10 秒 +50HP +10SP）。
+     跟下面的自然回復是兩回事——這是固定量的獨立心跳，
+     所以**不吃 hpRegenPct，也不受出血的「完全不回復」影響**（官方就是這樣寫的）。 */
+  const tickHp = getCardBonus('regenTickHp'), tickSp = getCardBonus('regenTickSp');
+  if (tickHp || tickSp) {
+    const now = Date.now();
+    if (now >= (state.cardRegenTickAt || 0)) {
+      state.cardRegenTickAt = now + 10000;
+      if (tickHp && state.hp > 0) state.hp = Math.min(state.maxHp, state.hp + tickHp);
+      if (tickSp) state.sp = Math.min(state.maxSp, state.sp + tickSp);
+    }
+  }
   // 卡片的「HP/SP恢復力+N%」加成
   const regenMult = (state.hpRegenMult || 1) * (1 + (state.cardHpRegenPct || 0) / 100);
   const hpPerTick = state.maxHp / 200 + state.stats.vit / 5;
-  const hpRegen = Math.max(1, Math.ceil(hpPerTick / REGEN_HP_TICK_SEC * REGEN_IDLE_SCALE * regenMult));
+  /* 恢復力可以是負的（幽靈波利 −25%、七彩飛龍 −100%），所以不能無腦 Math.max(1,…)——
+     那會讓「恢復力歸零」的卡片還是每秒回 1 點。降到 0 以下就是完全不回。 */
+  const hpRegen = regenMult <= 0 ? 0 : Math.max(1, Math.ceil(hpPerTick / REGEN_HP_TICK_SEC * REGEN_IDLE_SCALE * regenMult));
   /* 禪心：官方是「每個 SP tick +3~30」，所以跟基底一樣要除以 tick 長度，
      不然一個技能就蓋過整條自然回復。百分比那項同理。 */
   const zenFlat = state.zenSpFlatBonus || 0;
@@ -2417,8 +2700,8 @@ function passiveRegen() {
   const spPerTick = state.maxSp / 100 + state.stats.int / 6 + zenFlat + zenPct;
   // 聖母之頌歌buff：SP恢復速度倍率
   const sprateMult = buffMult('sprate').mult;
-  const spRegen = Math.max(1, Math.ceil(spPerTick / REGEN_SP_TICK_SEC * REGEN_IDLE_SCALE
-    * (state.spRegenMult || 1) * sprateMult * (1 + (state.cardSpRegenPct || 0) / 100)));
+  const spRegenMult = (state.spRegenMult || 1) * sprateMult * (1 + (state.cardSpRegenPct || 0) / 100);
+  const spRegen = spRegenMult <= 0 ? 0 : Math.max(1, Math.ceil(spPerTick / REGEN_SP_TICK_SEC * REGEN_IDLE_SCALE * spRegenMult));
   // 出血：官方規則，出血期間 HP/SP 完全不會自然回復
   if (playerNoRegen()) return;
   if (state.hp < state.maxHp) state.hp = Math.min(state.maxHp, state.hp + hpRegen);
@@ -2695,12 +2978,17 @@ function buffMult(type) {
 function effectiveHitWithBuff() {
   return (state.hit + buffMult('hit').flatBonus) * (1 + playerAilPct('hitPct') / 100);
 }
+// 攻擊力的臨時修正：詛咒（×0.75）與挑釁（±N%）
+function playerAtkMult() {
+  return playerAilAtkMult() * (1 + pDebuff('atkPct') / 100);
+}
 /* 迴避的 buff 版本。以前 buff_flee 類技能會 push 一個 type:'flee' 的 buff，
    但迴避判定直接讀 state.flee，那個 buff 從來沒有人去讀——等於推了個空的。
    跟 effectiveHitWithBuff() 同樣的處理方式，在使用端套上去。 */
 function effectiveFleeWithBuff() {
   const b = buffMult('flee');
-  return Math.round(state.flee * b.mult) + b.flatBonus;
+  // 緩緩移動那批：迴避減的是**點數**（命中判定是差值制，百分比會被放大到離譜）
+  return Math.round(state.flee * b.mult) + b.flatBonus + pDebuff('fleeFlat');
 }
 
 /* ---------------- 怪物 ---------------- */
@@ -2798,8 +3086,8 @@ function weaponChainDamage(monDef, elemMult, roll) {
     : roll === 'mid' ? mid
     : (mid - swing + Math.random() * swing * 2);
 
-  // 詛咒：玩家 ATK 下降（官方 −25%），整包 ATK 都吃
-  return (wpn * variance * getSizeMultiplier(monDef) * elemMult + nonWpn) * playerAilAtkMult();
+  // 詛咒 −25% 與挑釁 ±N%，整包 ATK 都吃
+  return (wpn * variance * getSizeMultiplier(monDef) * elemMult + nonWpn) * playerAtkMult();
 }
 
 /* 技能傷害的基底，跟普通攻擊走同一條官方鏈。
@@ -2925,10 +3213,21 @@ function playerAttack() {
 
   // 官方暴擊無視 DEF（也無視閃避）。以前暴擊照常吃減傷，等於只剩 1.5 倍那半邊效果，
   // 對高 DEF 的怪打起來跟普通攻擊差不了多少
-  const dmg = (isCrit ? Math.max(1, Math.round(raw)) : mitigateDamage(raw, monDefVal, monSoftVal)) + raceFlatBonus(monDef);
+  let dmg = (isCrit ? Math.max(1, Math.round(raw)) : mitigateDamage(raw, monDefVal, monSoftVal)) + raceFlatBonus(monDef);
   if (isCrit && !_dpsPaused && state && state.dpsTracker) state.dpsTracker.damage += dmg;
+
+  /* 怪物身上的增益（#36）：自動防禦擋下整下、防禦型增益減傷、反射盾把傷害彈回來。
+     只有近距離攻擊會被反射（官方 CR_REFLECTSHIELD 就是這樣）。 */
+  const absorb = monsterAbsorb(target, dmg, !isBowWeapon(atkWeaponId));
+  if (absorb.blocked) {
+    logMsg(`🛡️ ${monDef.name} 擋下了你的攻擊！`);
+    if (typeof showPlayerFloat === 'function') showPlayerFloat('GUARD', 'miss');
+    return;
+  }
+  dmg = absorb.dmg;
   target.hp -= dmg;
   logMsg(`你對 ${monDef.name} 造成 ${dmg} 點傷害${isCrit ? '（暴擊！無視閃避與防禦）' : ''}`);
+  if (absorb.reflect > 0) takeReflectDamage(monDef, absorb.reflect);
   applyCardLeech(dmg);
   ailBreakOnDamage(target, monDef);   // 睡眠被打就醒
   tryCardAilments('attack', target);
@@ -3091,11 +3390,57 @@ function playerAttack() {
 function monsterCastSkill(mon, monDef, sk) {
   const nameOf = () => `${monDef.name} 的「${MOB_SKILL_NAMES[sk.s] || sk.s}」`;
 
-  // 自我回復類：不打人，補自己
+  /* 自我增益（#36）：不打人，替自己掛一個 buff。
+     `buff` 是 { 鍵: 值 } 的表，`dur` 是持續秒數（工具那邊給預設）。 */
+  if (sk.buff) {
+    let any = false;
+    for (const [k, v] of Object.entries(sk.buff)) {
+      if (!MON_BUFF_KEYS.includes(k)) continue;
+      monBuffAdd(mon, k, v, sk.dur || 30);
+      any = true;
+    }
+    if (any) logMsg(`✨ ${nameOf()} 發動了！`);
+    return;
+  }
+
+  /* 對玩家的臨時減益（#36）：挑釁、緩緩移動、永恆之光。
+     不打人也不擲命中——官方這幾個是必中的狀態技能。 */
+  if (sk.debuff) {
+    const bits = [];
+    for (const [k, v] of Object.entries(sk.debuff)) {
+      if (!PLAYER_DEBUFF_KEYS.includes(k)) continue;
+      pDebuffAdd(k, v, sk.dur || 20, !!sk.once);
+      bits.push(`${PLAYER_DEBUFF_META[k].name} ${v > 0 ? '+' : ''}${v}${k === 'fleeFlat' ? '' : '%'}`);
+    }
+    if (bits.length) logMsg(`🔻 ${nameOf()}：${bits.join('、')}${sk.once ? '（只作用於下一擊）' : `（${sk.dur || 20}秒）`}`);
+    return;
+  }
+
+  /* 解除增益（SA_DISPELL）：把玩家身上的 buff 清掉。
+     護盾與異常狀態不動——前者是另一套資源、後者是負面效果，清掉等於幫玩家。 */
+  if (sk.dispell) {
+    const n = (state.buffs || []).length;
+    if (n > 0) {
+      state.buffs = [];
+      recomputeDerived(false);
+      logMsg(`🌀 ${nameOf()}：你身上的 ${n} 個增益被解除了！`);
+    }
+    return;
+  }
+
+  /* 回復類：不打人。官方 AL_HEAL 是**固定量**（看施法者的等級與 INT），
+     不是最大HP的比例——寫成比例的話血越厚的怪補得越誇張。 */
   if (sk.heal) {
-    const before = mon.hp;
-    mon.hp = Math.min(mon.maxHp, mon.hp + Math.round(mon.maxHp * sk.heal));
-    if (mon.hp > before) logMsg(`💚 ${nameOf()}：回復了 ${mon.hp - before} 點HP！`);
+    const tgt = sk.healFriend ? lowestHpAlly(mon) : mon;
+    if (!tgt) return;
+    const tgtDef = MONSTERS[tgt.defId] || monDef;
+    const before = tgt.hp;
+    tgt.hp = Math.min(tgt.maxHp, tgt.hp + monsterHealAmount(monDef, sk.lv));
+    if (tgt.hp > before) {
+      const who = sk.healFriend ? `${nameOf()} 替 ${tgtDef.name}` : nameOf();
+      logMsg(`💚 ${who}：回復了 ${tgt.hp - before} 點HP！`);
+      if (typeof showDamageFloatAt === 'function') showDamageFloatAt(tgt.id, '+' + (tgt.hp - before), 'heal');
+    }
     return;
   }
 
@@ -3124,26 +3469,49 @@ function monsterCastSkill(mon, monDef, sk) {
 
   let dmg = 0;
   if (sk.mult > 0) {
-    let raw = monsterBaseAtk(monDef) * sk.mult * (sk.magic ? 1.2 : 1);
+    let raw = monsterBaseAtk(monDef, undefined, mon) * sk.mult * (sk.magic ? 1.2 : 1);
     raw *= ailAtkMult(mon);                                   // 詛咒讓怪物 ATK 下降
     raw *= getElementMultiplier(sk.elem || monDef.element || 'none', 'none');
-    raw *= playerAilDmgTakenMult();                           // 睡眠中受到的傷害增加
     // 卡片的屬性/種族/體型減傷跟普攻共用同一組
     const el = sk.elem || monDef.element || 'none';
     if (state.cardEleDmgReduce && state.cardEleDmgReduce[el]) raw *= (1 - state.cardEleDmgReduce[el]);
     if (monDef.race && state.cardRaceDmgReduce && state.cardRaceDmgReduce[monDef.race]) raw *= (1 - state.cardRaceDmgReduce[monDef.race]);
-    let hardDef = state.defHard, softDef = state.defSoft;
+    let [hardDef, softDef] = debuffedDef(state.defHard, state.defSoft);   // 挑釁：DEF 下降
     // 狂暴狀態：DEF -55%（硬軟一起打折）
     if (state.hasBerserk && state.hp < state.maxHp * 0.25) {
       hardDef = Math.round(hardDef * 0.45); softDef = Math.round(softDef * 0.45);
     }
-    dmg = mitigatePlayerIncoming(raw, hardDef, softDef);
+    // 睡眠 ×1.5 與永恆之光 ×2：官方是**最後**的傷害倍率，要在防禦之後乘。
+    // 乘在防禦之前的話，軟防那一段是固定減值，會讓實際倍率大於寫出來的數字
+    dmg = Math.max(1, Math.round(mitigatePlayerIncoming(raw, hardDef, softDef) * playerDmgTakenMult()));
     state.hp -= dmg;
     logMsg(`✨ ${nameOf()} 造成了 ${dmg} 點傷害！`);
     if (typeof showPlayerFloat === 'function') showPlayerFloat('-' + dmg, 'normal');
     playerAilBreakOnDamage();
+    pDebuffConsumeOnce('dmgTakenPct');
+    // 吸血（NPC_BLOODDRAIN）：造成多少傷害就補自己多少
+    if (sk.drainHp) {
+      const before = mon.hp;
+      mon.hp = Math.min(mon.maxHp, mon.hp + dmg);
+      if (mon.hp > before) {
+        logMsg(`🩸 ${monDef.name} 吸走了 ${mon.hp - before} 點HP！`);
+        if (typeof showDamageFloatAt === 'function') showDamageFloatAt(mon.id, '+' + (mon.hp - before), 'heal');
+      }
+    }
+    // 卡片反射（#17）：技能傷害也算，只要不是魔法
+    if (!sk.magic) applyPlayerReflect(mon, monDef, dmg);
   } else {
     logMsg(`✨ ${nameOf()} 發動了！`);
+  }
+
+  /* 吸魔（NPC_ENERGYDRAIN）：抽玩家的 SP。官方是抽固定量，這裡按技能等級給。
+     不吃防禦——SP 沒有防禦的概念。 */
+  if (sk.drainSp) {
+    const amt = Math.min(state.sp, 10 * (sk.lv || 1));
+    if (amt > 0) {
+      state.sp -= amt;
+      logMsg(`💧 ${nameOf()}：你被抽走了 ${amt} 點SP！`);
+    }
   }
 
   // 附加的異常狀態
@@ -3165,6 +3533,23 @@ function monsterCastSkill(mon, monDef, sk) {
 
 // 官方技能代碼 → 看得懂的名字（只列會用到的，沒列到的直接顯示代碼）
 const MOB_SKILL_NAMES = {
+  // ---- #36 補的那批 ----
+  KN_SPEARSTAB: '長矛突刺', CR_SHIELDCHARGE: '盾牌衝擊', CR_HOLYCROSS: '聖十字架',
+  BS_HAMMERFALL: '重擊', AC_CHARGEARROW: '衝鋒箭', SN_SHARPSHOOTING: '銳利射擊',
+  AM_DEMONSTRATION: '火焰噴射', NPC_RANDOMATTACK: '亂擊', NPC_DARKTHUNDER: '暗雷',
+  NPC_EVILLAND: '邪惡之地', NPC_BLEEDING: '流血攻擊', NPC_SUICIDE: '自殺',
+  WZ_SIGHTRASHER: '暴裂波', WZ_FROSTNOVA: '霜狼之息', MG_FIREWALL: '火焰之壁',
+  TF_SPRINKLESAND: '噴砂', AS_VENOMDUST: '毒粉', PF_SPIDERWEB: '蜘蛛網',
+  WZ_QUAGMIRE: '沼澤之地',
+  NPC_BLOODDRAIN: '吸血', NPC_VAMPIRE_GIFT: '吸血鬼之禮', NPC_ENERGYDRAIN: '吸魔',
+  NPC_MENTALBREAKER: '精神崩潰', SA_DISPELL: '魔法效果解除',
+  NPC_POWERUP: '力量提升', NPC_AGIUP: '敏捷提升', AL_INCAGI: '加速術',
+  BS_ADRENALINE: '腎上腺素', KN_TWOHANDQUICKEN: '雙手劍熟練', BS_MAXIMIZE: '武器完全瞄準',
+  CR_AUTOGUARD: '自動防禦', NPC_KEEPING: '守護', MG_SAFETYWALL: '屏障',
+  AL_PNEUMA: '神聖之光', NPC_DEFENDER: '防禦者', NPC_BARRIER: '結界',
+  CR_REFLECTSHIELD: '反射盾', KN_AUTOCOUNTER: '反擊',
+  // ---- 對玩家的臨時減益 ----
+  SM_PROVOKE: '挑釁', AL_DECAGI: '緩緩移動', PR_LEXAETERNA: '永恆之光',
   NPC_STUNATTACK: '暈眩攻擊', NPC_CURSEATTACK: '詛咒攻擊', NPC_BLINDATTACK: '黑暗攻擊',
   NPC_SILENCEATTACK: '沉默攻擊', NPC_SLEEPATTACK: '催眠攻擊', NPC_PETRIFYATTACK: '石化攻擊',
   NPC_HALLUCINATION: '幻覺', NPC_CRITICALWOUND: '致命傷', NPC_POISON: '施毒', NPC_POISONATTACK: '毒屬性攻擊',
@@ -3265,7 +3650,7 @@ function monsterAttackSingle(mon) {
     }
   }
 
-  let raw = monsterBaseAtk(monDef);
+  let raw = monsterBaseAtk(monDef, undefined, mon);
   // 詛咒：怪物 ATK 下降
   raw *= ailAtkMult(mon);
 
@@ -3297,7 +3682,7 @@ function monsterAttackSingle(mon) {
     raw *= (1 + state.cardNormalDmgTakenPct / 100);
   }
 
-  let hardDef = state.defHard, softDef = state.defSoft;
+  let [hardDef, softDef] = debuffedDef(state.defHard, state.defSoft);   // 挑釁：DEF 下降
   // 天使之護：官方效果限定對惡魔/不死種族攻擊者生效（裝備類加成 → 硬防）
   if (state.divineDefBonus && (monDef.race === 'demon' || monDef.race === 'undead')) {
     hardDef += state.divineDefBonus;
@@ -3307,7 +3692,11 @@ function monsterAttackSingle(mon) {
     hardDef = Math.round(hardDef * 0.45); softDef = Math.round(softDef * 0.45);
   }
 
-  let dmg = mitigatePlayerIncoming(raw, hardDef, softDef);
+  /* 睡眠 ×1.5 與永恆之光 ×2。這一段以前**只寫在技能那條路徑上**，普通攻擊完全沒吃，
+     等於睡著的玩家被技能打會痛、被普攻打卻不會。
+     位置在防禦之後：官方這類是最後的傷害倍率，乘在防禦之前的話軟防那段固定減值
+     會讓實際倍率大於寫出來的數字（實測 ×2 會變成 ×2.5）。 */
+  let dmg = Math.max(1, Math.round(mitigatePlayerIncoming(raw, hardDef, softDef) * playerDmgTakenMult()));
   // 能量外套：啟動中減傷並消耗SP，SP%低於下限時暫停生效
   if (state.hasEnergyCoatUnlock && state.energyCoatEnabled) {
     const spPct = state.maxSp > 0 ? (state.sp / state.maxSp) * 100 : 0;
@@ -3335,8 +3724,13 @@ function monsterAttackSingle(mon) {
     }
   }
   state.hp -= dmg;
+  // 同上：睡眠「被打就醒」以前也只寫在技能那條路徑，普攻打不醒
+  playerAilBreakOnDamage();
+  pDebuffConsumeOnce('dmgTakenPct');
   const berserkMsg = (state.hasBerserk && state.hp < state.maxHp * 0.25) ? '（狂暴中：ATK+32% DEF-55%）' : '';
   logMsg(`${monDef.name} 對你造成 ${dmg} 點傷害。${berserkMsg}`);
+  // 卡片反射（#17）：彈回去的是扣完防禦與護盾之後的實際傷害
+  applyPlayerReflect(mon, monDef, dmg);
   // 怪物傷害飄字（玩家頭上）
   if (typeof showPlayerFloat === 'function') showPlayerFloat('-' + dmg, 'element-bad');
   if (state.hp <= 0) {
@@ -3520,6 +3914,16 @@ function killMonster(def, monObj) {
   const spKill = (def.race && state.cardSpOnKillRace && state.cardSpOnKillRace[def.race]) || 0;
   if (spKill && !isBowWeapon(getEquipBaseItemId('weapon'))) {
     state.sp = Math.min(state.maxSp, state.sp + spKill);
+  }
+  /* 卡片：近距離物理擊殺時回固定 HP（七彩飛龍 100、殭屍屠戮者 50）。
+     跟上面回 SP 那條同一個「近戰」判準——沒裝弓就算近戰。
+     這批卡片的設計是「回復力歸零，改成靠擊殺回血」，所以是站著回不了血、
+     打得動才活得下去，兩半要一起看（見 hpRegenPct）。 */
+  const hpKill = state.cardHpOnMeleeKill || 0;
+  if (hpKill && state.hp > 0 && !isBowWeapon(getEquipBaseItemId('weapon'))) {
+    const before = state.hp;
+    state.hp = Math.min(state.maxHp, state.hp + hpKill);
+    if (state.hp > before && typeof showPlayerFloat === 'function') showPlayerFloat('+' + (state.hp - before), 'heal');
   }
   (def.drops || []).forEach(d => {
     if (Math.random() < d.chance) addItem(d.item, 1);
@@ -3847,13 +4251,13 @@ function findSkillAnywhere(skillId) {
    opts.forceLv：指定施放等級（卡片寫幾級就幾級，跟玩家學到幾級無關），會夾在 1~maxLv。 */
 function castSkill(skillId, opts) {
   const free = !!(opts && opts.free);
-  const sk = free ? findSkillAnywhere(skillId) : findSkillById(skillId);
+  const sk = free ? findSkillAnywhere(skillId) : findSkillForUse(skillId);
   if (!sk) return false;
   // 沉默：完全不能施放技能（連卡片的自動念咒也一起擋，官方沉默就是這樣）
   if (playerSilenced()) { if (!free) logMsg(`🤐 沉默中，無法施放「${sk.name}」！`); return false; }
   let lv;
   if (opts && opts.forceLv) lv = Math.max(1, Math.min(sk.maxLv || opts.forceLv, opts.forceLv));
-  else lv = state.learnedSkills[skillId];
+  else lv = skillLv(skillId);
   if (!lv) return false;
   if (!free && !skillReady(skillId)) return false;
 
@@ -3911,13 +4315,19 @@ function castSkill(skillId, opts) {
      但場地類（隕石術）與持續傷害類（火焰之壁）是把 mult 存進 activeFieldEffects
      之後才結算的，只改基底會漏掉那些。乘 mult 才是唯一涵蓋全部的位置。 */
   const skillDmgPct = getCardBonus('skillDmg_' + sk.id);
-  const mult = (Array.isArray(sk.mult) ? sk.mult[lv - 1] : sk.mult) * (1 + skillDmgPct / 100);
   // 'magic_aoe'（例如火球術、雷爆術、光獵、怒雷強擊）先前漏判，導致誤用ATK而非MATK計算傷害
   // 傷害基底一律走 skillBaseDamage(useMag, 怪, 屬性倍率)，物理走官方武器鏈、魔法用 MATK
   const useMag = sk.type === 'magic' || sk.type === 'magic_aoe';
 
   // 屬性相剋：技能屬性 vs 怪物屬性
   const skElement = sk.element || 'none';
+  /* 卡片的「某屬性**魔法**傷害 +N%」（無頭騾：水/聖魔法 +20%）。
+     跟 eleDmg_ 是兩件不同的事——那個看的是**怪物的屬性**（打水屬性的怪 +N%），
+     這個看的是**自己這一發的屬性**，而且只算魔法。放在 mult 上跟 skillDmg_ 同理。 */
+  const magicElePct = useMag && skElement !== 'none' && skElement !== 'neutral'
+    ? getCardBonus('magicEleDmg_' + skElement) : 0;
+  const mult = (Array.isArray(sk.mult) ? sk.mult[lv - 1] : sk.mult)
+    * (1 + skillDmgPct / 100) * (1 + magicElePct / 100);
 
   // 各 case 推 buff 時常忘了標 skillId，導致「同 type 就算已生效」的判斷把不同來源
   // 混為一談（例：喝了集中藥水後，雙手劍加速因為都是 type:'aspd' 而永遠不再自動施放）。
@@ -4431,33 +4841,26 @@ function tryAutoCastSkill() {
 
   // 兩招都沒有設定時，回退到自動施放第一個可用技能
   if (!config.skillId && !config.skillId2) {
-    const allJobs = getAllLearnedJobs();
-    for (const jobId of allJobs) {
-      const job = JOB_TREE[jobId];
-      if (!job) continue;
-      for (const sk of job.skills) {
-        const lv = state.learnedSkills[sk.id];
-        if (!lv) continue;
-        if (!skillReady(sk.id)) continue;
-        // 武器不對就跳過，不要讓 castSkill 每秒噴一次警告訊息洗版
-        if (!weaponReqMet(sk.requiresWeapon)) continue;
-        const spCost = skillSpCost(sk, lv);
-        if (state.sp < spCost) continue;
-        const isAttack = ['damage', 'magic', 'dot', 'damage_multihit', 'damage_multi', 'damage_aoe', 'magic_aoe', 'poison_proc'].includes(sk.type);
-        if (isAttack && monsterCount === 0) continue;
-        if (wastesResourceInTown(sk, lv)) continue;
-        castSkill(sk.id);
-        return;
-      }
+    for (const { sk, lv } of usableSkillEntries()) {
+      if (!skillReady(sk.id)) continue;
+      // 武器不對就跳過，不要讓 castSkill 每秒噴一次警告訊息洗版
+      if (!weaponReqMet(sk.requiresWeapon)) continue;
+      const spCost = skillSpCost(sk, lv);
+      if (state.sp < spCost) continue;
+      const isAttack = ['damage', 'magic', 'dot', 'damage_multihit', 'damage_multi', 'damage_aoe', 'magic_aoe', 'poison_proc'].includes(sk.type);
+      if (isAttack && monsterCount === 0) continue;
+      if (wastesResourceInTown(sk, lv)) continue;
+      castSkill(sk.id);
+      return;
     }
     return;
   }
 
   // 第一招：SP 達到門檻 + 有怪物就施放
   if (config.skillId) {
-    const sk = findSkillById(config.skillId);
+    const sk = findSkillForUse(config.skillId);
     if (sk) {
-      const lv = state.learnedSkills[sk.id];
+      const lv = skillLv(sk.id);
       if (lv && skillReady(sk.id) && weaponReqMet(sk.requiresWeapon)) {
         const spCost = skillSpCost(sk, lv);
         const isAttack = ['damage', 'magic', 'dot', 'damage_multihit', 'damage_multi', 'damage_aoe', 'magic_aoe', 'poison_proc'].includes(sk.type);
@@ -4473,9 +4876,9 @@ function tryAutoCastSkill() {
 
   // 第二招：SP 達到門檻 + 怪物數量達到門檻才施放
   if (config.skillId2) {
-    const sk2 = findSkillById(config.skillId2);
+    const sk2 = findSkillForUse(config.skillId2);
     if (sk2) {
-      const lv2 = state.learnedSkills[sk2.id];
+      const lv2 = skillLv(sk2.id);
       if (lv2 && skillReady(sk2.id) && weaponReqMet(sk2.requiresWeapon)) {
         const spCost2 = skillSpCost(sk2, lv2);
         if (state.sp >= spCost2 && spPct >= config.spThreshold2 && monsterCount >= config.monsterCount2 && !wastesResourceInTown(sk2, lv2)) {
@@ -4490,14 +4893,9 @@ function tryAutoCastSkill() {
 // 自動施放輔助技能
 function tryAutoCastSupportSkills() {
   if (!state.autoSupportSkills) return;
-  const allJobs = getAllLearnedJobs();
-  for (const jobId of allJobs) {
-    const job = JOB_TREE[jobId];
-    if (!job) continue;
-    for (const sk of job.skills) {
+  {
+    for (const { sk, lv } of usableSkillEntries()) {
       if (!state.autoSupportSkills[sk.id]) continue;
-      const lv = state.learnedSkills[sk.id];
-      if (!lv) continue;
       if (!skillReady(sk.id)) continue;
       if (!weaponReqMet(sk.requiresWeapon)) continue;
       if (wastesResourceInTown(sk, lv)) continue;
@@ -4529,9 +4927,9 @@ function tryAutoCastSupportSkills() {
   // 偽裝連動：勾選了自動偽裝，且偽裝生效中時，自動施放無影之牙
   if (state.autoSupportSkills['cloaking']) {
     const cloakActive = state.buffs.some(b => b.type === 'flee' && b.skillId === 'cloaking');
-    const gtLv = state.learnedSkills['grimtooth'];
+    const gtLv = skillLv('grimtooth');
     if (cloakActive && gtLv && skillReady('grimtooth') && state.monsters && state.monsters.length > 0) {
-      const gtSk = findSkillById('grimtooth');
+      const gtSk = findSkillForUse('grimtooth');
       const gtCost = skillSpCost(gtSk, gtLv);
       if (state.sp >= gtCost) castSkill('grimtooth');
     }
@@ -5465,12 +5863,17 @@ function effectiveGearBonuses() {
     });
   });
   if (typeof EQUIP_SETS !== 'undefined') {
+    /* 成員寫成陣列代表「這幾件任一件都算」。同一件官方裝備在本作常有無孔／有孔
+       兩個 id（魔法外套 / 魔法外套[1]），不支援的話玩家拿到有孔版反而湊不成套。 */
+    const hasMember = m => Array.isArray(m) ? m.some(i => lo.items.has(i)) : lo.items.has(m);
+    const slotOfMember = m => EQUIP_SLOTS_ALL.find(s => lo.slots[s] &&
+      (Array.isArray(m) ? m.includes(lo.slots[s].itemId) : lo.slots[s].itemId === m));
     for (const [setId, def] of Object.entries(EQUIP_SETS)) {
-      if (!def.items || !def.items.every(i => lo.items.has(i))) continue;
+      if (!def.items || !def.items.every(hasMember)) continue;
       if (def.when && !condMet(def.when, null, lo)) continue;
       mergeBonus(total, def.bonus);
       if (def.perRefine && def.perRefine.of) {
-        const slot = EQUIP_SLOTS_ALL.find(s => lo.slots[s] && lo.slots[s].itemId === def.perRefine.of);
+        const slot = slotOfMember(def.perRefine.of);
         if (slot) mergeBonus(total, def.perRefine.bonus, lo.slots[slot].refine);
       }
       sets.push({ id: setId, name: def.name, bonus: def.bonus });
