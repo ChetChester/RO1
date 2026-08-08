@@ -547,7 +547,24 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-deep); co
 .tree-icon { font-size: 20px; }
 .tree-label { font-size: 11px; fill: var(--ink); font-family: var(--font-body); font-weight: 700; }
 .tree-cta { font-size: 8px; fill: var(--gold-soft); }
+/* 進階二轉的技能分批補，還沒補到的節點標這個 */
+.tree-wip { font-size: 8px; fill: #7a8496; }
 .tree-hint { font-size: 12px; color: var(--ink-dim); line-height: 1.7; margin-top: 12px; }
+
+/* 轉生面板（#56）：條件沒到是暗的，到了才亮金框——一眼看得出現在能不能轉 */
+.rebirth-panel { margin-top: 14px; padding: 12px 14px; border: 1px solid var(--line);
+  border-radius: 10px; background: #0c0e16; }
+.rebirth-panel.rebirth-ready { border-color: var(--gold-soft); box-shadow: 0 0 12px rgba(212,175,55,.18); }
+.rebirth-panel.rebirth-done { border-color: #4a5a7a; }
+/* 轉職樹上的指路（面板本體在地圖分頁的安全區） */
+.rebirth-pointer {
+  margin-top: 12px; padding: 10px 12px; border-radius: 8px;
+  border: 1px dashed #4a5a7a; color: var(--ink-dim); font-size: 12px;
+}
+.rebirth-panel h4 { margin: 0 0 8px; font-size: 14px; color: var(--gold-soft); }
+.rebirth-req { font-size: 12px; color: var(--ink); margin-bottom: 6px; }
+.rebirth-gain { font-size: 12px; color: var(--ink-dim); line-height: 1.7; margin-bottom: 10px; }
+.rebirth-block { font-size: 12px; color: #e0674f; }
 
 /* ---------------- RWD ---------------- */
 @media (max-width: 860px) {

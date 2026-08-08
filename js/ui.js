@@ -219,7 +219,7 @@ function updateBuffCountdown() {
     el.innerHTML = '';
     return;
   }
-  const buffNames = { aspd: '攻速', atk: '攻擊', def: '防禦', flee: '迴避', gold: '金錢', crit: '暴擊', hit: '命中' };
+  const buffNames = { aspd: '攻速', atk: '攻擊', def: '防禦', flee: '迴避', gold: '金錢', crit: '暴擊', hit: '命中', block: '格擋' };
   el.innerHTML = state.buffs.map(b => {
     const name = buffNames[b.type] || b.type;
     const remain = Math.ceil(b.msRemaining / 1000);
@@ -1045,6 +1045,9 @@ function renderMapTab() {
         .join('、')
     }</div>
     ` : ''}
+    ${/* 轉生祭壇只開在安全區。放在這裡而不是轉職樹，是因為轉生是「回到城裡辦一件大事」，
+          跟商店同一個場景；而且要先擋在安全區，玩家就不會在野外打到一半按下去 */
+      isCity ? renderRebirthPanel() : ''}
     ${isCity ? `
     <div class="town-npcs">
       <h4 class="town-npc-title">🏪 城鎮 NPC</h4>
@@ -1105,7 +1108,7 @@ function renderAutoBattleTab() {
   };
   const ATTACK_TYPES = ['damage', 'magic', 'dot', 'damage_multihit', 'damage_multi', 'damage_aoe', 'magic_aoe', 'poison_proc'];
   // buff_flatstat（商人的大聲吶喊）原本漏在清單外，自動戰鬥頁面就勾不到
-  const SUPPORT_TYPES = ['buff_atk', 'buff_def', 'buff_aspd', 'buff_flee', 'buff_gold', 'buff_crit', 'buff_poison', 'buff_statpct', 'buff_flatstat', 'buff_maxroll', 'buff_blessing', 'buff_shield', 'buff_sprate', 'buff_lukflat', 'buff_holyweapon', 'debuff_def', 'debuff', 'heal', 'heal_over_time', 'field_heal', 'field_aoe_magic', 'stun_field', 'multi_dot_stun'];
+  const SUPPORT_TYPES = ['buff_atk', 'buff_auraflat', 'buff_block', 'buff_def', 'buff_aspd', 'buff_flee', 'buff_gold', 'buff_crit', 'buff_poison', 'buff_statpct', 'buff_flatstat', 'buff_maxroll', 'buff_blessing', 'buff_shield', 'buff_sprate', 'buff_lukflat', 'buff_holyweapon', 'debuff_def', 'debuff', 'heal', 'heal_over_time', 'field_heal', 'field_aoe_magic', 'stun_field', 'multi_dot_stun'];
   const attackSkills = [], supportSkills = [];
   usableSkillEntries().forEach(({ sk, lv }) => {
     const row = { ...sk, lv, jobName: jobNameOf(sk.id) };
@@ -1174,7 +1177,8 @@ function renderAutoBattleTab() {
   const supportRows = supportSkills.map(sk => {
     const enabled = state.autoSupportSkills && state.autoSupportSkills[sk.id];
     const spCost = Array.isArray(sk.spCost) ? sk.spCost[sk.lv - 1] : sk.spCost;
-    const cd = Array.isArray(sk.cooldown) ? sk.cooldown[sk.lv - 1] : sk.cooldown;
+    // 顯示卡片修正後的冷卻（#55），不然畫面數字跟實際等待時間對不上
+    const cd = effectiveCooldownMs(sk.id, Array.isArray(sk.cooldown) ? sk.cooldown[sk.lv - 1] : sk.cooldown) / 1000;
     let healCfgHtml = '';
     if (sk.type === 'heal') {
       const healCfg = (state.autoHealConfig && state.autoHealConfig[sk.id]) || { hpThreshold: 70, spThreshold: 0 };
@@ -1468,7 +1472,7 @@ function renderSkillsTab() {
         const canLevelUp = !isQuest && !isMaxed && jobPoints > 0;
 
         const spCost = Array.isArray(sk.spCost) ? sk.spCost[Math.max(0, lv - 1)] || sk.spCost[0] : sk.spCost;
-        const cd = Array.isArray(sk.cooldown) ? sk.cooldown[Math.max(0, lv - 1)] || sk.cooldown[0] : sk.cooldown;
+        const cd = effectiveCooldownMs(sk.id, Array.isArray(sk.cooldown) ? sk.cooldown[Math.max(0, lv - 1)] || sk.cooldown[0] : sk.cooldown) / 1000;
 
         let statusTag = '';
         if (isQuest) {
@@ -1489,7 +1493,10 @@ function renderSkillsTab() {
         else if (sk.type.includes('buff')) typeTag = '<span class="skill-type buff">輔助</span>';
         else if (sk.type.includes('debuff')) typeTag = '<span class="skill-type debuff">減益</span>';
 
-        const elemTag = sk.element && sk.element !== 'none' ? `<span class="skill-element elem-${sk.element}">${ELEMENT_ICONS[sk.element]}</span>` : '';
+        /* 無屬性在資料裡有兩種寫法：SKILLS 用 'neutral'（60 個）、ITEMS 用 'none'。
+           以前只擋了 'none'，所以那 60 個技能全都印出 `undefined` 當圖示。 */
+        const elemTag = sk.element && sk.element !== 'none' && sk.element !== 'neutral'
+          ? `<span class="skill-element elem-${sk.element}">${ELEMENT_ICONS[sk.element] || '⚪'}</span>` : '';
 
         html += `<div class="skill-row ${lv > 0 ? 'learned' : ''}">
           <div class="skill-info">
@@ -1523,7 +1530,7 @@ function renderSkillsTab() {
       <div class="skill-list">`;
     cardOnly.forEach(({ sk, lv }) => {
       const spCost = Array.isArray(sk.spCost) ? sk.spCost[Math.max(0, lv - 1)] || sk.spCost[0] : sk.spCost;
-      const cd = Array.isArray(sk.cooldown) ? sk.cooldown[Math.max(0, lv - 1)] || sk.cooldown[0] : sk.cooldown;
+      const cd = effectiveCooldownMs(sk.id, Array.isArray(sk.cooldown) ? sk.cooldown[Math.max(0, lv - 1)] || sk.cooldown[0] : sk.cooldown) / 1000;
       const typeTag = sk.type === 'passive' ? '<span class="skill-type passive">被動</span>' : '';
       html += `<div class="skill-row learned">
         <div class="skill-info">
@@ -1938,9 +1945,9 @@ const CARD_SLOT_LABELS = {
 };
 const CARD_BONUS_LABELS = {
   str: 'STR', agi: 'AGI', vit: 'VIT', int: 'INT', dex: 'DEX', luk: 'LUK',
-  atk: 'ATK', matk: 'MATK', def: 'DEF', hit: 'HIT', flee: 'FLEE',
+  atk: 'ATK', matk: 'MATK', def: 'DEF', mdef: 'MDEF', hit: 'HIT', flee: 'FLEE',
   critRate: '暴擊率', perfectDodge: '完全迴避', hp: 'MaxHP', sp: 'MaxSP',
-  hpPct: 'MaxHP', spPct: 'MaxSP', hpRegenPct: 'HP恢復力', spRegenPct: 'SP恢復力',
+  hpPct: 'MaxHP', spPct: 'MaxSP', matkPct: 'MATK', hpRegenPct: 'HP恢復力', spRegenPct: 'SP恢復力',
   allStat: '全素質', aspdPct: '攻擊速度', aspdFlat: 'ASPD', critDmgPct: '暴擊傷害',
   bossDmgPct: '對首領類傷害', allTargetDmgPct: '物理傷害', rangedDmgPct: '遠距離傷害',
   rangedDmgTakenPct: '受遠距離傷害', bossDmgTakenPct: '受首領類傷害',
@@ -1955,7 +1962,7 @@ function cardArtSrc(cardId) {
 const CARD_PCT_KEYS = [
   'hpPct', 'spPct', 'hpRegenPct', 'spRegenPct', 'aspdPct', 'critDmgPct',
   'bossDmgPct', 'allTargetDmgPct', 'rangedDmgPct', 'rangedDmgTakenPct',
-  'bossDmgTakenPct', 'normalDmgTakenPct', 'spCostPct', 'defPct'
+  'bossDmgTakenPct', 'normalDmgTakenPct', 'spCostPct', 'defPct', 'matkPct'
 ];
 /* 數值一律帶正負號，減益卡片才不會顯示成「MaxHP +-25%」 */
 function signed(v, pct) { return (v > 0 ? '+' : '') + v + (pct ? '%' : ''); }
@@ -1971,6 +1978,9 @@ function describeCondition(when) {
   if (when.withCards) bits.push(when.withCards.map(c => (CARDS[c] || {}).name || c).join('、') + ' 同時裝備');
   if (when.withItems) bits.push(when.withItems.map(i => (ITEMS[i] || {}).name || i).join('、') + ' 同時裝備');
   if (when.statMin) bits.push(Object.entries(when.statMin).map(([k, v]) => `${k.toUpperCase()} ${v} 以上`).join('、'));
+  if (when.statMax) bits.push(Object.entries(when.statMax).map(([k, v]) => `${k.toUpperCase()} ${v} 以下`).join('、'));
+  if (when.jobIs) bits.push((Array.isArray(when.jobIs) ? when.jobIs : [when.jobIs])
+    .map(j => (JOB_TREE[j] || {}).name || j).join('或'));
   return bits.join('且') + '時';
 }
 
@@ -1988,18 +1998,22 @@ function describeCardBonus(card) {
       out.push(`每精煉 1 階：${formatCardBonus(k, v, card.perRefine)}`);
     }
   }
+  // melee：官方寫「近距離」的那幾張，只有手上不是弓的時候才會觸發
+  const meleeTag = e => (e.melee ? '近戰' : '');
   (card.autoSpell || []).forEach(a => {
     const sk = (typeof findSkillAnywhere === 'function') ? findSkillAnywhere(a.skill) : null;
     const when = a.on === 'hit' ? '受擊時' : '攻擊時';
     const cond = a.when ? describeCondition(a.when) + '，' : '';
-    out.push(`${cond}${when} ${a.chance}% 自動念咒：${sk ? sk.name.split(' ')[0] : a.skill} Lv${a.lv}`);
+    out.push(`${cond}${meleeTag(a)}${when} ${a.chance}% 自動念咒：${sk ? sk.name.split(' ')[0] : a.skill} Lv${a.lv}`);
   });
   (card.ailment || []).forEach(a => {
     const when = a.on === 'hit' ? '受擊時' : (a.on === 'magic' ? '魔法命中時' : '攻擊時');
     const cond = a.when ? describeCondition(a.when) + '，' : '';
     const names = String(a.type).split('+').map(t => (typeof MON_AILMENTS !== 'undefined' && MON_AILMENTS[t]) ? MON_AILMENTS[t].icon + MON_AILMENTS[t].name : t);
     const what = names.length > 1 ? `${names.join('／')} 隨機一種` : names[0];
-    out.push(`${cond}${when} ${a.chance}% 使敵人${what}`);
+    // target：官方「對敵人和自身」那批，代價要跟效果一起寫出來，玩家才看得到取捨
+    const who = { self: '使自己', both: '使敵人與自己' }[a.target] || '使敵人';
+    out.push(`${cond}${meleeTag(a)}${when} ${a.chance}% ${who}${what}`);
   });
   (card.killDrop || []).forEach(d => {
     const RACE = { insect: '昆蟲', brute: '動物', humanoid: '人型', demon: '惡魔', undead: '不死', plant: '植物', fish: '魚貝', formless: '無形', angel: '天使', dragon: '龍族' };
@@ -2057,9 +2071,42 @@ function formatCardBonus(k, v, all) {
   if (k === 'regenTickHp') return `每 10 秒回復 ${v} HP`;
   if (k === 'regenTickSp') return `每 10 秒回復 ${v} SP`;
   if (k.startsWith('magicEleDmg_')) return `${ELEMENT_NAMES[k.slice(12)] || k.slice(12)}屬性魔法傷害 ${signed(v, 1)}`;
+  // 這一條必須排在 familyDmg_ 前面比對，否則前綴會被前者先吃掉
+  if (k.startsWith('familyDmgTaken_')) {
+    const f = typeof MONSTER_FAMILIES !== 'undefined' ? MONSTER_FAMILIES[k.slice(15)] : null;
+    return `受${f ? f.name + '族' : k.slice(15)}傷害 ${signed(v, 1)}`;
+  }
   if (k.startsWith('familyDmg_')) {
     const f = typeof MONSTER_FAMILIES !== 'undefined' ? MONSTER_FAMILIES[k.slice(10)] : null;
     return `對${f ? f.name + '族' : k.slice(10)}傷害 ${signed(v, 1)}`;
+  }
+  // 異常狀態抗性（#30 做的，但一直沒有對應的文案，畫面上直接露出 ailResist_stone 這種原始鍵）
+  if (k.startsWith('ailResist_')) {
+    const t = k.slice(10);
+    const a = (typeof MON_AILMENTS !== 'undefined' && MON_AILMENTS[t]) ? MON_AILMENTS[t].icon + MON_AILMENTS[t].name : t;
+    return v >= 100 ? `免疫${a}` : `${a}抗性 +${v}%`;
+  }
+  // #17 第五批：官方的「變動施法時間 ±N%」魔改成冷卻秒數（本作技能瞬發）
+  if (k === 'skillCdFlat') return `全技能冷卻 ${v > 0 ? '+' : ''}${v} 秒`;
+  if (k.startsWith('skillCdFlat_')) {
+    const sk = (typeof findSkillAnywhere === 'function') ? findSkillAnywhere(k.slice(12)) : null;
+    return `${sk ? sk.name.split(' ')[0] : k.slice(12)} 冷卻 ${v > 0 ? '+' : ''}${v} 秒`;
+  }
+  if (k === 'spawnSpeedPct') return `生怪速度 ${signed(v, 1)}`;
+  // #17 第四批
+  if (k.startsWith('armorEle_')) {
+    const e = k.slice(9);
+    return `鎧甲屬性轉為${ELEMENT_ICONS[e] || ''}${ELEMENT_NAMES[e] || e}屬性`;
+  }
+  if (k === 'magicReflectChance') return `${v}% 機率反射魔法攻擊`;
+  // #17 第三批
+  if (k === 'mdefIgnorePct') return `無視魔法防禦力 ${v}%`;
+  if (k === 'bossMdefIgnorePct') return `無視 BOSS 魔法防禦力 ${v}%`;
+  if (k === 'spOnAttack') return v < 0 ? `每次攻擊消耗 ${-v} SP` : `每次攻擊回復 ${v} SP`;
+  if (k === 'reviveFullRestore') return '原地復活時 HP、SP 全部恢復';
+  if (k.startsWith('perJobLv10_')) {
+    const t = { atk: 'ATK', hit: '命中', critRate: '暴擊率' }[k.slice(11)] || k.slice(11);
+    return `每 10 點職業等級 ${t} +${v}`;
   }
   if (k.startsWith('monDmg_')) {
     const m = MONSTERS[k.slice(7)];
@@ -2919,7 +2966,8 @@ function renderCharacterTab() {
     const buffNames = {
       aspd: '攻速', atk: '攻擊', def: '防禦', flee: '迴避', gold: '金錢', crit: '暴擊', hit: '命中',
       statpct: 'DEX/AGI', blessing: 'STR/INT/DEX', flatstat: 'STR/ATK', agiflat: 'AGI', lukflat: 'LUK',
-      sprate: 'SP回復', poison: '毒', maxroll: '傷害固定最大值', holyweapon: '聖屬武器', shield: '護盾', magnumfire: '火屬強化'
+      sprate: 'SP回復', poison: '毒', maxroll: '傷害固定最大值', holyweapon: '聖屬武器', shield: '護盾', magnumfire: '火屬強化',
+      block: '格擋'
     };
     const PCT_BUFFS = ['statpct', 'magnumfire'];
     buffListHtml += state.buffs.map(b => {
@@ -2989,6 +3037,10 @@ function renderCharacterTab() {
       <div>物理攻擊 ATK：${state.atk}${(() => { const r = getRefinementLevel('weapon'); const wId = getEquipBaseItemId('weapon'); const wLv = wId ? getRefineWeaponLv(ITEMS[wId]) : 1; return r > 0 ? ` (+${getRefinementAtkBonus(r, wLv)}精煉)` : ''; })()}</div>
       <div>魔法攻擊 MATK：${state.matkMin}~${state.matkMax}</div>
       <div title="硬防（裝備）走比例減傷、軟防（等級+VIT）每一擊固定扣血，兩者運算方式不同">防禦 DEF：${state.defHard || 0}+${state.defSoft || 0}${(() => { let refBonus = 0; ['head_top','head_mid','head_bottom','armor','shield','garment','footgear','accessory1','accessory2'].forEach(s => { const lv = getRefinementLevel(s); if (lv > 0) refBonus += getRefinementDefBonus(lv); }); return refBonus > 0 ? ` (+${refBonus}精煉)` : ''; })()}　<span class="dim">硬防減傷 ${Math.round((1 - (4000 + (state.defHard||0)) / (4000 + 10 * (state.defHard||0))) * 100)}%</span></div>
+      <div title="魔防（#17）：怪物的魔法技能看的是這個，不是 DEF。硬魔防（裝備+卡片）走比例減傷、軟魔防（INT/2）每一發固定扣血">魔防 MDEF：${state.mdefHard || 0}+${state.mdefSoft || 0}　<span class="dim">硬魔防減傷 ${Math.round((1 - (4000 + Math.max(0, state.mdefHard || 0)) / (4000 + 10 * Math.max(0, state.mdefHard || 0))) * 100)}%</span></div>
+      ${state.playerElement && state.playerElement !== 'none'
+        ? `<div title="鎧甲屬性（#17）：被攻擊時吃屬性相剋。免疫同屬性，但也會被剋星打雙倍">鎧甲屬性：<span class="set-tag">${ELEMENT_ICONS[state.playerElement] || ''}${ELEMENT_NAMES[state.playerElement] || state.playerElement}屬性</span></div>` : ''}
+      ${state.cardMagicReflectChance ? `<div title="成功時完全不受傷，法術原樣彈回施法者">魔法反射：${state.cardMagicReflectChance}%</div>` : ''}
       <div>攻擊速度 ASPD：${state.aspd}${state.buffs.some(b => b.type === 'aspd') ? ' <span class="buff-active">BUFF</span>' : ''}</div>
       <div>攻擊間隔：${(state.attackInterval / 1000).toFixed(2)} 秒</div>
       <div>命中 HIT：${effectiveHit}${effectiveHit > state.hit ? ` <span class="buff-active">(+${effectiveHit - state.hit})</span>` : ''}</div>
@@ -3003,10 +3055,18 @@ function renderCharacterTab() {
 /* ---------------- 轉職樹（簽名視覺元素） ---------------- */
 function renderJobTree() {
   const el = document.getElementById('tab-jobtree');
-  const tiers = [['novice'], ['swordsman', 'mage', 'archer', 'merchant', 'thief', 'acolyte'], ['knight', 'wizard', 'hunter', 'blacksmith', 'assassin', 'priest']];
+  /* 第四層是進階二轉（轉生後才走得到）。**沒轉生過的角色不畫這一層**——
+     那是轉生的獎勵，提早攤開來只會讓還在練一轉的玩家看不懂。 */
+  const tiers = [
+    ['novice'],
+    ['swordsman', 'mage', 'archer', 'merchant', 'thief', 'acolyte'],
+    ['knight', 'wizard', 'hunter', 'blacksmith', 'assassin', 'priest'],
+  ];
+  const showTrans = (state.rebirthCount || 0) > 0;
+  if (showTrans) tiers.push(['lordknight', 'highwizard', 'sniper', 'whitesmith', 'assassincross', 'highpriest']);
   const nodeW = 108, nodeH = 64, gapX = 20, tierGapY = 130;
   const svgW = tiers[1].length * (nodeW + gapX);
-  const svgH = tierGapY * 2 + nodeH + 40;
+  const svgH = tierGapY * (tiers.length - 1) + nodeH + 40;
 
   function xOf(tierIdx, i, count) {
     const rowW = count * (nodeW + gapX) - gapX;
@@ -3035,12 +3095,15 @@ function renderJobTree() {
         lines += `<line x1="${px}" y1="${py}" x2="${cx}" y2="${y}" class="tree-line ${unlocked ? 'tree-line-active' : ''}" />`;
       }
 
+      // 進階二轉的技能是分批補的，還沒補到的先標出來，免得轉過去才發現沒東西點
+      const noSkills = jd.tier === 3 && (jd.skills || []).length === 0;
+      const foot = canChange ? '點擊轉職' : (noSkills ? '技能製作中' : '');
       nodes += `<g class="tree-node ${isCurrent ? 'tree-node-current' : ''} ${unlocked ? 'tree-node-unlocked' : 'tree-node-locked'}"
-                   transform="translate(${x},${y})" ${canChange ? `onclick="doJobChange('${jobId}');renderJobTree();renderAll();"` : ''} style="${canChange ? 'cursor:pointer' : ''}">
+                   transform="translate(${x},${y})" ${canChange ? `onclick="confirmJobChange('${jobId}')"` : ''} style="${canChange ? 'cursor:pointer' : ''}">
           <rect width="${nodeW}" height="${nodeH}" rx="10" class="tree-rect"/>
           <text x="${nodeW / 2}" y="24" class="tree-icon" text-anchor="middle">${jd.icon}</text>
           <text x="${nodeW / 2}" y="46" class="tree-label" text-anchor="middle">${jd.name}</text>
-          ${canChange ? `<text x="${nodeW / 2}" y="58" class="tree-cta" text-anchor="middle">點擊轉職</text>` : ''}
+          ${foot ? `<text x="${nodeW / 2}" y="58" class="${canChange ? 'tree-cta' : 'tree-wip'}" text-anchor="middle">${foot}</text>` : ''}
         </g>`;
     });
   });
@@ -3049,7 +3112,100 @@ function renderJobTree() {
     <div class="job-tree-wrap">
       <svg viewBox="0 0 ${svgW} ${svgH}" class="job-tree-svg">${lines}${nodes}</svg>
     </div>
-    <p class="tree-hint">金色代表你已走過或正在的道路。二轉需職業等級滿級並達到基礎等級門檻。三轉之路仍在雲霧之中，敬請期待未來的資料片。</p>`;
+    <p class="tree-hint">金色代表你已走過或正在的道路。二轉需職業等級滿級並達到基礎等級門檻。
+      <b>職業一旦選定就走到底</b>，轉職只保留本系路線，其他路線的技能會被清除。</p>
+    ${/* 轉生面板搬到地圖分頁的安全區了，這裡只留指路 */
+      (state.rebirthCount || 0) >= REBIRTH_MAX ? renderRebirthPanel()
+        : `<div class="rebirth-pointer">🌟 轉生要到<b>安全區（城鎮）</b>的轉生祭壇辦理——請切到地圖分頁。</div>`}`;
+}
+
+/* 轉職前的確認：**這個動作會刪東西**，所以一定要先把刪什麼列出來。
+   沒有東西要刪（正常的一路往下轉）就不打擾，直接轉。 */
+function confirmJobChange(jobId) {
+  const jd = JOB_TREE[jobId];
+  const p = jobPrunePreview(jobId);
+  const noSkills = jd.tier === 3 && (jd.skills || []).length === 0;
+  if (p.skills.length || p.points || p.jobs.length || noSkills) {
+    const names = p.skills.map(id => { const sk = SKILLS[id]; return sk ? sk.name.split(' ')[0] : id; });
+    const shown = names.slice(0, 12).join('、') + (names.length > 12 ? ` …等 ${names.length} 個` : '');
+    const bits = [`轉職成「${jd.name}」之後只會保留這條路線。`, ''];
+    if (names.length) bits.push(`會被清除的技能（${names.length} 個）：${shown}`);
+    if (p.points) bits.push(`會被清除的未使用技能點：${p.points} 點`);
+    /* 框架先上、技能分批補，所以有可能轉過去時專屬技能還是空的。
+       這不是死路：原本學過的技能全部留著、HP/SP 也立刻變強，技能點會存著等技能開放。
+       但要先講清楚，不然玩家轉完打開技能分頁會以為壞了。 */
+    if (noSkills) {
+      bits.push('', `⚠️ ${jd.name} 的專屬技能還在製作中，目前是空的。`,
+        `　・原本學過的技能全部保留，體質（HP/SP）立刻提升`,
+        `　・職業等級上限 ${jd.jobLevelMax}，技能點會先存著，技能開放後就能點`);
+    }
+    bits.push('', '這個動作無法復原，確定要轉職嗎？');
+    if (!confirm(bits.join('\n'))) return;
+  }
+  doJobChange(jobId);
+  renderJobTree();
+  renderAll();
+}
+
+/* 轉生面板：條件沒到就把還差什麼寫清楚，不要只給一顆灰掉的按鈕。
+   轉生完之後改成顯示「你被鎖在哪條路上、下一站是誰」。 */
+function renderRebirthPanel() {
+  const done = (state.rebirthCount || 0) >= REBIRTH_MAX;
+  if (done) {
+    const line = ['novice', ...(state.rebirthPath || [])]
+      .map(j => (JOB_TREE[j] || {}).name || j).join(' → ');
+    const nxt = rebirthPathNext();
+    const nxtName = nxt ? ((JOB_TREE[nxt] || {}).name || nxt) : null;
+    return `<div class="rebirth-panel rebirth-done">
+      <h4>🌟 已轉生</h4>
+      <div class="rebirth-req">鎖定路線：${line}</div>
+      <div class="rebirth-gain">轉生是為了把本職練得更強，所以路線鎖死，只能照原路重走一次。<br>
+        ${nxt && JOB_TREE[nxt] ? `下一站：<b>${nxtName}</b>`
+          : nxt ? `<span class="dim">終點的進階二轉（${nxt}）尚未實作。</span>`
+                : `<span class="dim">已走到目前資料的終點。</span>`}</div>
+    </div>`;
+  }
+  const reason = rebirthBlockReason();
+  const ok = reason === null;
+  const nextAdv = (currentJob().nextLocked || [])[0];
+  const worn = EQUIP_SLOTS_ALL.filter(s => state.equip[s]).length;
+  return `<div class="rebirth-panel${ok ? ' rebirth-ready' : ''}">
+    <h4>🌟 轉生祭壇　<span class="dim">每隻角色只能一次</span></h4>
+    <div class="rebirth-req">條件：基礎等級 ${REBIRTH_REQ.baseLevel}　職業等級 ${REBIRTH_REQ.jobLevel}　${REBIRTH_REQ.zeny.toLocaleString()}z</div>
+    <div class="rebirth-gain">回到新手，素質歸零並獲得 <b>${REBIRTH_STAT_POINTS}</b> 點素質點、<b>${rebirthSkillPoints()}</b> 點新手技能點（滿級時剛好點滿新手全部技能）。<br>
+      <b>路線會被鎖死</b>——轉生後只能重走你現在這條路，走完再接進階二轉${nextAdv && JOB_TREE[nextAdv] ? `「${JOB_TREE[nextAdv].name}」` : ''}。<br>
+      <span class="dim">裝備、道具、卡片、圖鑑都會保留；目前職業的技能會全部清除。
+      ${worn ? `身上的 <b>${worn}</b> 件裝備會自動卸下放回背包（轉生後等級與職業都穿不上）。` : ''}</span></div>
+    ${ok ? `<button class="btn-primary" onclick="confirmRebirth()">進行轉生</button>`
+         : `<div class="rebirth-block">尚未符合條件：${reason}</div>`}
+  </div>`;
+}
+
+function confirmRebirth() {
+  if (!canRebirth()) { renderJobTree(); return; }
+  const p = jobPrunePreview('novice');
+  const path = getAllLearnedJobs().filter(j => j !== 'novice')
+    .map(j => (JOB_TREE[j] || {}).name || j).join(' → ');
+  const worn = EQUIP_SLOTS_ALL.filter(s => state.equip[s]).length;
+  const msg = [
+    `轉生會把你變回新手：`,
+    `　・基礎等級與職業等級歸 1`,
+    `　・素質全部歸 1，改發 ${REBIRTH_STAT_POINTS} 點素質點`,
+    `　・清除 ${p.skills.length} 個技能，改發 ${rebirthSkillPoints()} 點新手技能點`,
+    ...(worn ? [`　・卸下身上 ${worn} 件裝備放回背包（轉生後等級與職業都穿不上）`] : []),
+    `　・扣除 ${REBIRTH_REQ.zeny.toLocaleString()}z`,
+    ``,
+    `【每隻角色只能轉生一次】`,
+    `【路線會被鎖死】轉生後只能重走「${path}」，不能改走其他職業。`,
+    ``,
+    `裝備、道具、卡片、圖鑑、成就都會保留。`,
+    `這個動作無法復原，確定要轉生嗎？`,
+  ].join('\n');
+  if (!confirm(msg)) return;
+  doRebirth();
+  renderJobTree();
+  renderMapTab();   // 面板本體在地圖分頁，轉生後要立刻換成「已轉生」的樣子
+  renderAll();
 }
 
 /* ---------------- 地圖背景圖 ---------------- */

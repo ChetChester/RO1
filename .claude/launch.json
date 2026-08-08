@@ -4,8 +4,9 @@
     {
       "name": "ro-idle-static",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["-y", "http-server", "-p", "8834", "-c-1"],
-      "port": 8834
+      "runtimeArgs": ["-y", "http-server", "-c-1"],
+      "port": 8834,
+      "autoPort": true
     }
   ]
 }

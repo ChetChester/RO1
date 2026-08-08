@@ -163,4 +163,108 @@ const SKILLS = {
   asperio: {"id":"asperio","name":"十字驅魔攻擊","maxLv":10,"type":"field_aoe_magic","element":"holy","fieldTickIntervalSec":3,"spCost":[40,42,44,46,48,50,52,54,56,58],"cooldown":[15,15,15,15,15,15,15,15,15,15],"mult":[1,2,3,4,5,6,7,8,9,10],"duration":[12,12,12,12,12,12,12,12,12,12],"desc":"在原地造成持續範圍聖屬性魔法傷害，每3秒一次，共持續12秒，每次傷害為MATK 100%~1000%（依等級）。"},
   suffragium: {"id":"suffragium","name":"捨身取義","maxLv":1,"isQuest":true,"type":"passive","passiveStat":"onDeathRevive2","spCost":[0],"cooldown":[0],"revivePct":[50],"internalCooldown":[300],"desc":"被動技能，HP歸零時原地復活並恢復50%HP，冷卻300秒（若復活術可用會優先觸發復活術）。"},
   darkbarrier: {"id":"darkbarrier","name":"暗之障壁","maxLv":10,"type":"buff_shield","spCost":[30,30,30,35,35,35,40,40,40,40],"cooldown":[10,10,10,10,10,10,10,10,10,10],"shieldCapacityFlat":[300,600,900,1200,1500,1800,2100,2400,2700,3000],"shieldCharges":[2,3,4,5,6,7,8,9,10,11],"duration":[5,10,15,20,25,30,35,40,45,50],"desc":"設置魔法障壁，耐久度300~3000（依等級），可抵擋2~11次近距離物理傷害，持續5~50秒。"},
+
+  /* ---- 卡片自動念咒／賦予技能需要的技能本體（#22）----
+     這幾個官方技能本作原本沒有，所以那批卡片一直卡在「框架好了但沒有技能可放」。
+     **刻意不掛在任何職業的技能表下**——只有卡片用得到，玩家學不到也加不了點。
+     `castSkill(id, {free:true})` 與 `findSkillForUse()` 都是查 SKILLS，不必進職業樹。
+
+     其中三個現在做得到，是因為需要的東西後來才補上：解除增益要有 `mon.mbuff`（#45）、
+     痊癒術要有 `state.playerAil`（#30）、冷笑話要有怪物異常狀態（#29）。
+     這些在 #22 寫下時都還不存在。 */
+  frostjoke: {"id":"frostjoke","name":"冷笑話","maxLv":5,"type":"ailment_aoe","element":"water","ailment":"freeze","successChance":[15,20,25,30,35],"spCost":[10,10,10,10,10],"cooldown":[10,10,10,10,10],"desc":"講一個冷到結凍的笑話，對全部敵人各有15%~35%機率造成冰凍（依等級）。"},
+  impositio_manus: {"id":"impositio_manus","name":"神威祈福","maxLv":5,"type":"buff_atk","spCost":[20,20,20,20,20],"cooldown":[30,30,30,30,30],"mult":[1.05,1.1,1.15,1.2,1.25],"duration":[60,60,60,60,60],"desc":"祝福自身，攻擊力+5%~25%，持續60秒（依等級）。（官方是固定值 ATK+5×等級，本作的攻擊力buff一律是倍率制，改成等效的百分比）"},
+  autoguard: {"id":"autoguard","name":"自動防禦","maxLv":10,"type":"buff_block","spCost":[10,10,10,10,10,12,12,12,12,12],"cooldown":[15,15,15,15,15,15,15,15,15,15],"blockChance":[5,10,15,20,25,30,35,40,45,50],"duration":[20,20,20,20,20,30,30,30,30,30],"desc":"進入防禦姿態，有5%~50%機率完全擋下敵人的物理攻擊，持續20~30秒（依等級）。"},
+  grandcross: {"id":"grandcross","name":"聖十字審判","maxLv":10,"type":"magic_aoe","element":"holy","spCost":[37,40,43,46,49,52,55,58,61,64],"cooldown":[8,8,8,8,8,8,8,8,8,8],"mult":[1.4,1.8,2.2,2.6,3,3.4,3.8,4.2,4.6,5],"desc":"以聖十字之力對全部敵人造成聖屬性魔法傷害MATK×140%~500%（依等級）。（官方會同時傷到自己，本作不做——放置遊戲裡自傷技能只會被玩家關掉）"},
+  dispell_magic: {"id":"dispell_magic","name":"魔法效果解除","maxLv":5,"type":"dispel_aoe","spCost":[35,35,35,35,35],"cooldown":[20,20,20,20,20],"aoeFromLv":3,"desc":"解除敵人身上的增益效果（力量提升、自動防禦、反射盾那一類）。Lv3以上對全體生效。"},
+  strecovery: {"id":"strecovery","name":"痊癒術","maxLv":1,"type":"cure","spCost":[25],"cooldown":[15],"desc":"解除自身的昏迷、冰凍、石化、睡眠、混亂、沉默、黑暗、詛咒、中毒、出血。"},
+
+  /* ---------------- 領主騎士（進階二轉，第一批 6 個）----------------
+     官方 skill id 對照（用 id 不用中文名——不同版本的譯名會對調）：
+       LK_BERSERK      狂怒之槍   LK_TENSIONRELAX 極速回復
+       LK_PARRYING     雙劍挌擋   LK_HEADCRUSH    傷害增壓
+       LK_JOINTBEAT    巧打       LK_SPIRALPIERCE 螺旋擊刺
+     還沒做的兩個：LK_AURABLADE 靈氣劍、LK_CONCENTRATION 集中攻擊 */
+
+  lk_berserk: {
+    id: 'lk_berserk', name: '狂怒之槍 Frenzy', maxLv: 1,
+    type: 'passive', passiveStat: 'frenzyProc',
+    spCost: [0], cooldown: [0],
+    procChance: [10], mult: [2], aspdFlat: [2], duration: [10], internalCooldown: [30],
+    desc: '被動技能。受到攻擊時 10% 機率進入狂怒，ATK ×2、ASPD +2，持續 10 秒（內部冷卻 30 秒）。'
+        + '（官方是主動技能，代價是持續掉血、不能喝水也不能用技能；本作依使用者指定改成受擊觸發的被動，代價換成低觸發率與冷卻）'
+  },
+  lk_tensionrelax: {
+    id: 'lk_tensionrelax', name: '極速回復 Tension Relax', maxLv: 1,
+    type: 'passive', passiveStat: 'regenDoubleProc',
+    spCost: [0], cooldown: [0],
+    procChance: [30], mult: [2],
+    desc: '被動技能。自然回復 HP 時 30% 機率回復量加倍，沒有冷卻。'
+        + '（官方是「坐下時 HP 恢復加速」，放置遊戲沒有坐下這個動作，改成掛在自然回復上）'
+  },
+  lk_parrying: {
+    id: 'lk_parrying', name: '雙劍挌擋 Parrying', maxLv: 10,
+    type: 'passive', passiveStat: 'parryingProc',
+    spCost: [0], cooldown: [0], requiresWeapon: 'sword2',
+    mult: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55],
+    desc: '被動技能，需裝備雙手劍。有 10%~55% 機率完全擋下敵人的物理攻擊（魔法不擋）。'
+  },
+  /* 傷害增壓與巧打依使用者指定改成**普攻觸發的被動**（原本是主動技）。
+     兩者共用 `onAttackStrikeProc` 這個型別：普攻命中後擲一次，中了就補一段傷害＋異常狀態，
+     各自有獨立的內部冷卻。改成被動之後 SP 成本沒有意義，一律 0。 */
+  lk_headcrush: {
+    id: 'lk_headcrush', name: '傷害增壓 Head Crush', maxLv: 5,
+    type: 'passive', passiveStat: 'onAttackStrikeProc', element: 'neutral',
+    spCost: [0], cooldown: [0],
+    procChance: [5, 10, 15, 20, 25], internalCooldown: [5, 5, 5, 5, 5],
+    mult: [1.4, 1.8, 2.2, 2.6, 3.0],
+    inflict: { type: 'bleed', chance: [100, 100, 100, 100, 100] },
+    desc: '被動技能。普通攻擊有 5%~25% 機率追加一次 ATK×140%~300% 的重擊並使目標出血（內部冷卻 5 秒）。'
+  },
+  lk_jointbeat: {
+    id: 'lk_jointbeat', name: '巧打 Joint Beat', maxLv: 10,
+    type: 'passive', passiveStat: 'onAttackStrikeProc', element: 'neutral',
+    spCost: [0], cooldown: [0], requiresWeapon: 'spear',
+    procChance: [3, 6, 9, 12, 15, 18, 21, 24, 27, 30],
+    internalCooldown: [5, 5, 5, 5, 5, 5, 5, 5, 5, 5],
+    mult: [1.2, 1.5, 1.8, 2.1, 2.4, 2.7, 3.0, 3.3, 3.6, 4.0],
+    inflict: { type: 'stun+blind+curse+bleed', chance: [100, 100, 100, 100, 100, 100, 100, 100, 100, 100] },
+    desc: '被動技能，需裝備矛類武器。普通攻擊有 3%~30% 機率追加一次 ATK×120%~400% 的關節打擊，'
+        + '並隨機造成昏迷／黑暗／詛咒／出血其中一種（內部冷卻 5 秒）。'
+        + '（官方是依部位給不同減益：腳踝降移速、手腕降攻速、膝肩腰頸各有效果；本作沒有部位概念，改成從性質最接近的四種異常狀態隨機挑一種）'
+  },
+  lk_spiralpierce: {
+    id: 'lk_spiralpierce', name: '螺旋擊刺 Spiral Pierce', maxLv: 5,
+    type: 'damage', element: 'neutral',
+    spCost: [20, 22, 24, 26, 28], cooldown: [6, 6, 6, 6, 6],
+    /* 官方每段倍率是 (100 + 50×等級)%，**而且會打 5 段**＝總倍率 750%~1750%。
+       本作沒有多段攻擊的呈現，使用者 2026-08-08 指定「直接把倍率 ×5」，
+       所以這裡寫的是**官方的總倍率**，一次打完。 */
+    mult: [7.5, 10.0, 12.5, 15.0, 17.5],
+    requiresWeapon: 'spear',
+    // 官方係數就是 0.8，乘的是**顯示重量**（引擎會把 ITEMS.weight 的 ×10 原始值除回來）
+    weaponWeightMult: [0.8, 0.8, 0.8, 0.8, 0.8],
+    ignoreSize: true,
+    desc: '矛類專用。旋轉貫穿造成 ATK×750%~1750% 傷害，額外加上「武器重量×0.8」的攻擊力，且無視體型懲罰。'
+        + '（官方是每段 150%~350% 打 5 段，本作沒有多段呈現，直接合成一次打完）'
+  },
+  lk_aurablade: {
+    id: 'lk_aurablade', name: '靈氣劍 Aura Blade', maxLv: 5,
+    type: 'buff_auraflat', element: 'neutral',
+    spCost: [20, 25, 30, 35, 40], cooldown: [30, 30, 30, 30, 30],
+    // 官方：每次攻擊附加 20×等級 的固定傷害，**無視防禦**
+    flatDmg: [20, 40, 60, 80, 100],
+    duration: [60, 90, 120, 150, 180],
+    desc: '劍上纏繞靈氣，每次攻擊額外附加 20~100 點固定傷害且無視防禦，持續 60~180 秒。'
+  },
+  lk_concentration: {
+    id: 'lk_concentration', name: '集中攻擊 Concentration', maxLv: 5,
+    type: 'buff_atk', element: 'neutral',
+    spCost: [20, 24, 28, 32, 36], cooldown: [30, 30, 30, 30, 30],
+    // 官方：ATK +5×等級%，代價是 DEF −5×等級%
+    mult: [1.05, 1.10, 1.15, 1.20, 1.25],
+    defMult: [0.95, 0.90, 0.85, 0.80, 0.75],
+    duration: [30, 45, 60, 75, 90],
+    desc: '集中精神提升攻擊力 5%~25%，代價是防禦力下降 5%~25%，持續 30~90 秒。'
+  },
 };

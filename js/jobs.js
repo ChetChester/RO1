@@ -234,6 +234,98 @@ const JOB_TREE = {
       'asperio', 'suffragium', 'darkbarrier',
     ],
     desc: '光輝籠罩之地，皆為信徒的庇護所。'
+  },
+
+  /* ---------------- 進階二轉（tier 3，轉生後才走得到）----------------
+     只有**轉生過**的角色接得到（`canJobChange()` 走 `state.rebirthPath` → `nextLocked`）。
+     轉生的定位是「把本職練得更強」，所以這六個是原二轉的加強版，不是新路線。
+
+     這一批是**框架**：職業本體、成長曲線、轉職條件都到位，`skills` 先留空，
+     36 個官方技能分批補（清單見 docs/BUGS.md #56）。留空不會壞——技能表本來就是
+     id 陣列，空陣列在 jobs.js 尾端的還原、技能分頁、被動掃描全部都走得通。
+
+     四個共通設定，理由寫在這裡不逐條重複：
+
+     `jobLevelMax: 70`  官方轉生二轉就是 70（一般二轉 50）。多出來的 20 級＝20 點技能點，
+                        剛好夠點那批新技能，不必另外發點。
+
+     `baseLevelReq: 70` **本作自訂**。官方的轉職條件是另一套階層（轉生一轉 job 40），
+                        本作沒有轉生一轉那一層，所以改用基礎等級當門檻。
+                        一轉 10 / 二轉 40 / 進階二轉 70，間距一致。
+
+     `hpSpFrom` / `aspdFrom`  一律指回本職。官方轉生職**用的就是同一張 HP/SP 表與攻速表**，
+                        差別在轉生職身上那個固定加成——本作把那份加成折進 hpMod / spMod，
+                        所以不複製 100 格陣列，也不新增攻速表。
+
+     `hpMod` / `spMod`  本職 ×1.25。官方轉生職的體質加成就是這個量級，
+                        六個職業一致，之後要調平衡只要動這個係數。
+
+     `bonusLevels` 沿用本職的表（職業加成是累計繼承的，見 computeJobBonuses），
+     51~70 那段再補一輪，讓多出來的 20 級不是白練。 */
+
+  lordknight: {
+    id: 'lordknight', name: '領主騎士', tier: 3, icon: '⚔️', parent: 'knight',
+    baseLevelReq: 70, jobLevelReq: 50, jobLevelMax: 70,
+    hpMod: 1.875, spMod: 3.75, atkMod: 1.8, matkMod: 0.7,
+    hpSpFrom: 'knight', aspdFrom: 'knight',
+    next: [], nextLocked: ['runeknight'],
+    bonusLevels: { str:[4,10,15,21,27,33,46,47,52,58,64,70], agi:[13,38,55], vit:[1,3,8,12,17,18,23,29,36,43,60,66], int:[], dex:[11,19,31,40,48,49,62,68], luk:[5,20,28,37,57] },
+    // 官方 8 個技能全數到齊（2026-08-08）
+    skills: [
+      'lk_berserk', 'lk_tensionrelax', 'lk_parrying', 'lk_aurablade',
+      'lk_concentration', 'lk_headcrush', 'lk_jointbeat', 'lk_spiralpierce',
+    ],
+    desc: '騎士之上的騎士。戰場上的旗幟只為他而立。'
+  },
+  highwizard: {
+    id: 'highwizard', name: '高等巫師', tier: 3, icon: '🔮', parent: 'wizard',
+    baseLevelReq: 70, jobLevelReq: 50, jobLevelMax: 70,
+    hpMod: 0.6875, spMod: 11.25, atkMod: 0.5, matkMod: 2.0,
+    hpSpFrom: 'wizard', aspdFrom: 'wizard', baseAspd: 150,
+    next: [], nextLocked: ['warlock'],
+    bonusLevels: { str:[12,56], agi:[6,10,24,34,41,43,46,47,60], vit:[38,64], int:[1,4,9,18,22,29,31,33,40,45,48,50,52,58,66,70], dex:[2,5,13,26,32,39,54,62], luk:[15,36,68] },
+    skills: [],
+    desc: '把咒文推到極限的人，最後連自己都成了咒文的一部分。'
+  },
+  sniper: {
+    id: 'sniper', name: '狙擊之王', tier: 3, icon: '🏹', parent: 'hunter',
+    baseLevelReq: 70, jobLevelReq: 50, jobLevelMax: 70,
+    hpMod: 1.0625, spMod: 5.0, atkMod: 1.6, matkMod: 0.8,
+    hpSpFrom: 'hunter', aspdFrom: 'hunter',
+    next: [], nextLocked: ['ranger'],
+    bonusLevels: { str:[11,25,34,47,58], agi:[3,7,15,19,27,31,39,43,52,62], vit:[9,21,37,50,66], int:[5,17,29,41,56], dex:[1,2,6,13,23,33,45,49,54,60,68,70], luk:[10,26,42,64] },
+    skills: [],
+    desc: '一箭，一命。距離只是他與獵物之間的一個數字。'
+  },
+  whitesmith: {
+    id: 'whitesmith', name: '神匠', tier: 3, icon: '🔨', parent: 'blacksmith',
+    baseLevelReq: 70, jobLevelReq: 50, jobLevelMax: 70,
+    hpMod: 1.125, spMod: 5.0, atkMod: 1.75, matkMod: 0.7,
+    hpSpFrom: 'blacksmith', aspdFrom: 'blacksmith',
+    next: [], nextLocked: ['mechanic'],
+    bonusLevels: { str:[1,7,13,22,30,38,44,50,54,62,70], agi:[10,26,40,58], vit:[4,16,28,36,46,52,66], int:[6,19,33,48,60], dex:[3,9,15,24,32,42,56,64], luk:[12,20,35,68] },
+    skills: [],
+    desc: '鐵砧上敲出來的不只是武器，還有一整個時代的重量。'
+  },
+  assassincross: {
+    id: 'assassincross', name: '十字刺客', tier: 3, icon: '🗡️', parent: 'assassin',
+    baseLevelReq: 70, jobLevelReq: 50, jobLevelMax: 70,
+    hpMod: 1.375, spMod: 5.0, atkMod: 1.75, matkMod: 0.7,
+    hpSpFrom: 'assassin', aspdFrom: 'assassin',
+    next: [], nextLocked: ['guillotinecross'],
+    bonusLevels: { str:[2,9,17,26,35,44,52,60,68], agi:[1,5,11,19,28,37,46,50,56,64,70], vit:[14,31,41,58], int:[23,48], dex:[7,21,33,43,54,66], luk:[3,15,29,39,62] },
+    skills: [],
+    desc: '影子裡的影子。你察覺的那一刻，已經是他允許的。'
+  },
+  highpriest: {
+    id: 'highpriest', name: '高階祭司', tier: 3, icon: '🕊️', parent: 'priest',
+    baseLevelReq: 70, jobLevelReq: 50, jobLevelMax: 70,
+    hpMod: 0.9375, spMod: 10.0, atkMod: 0.6, matkMod: 1.4,
+    hpSpFrom: 'priest', aspdFrom: 'priest', baseAspd: 150,
+    next: [], nextLocked: ['archbishop'],
+    bonusLevels: { str:[4,11,17,27,35,56], agi:[6,29,37,48,62], vit:[7,14,34,36,45,58,68], int:[8,9,22,42,43,52,60,70], dex:[16,20,25,32,54,64], luk:[1,3,10,21,31,39,50,66] },
+    skills: [],
+    desc: '祈禱到了盡頭，連神都會側耳。'
   }
 };
 
@@ -297,20 +389,17 @@ const JOBS_TIER2_PENDING = [
   { id: 'monk',      name: '武僧',     parent: 'acolyte' },
 ];
 
-// 二、轉生二轉（進階二轉，tier 2 trans）。要先有轉生系統與轉生一轉才走得到
+/* 二、還沒做的進階二轉。
+   **六個主線的進階二轉（領主騎士／高等巫師／狙擊之王／神匠／十字刺客／高階祭司）
+   已經在上面的 JOB_TREE 裡了**（2026-08-08 的框架），剩下這七個都掛在
+   JOBS_TIER2_PENDING 那七個還沒做的普通二轉底下，所以要先有父職業才做得起來。 */
 const JOBS_TRANS_PENDING = [
-  { id: 'lordknight',    name: '神威騎士',     parent: 'knight' },
   { id: 'paladin',       name: '聖殿十字軍',   parent: 'crusader' },
-  { id: 'highwizard',    name: '高等巫師',     parent: 'wizard' },
   { id: 'professor',     name: '教授',         parent: 'sage' },
-  { id: 'sniper',        name: '狙擊之王',     parent: 'hunter' },
   { id: 'clown',         name: '演奏者',       parent: 'bard' },
   { id: 'gypsy',         name: '吉普賽',       parent: 'dancer' },
-  { id: 'whitesmith',    name: '神匠',         parent: 'blacksmith' },
   { id: 'creator',       name: '生命鍊成師',   parent: 'alchemist' },
-  { id: 'assassincross', name: '十字刺客',     parent: 'assassin' },
   { id: 'stalker',       name: '神行太保',     parent: 'rogue' },
-  { id: 'highpriest',    name: '高階祭司',     parent: 'priest' },
   { id: 'champion',      name: '拳聖',         parent: 'monk' },
 ];
 
