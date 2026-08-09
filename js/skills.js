@@ -267,4 +267,353 @@ const SKILLS = {
     duration: [30, 45, 60, 75, 90],
     desc: '集中精神提升攻擊力 5%~25%，代價是防禦力下降 5%~25%，持續 30~90 秒。'
   },
+
+  /* ---------------- 十字刺客 Assassin Cross（#59）----------------
+
+     官方 6 個技能，`ASC_HALLUCINATION`（幻影步）**使用者指定刪除**——
+     官方資料本身就是空的（maxLv −1、沒有說明），那是個沒實裝的殘留條目，
+     真正有效果的「幻影步」是三轉十字斬首者的 GC_HALLUCINATIONWALK。
+
+     官方 id 對照（用 id 不用中文名，譯名在不同版本會對調）：
+       ASC_KATAR         高階拳刃修練  → asc_katar
+       ASC_CDP           毒液製作      → asc_cdp
+       ASC_EDP           致命塗毒      → asc_edp
+       ASC_BREAKER       心靈震波      → asc_breaker
+       ASC_METEORASSAULT 黑暗瞬間      → asc_meteorassault           */
+
+  // 官方：拳刃攻擊時物理傷害 +12/14/16/18/20%（傷害%，不是 ATK 固定值——那是二轉的拳刃修練）
+  asc_katar: {
+    id: 'asc_katar', name: '高階拳刃修練 Advanced Katar Mastery', maxLv: 5,
+    type: 'passive', passiveStat: 'physDmgPct', element: 'neutral',
+    spCost: [0], cooldown: [0],
+    requiresWeapon: 'katar',
+    mult: [12, 14, 16, 18, 20],
+    desc: '被動技能，裝備拳刃時物理傷害 +12%~20%（普通攻擊與物理技能都適用）。'
+  },
+
+  /* 官方是主動的製作技能。本作的製作一律走鍛造頁面（跟鐵/鋼/屬性原石同一套），
+     所以做成「解鎖一道配方」的被動。七種材料照官方一項不減，成功率 25%（使用者指定）。 */
+  asc_cdp: {
+    id: 'asc_cdp', name: '毒液製作 Create Deadly Poison', maxLv: 1,
+    type: 'passive', passiveStat: 'materialCraft', craftCategory: 'poison',
+    element: 'neutral', spCost: [0], cooldown: [0], mult: [1],
+    desc: '被動技能，解鎖鍛造頁面的「毒藥瓶」配方：消耗毒牙、仙人掌刺、蜂針、毒魔菇芽孢、卡勒波迪藥水、菠色克藥水、空瓶各×1，成功率 25%（失敗材料照樣消耗）。毒藥瓶是致命塗毒的發動條件。'
+  },
+
+  /* 官方是主動 buff、消耗毒藥瓶×1、自己讓對方中毒。
+     使用者改成**被動**且反過來：打到已經中毒的敵人時觸發，毒藥瓶只當門票不消耗。
+     裝備ATK 倍率沿用官方 280~400%，持續與冷卻改成 10 秒 / 30 秒。 */
+  asc_edp: {
+    id: 'asc_edp', name: '致命塗毒 Enchant Deadly Poison', maxLv: 5,
+    type: 'passive', passiveStat: 'edpProc', element: 'poison',
+    spCost: [0], cooldown: [0],
+    mult: [2.8, 3.1, 3.4, 3.7, 4.0],   // 裝備（武器）ATK 倍率
+    poisonDmgMult: [2, 2, 2, 2, 2],    // 毒屬性傷害 +100%
+    duration: [10, 10, 10, 10, 10],
+    internalCooldown: [30, 30, 30, 30, 30],
+    desc: '被動技能，攻擊已中毒的敵人時發動（身上需有毒藥瓶，不會消耗）：裝備ATK ×280%~400%、毒屬性傷害 +100%，持續 10 秒，冷卻 30 秒。'
+  },
+
+  /* 官方：遠距離物理單體，ATK 150%~1500%，傷害隨基本等級與 INT 增加，
+     「以暴擊率的一半判定暴擊，且暴擊加成只有一半」——critRateMult / critDmgMult 就是為它做的。 */
+  asc_breaker: {
+    id: 'asc_breaker', name: '心靈震波 Soul Destroyer', maxLv: 10,
+    type: 'damage', element: 'neutral',
+    spCost: [24, 28, 32, 36, 40, 44, 48, 52, 56, 60],
+    cooldown: [4, 4, 4, 4, 4, 4, 4, 4, 4, 4],
+    mult: [1.5, 3, 4.5, 6, 7.5, 9, 10.5, 12, 13.5, 15],
+    levelScaleMax: 50, intScaleMax: 50,
+    critRateMult: 0.5, critDmgMult: 0.5,
+    desc: '對目標造成 ATK 150%~1500% 傷害，並依基本等級（最高+50%）與 INT（最高+50%，INT99）額外增傷。以暴擊率的一半判定暴擊，暴擊加成也只有一半。'
+  },
+
+  /* 官方是主動範圍技，使用者改成**普攻 20% 機率觸發的被動**。
+     倍率與異常狀態機率照官方逐級值，沒有內部冷卻（20% 已經是節流）。 */
+  asc_meteorassault: {
+    id: 'asc_meteorassault', name: '黑暗瞬間 Meteor Assault', maxLv: 10,
+    type: 'passive', passiveStat: 'onAttackPhysAoeProc', element: 'neutral',
+    spCost: [0], cooldown: [0],
+    procChance: [20, 20, 20, 20, 20, 20, 20, 20, 20, 20],
+    mult: [3.2, 4.4, 5.6, 6.8, 8.0, 9.2, 10.4, 11.6, 12.8, 14.0],
+    inflict: { type: 'stun+blind+bleed', chance: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55] },
+    desc: '被動技能，普通攻擊時 20% 機率對全體敵人造成 ATK 320%~1400% 傷害，並有 10%~55% 機率使目標陷入暈眩、黑暗或出血。'
+  },
+
+  /* ---------------- 神匠 Whitesmith（#60）----------------
+
+     官方 8 個，`WS_CREATECOIN`（金錢鑄造）／`WS_CREATENUGGET`（金屬塊製造）／
+     `WS_SYSTEMCREATE`（攻擊塔製作）**使用者指定刪除**——官方資料本身就是空的
+     （`maxLv: -1`、沒有任何效果說明），跟十字刺客的幻影步同一種殘留條目。
+
+     官方 id 對照：
+       WS_WEAPONREFINE    武器精煉      → ws_weaponrefine
+       WS_CARTBOOST       手推車加速    → ws_cartboost
+       WS_CARTTERMINATION 手推車終結技  → ws_cartterm
+       WS_MELTDOWN        野蠻凶砍      → ws_meltdown
+       WS_OVERTHRUSTMAX   凶砍最大值    → ws_overthrustmax                */
+
+  // 官方是「自己也能精煉，JOB50 後每級 +0.5%」。本作本來就是自己按精煉，
+  // 那半邊的價值天生沒有，所以只留成功率加成（使用者指定 Lv10 給 +10%）
+  ws_weaponrefine: {
+    id: 'ws_weaponrefine', name: '武器精煉 Weapon Refine', maxLv: 10,
+    type: 'passive', passiveStat: 'refineBonus', element: 'neutral',
+    spCost: [0], cooldown: [0],
+    mult: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    desc: '被動技能，裝備精煉的成功率 +1%~+10%（武器與防具都算，加在官方機率之上）。'
+  },
+
+  /* 官方是移速 +20%、持續 60 秒的主動 buff。本作沒有移動，比照騎乘術與月夜貓
+     改成**生怪加速**；使用者指定做成會自己續的被動：60 秒持續、10 秒冷卻。 */
+  ws_cartboost: {
+    id: 'ws_cartboost', name: '手推車加速 Cart Boost', maxLv: 1,
+    type: 'passive', passiveStat: 'cartBoost', element: 'neutral',
+    spCost: [0], cooldown: [0],
+    mult: [1.2],
+    duration: [60], internalCooldown: [10],
+    desc: '被動技能，自動發動：生怪速度 +20%，持續 60 秒，結束後 10 秒再次發動。與騎乘術、月夜貓卡片相乘。'
+  },
+
+  /* 官方傷害是「推車重量 ÷ 15~÷6」。本作沒有負重系統，使用者指定改成固定倍率
+     500%~1500%，並且**商人的負重量上升照樣加強它**（跟金錢攻擊、手推車攻擊同一條）。
+     暈眩機率與鋅幣消耗照官方逐級值。 */
+  ws_cartterm: {
+    id: 'ws_cartterm', name: '手推車終結技 Cart Termination', maxLv: 10,
+    type: 'damage', element: 'neutral',
+    spCost: [15, 15, 15, 15, 15, 15, 15, 15, 15, 15],
+    cooldown: [3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
+    mult: [5, 6.1, 7.2, 8.3, 9.4, 10.6, 11.7, 12.8, 13.9, 15],
+    zenyCost: [600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400, 1500],
+    inflict: { type: 'stun', chance: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50] },
+    desc: '消耗 600~1500 鋅幣以手推車撞擊目標，造成 ATK 500%~1500% 傷害，5%~50% 機率使其暈眩。傷害會被「負重量上升」加強。'
+  },
+
+  /* 官方效果有兩半：打玩家破壞武器／鎧甲、打怪物降其物攻／物防。
+     **前一半本作永久 N/A**（裝備不會損壞），只做後一半，
+     機率沿用官方那兩欄（武器損壞→降物攻、鎧甲損壞→降物防）。 */
+  ws_meltdown: {
+    id: 'ws_meltdown', name: '野蠻凶砍 Meltdown', maxLv: 10,
+    type: 'buff_meltdown', element: 'neutral',
+    spCost: [50, 50, 60, 60, 70, 70, 80, 80, 90, 90],
+    cooldown: [60, 60, 60, 60, 60, 60, 60, 60, 60, 60],
+    duration: [15, 20, 25, 30, 35, 40, 45, 50, 55, 60],
+    atkBreakChance: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    defBreakChance: [0.7, 1.4, 2.1, 2.8, 3.5, 4.2, 4.9, 5.6, 6.3, 7.0],
+    debuffMult: 0.8, debuffSec: 10,       // 本作自訂：中了就 −20%，持續 10 秒
+    desc: '持續 15~60 秒，期間普通攻擊有 1%~10% 機率使目標物攻 −20%、0.7%~7% 機率使目標物防 −20%（各持續 10 秒）。'
+  },
+
+  // 官方：消耗 3000~5000 鋅幣，ATK +20%~100%，持續 3 分鐘
+  ws_overthrustmax: {
+    id: 'ws_overthrustmax', name: '凶砍最大值 Maximum Overthrust', maxLv: 5,
+    type: 'buff_atk', element: 'neutral',
+    spCost: [15, 15, 15, 15, 15], cooldown: [180, 180, 180, 180, 180],
+    mult: [1.2, 1.4, 1.6, 1.8, 2.0],
+    duration: [180, 180, 180, 180, 180],
+    zenyCost: [3000, 3500, 4000, 4500, 5000],
+    desc: '消耗 3000~5000 鋅幣，攻擊力 +20%~100%，持續 3 分鐘。'
+  },
+
+  /* ---------------- 狙擊之王 Sniper（#61）----------------
+
+     官方 4 個，全部做。id 對照：
+       SN_WINDWALK       風之步      → sn_windwalk
+       SN_SHARPSHOOTING  銳利射擊    → sn_sharpshooting
+       SN_SIGHT          狙殺瞄準    → sn_sight
+       SN_FALCONASSAULT  獵鷹突擊    → sn_falconassault                    */
+
+  /* 官方：自身與隊友移速 +2~20%、FLEE +1~5，持續 130~400 秒。
+     本作沒有移動也沒有隊友——移速照既定慣例（騎乘術／月夜貓／手推車加速）
+     改成**生怪加速**，使用者 2026-08-09 指定照做。 */
+  sn_windwalk: {
+    id: 'sn_windwalk', name: '風之步 Wind Walk', maxLv: 10,
+    type: 'buff_windwalk', element: 'neutral',
+    spCost: [46, 52, 58, 64, 70, 76, 82, 88, 94, 100],
+    cooldown: [60, 60, 60, 60, 60, 60, 60, 60, 60, 60],
+    mult: [1.02, 1.04, 1.06, 1.08, 1.10, 1.12, 1.14, 1.16, 1.18, 1.20],
+    fleeFlat: [1, 1, 2, 2, 3, 3, 4, 4, 5, 5],
+    duration: [130, 160, 190, 220, 250, 280, 310, 340, 370, 400],
+    desc: '生怪速度 +2%~20%、迴避 +1~5，持續 130~400 秒。（官方是移動速度，本作沒有移動，比照騎乘術改成生怪加速）'
+  },
+
+  /* 官方：遠距離物理範圍技，ATK 600%~1800%，依基本等級遞增，
+     「以暴擊率 +50 判定暴擊，暴擊加成只有一半」——本作唯一會暴擊的範圍技。 */
+  sn_sharpshooting: {
+    id: 'sn_sharpshooting', name: '銳利射擊 Sharp Shooting', maxLv: 5,
+    type: 'damage_aoe', element: 'neutral',
+    spCost: [16, 18, 20, 22, 24], cooldown: [5, 5, 5, 5, 5],
+    mult: [6, 9, 12, 15, 18],
+    levelScaleMax: 50,
+    critRateFlat: 50, critDmgMult: 0.5,
+    requiresWeapon: 'bow',
+    desc: '對全體敵人造成 ATK 600%~1800% 遠距離物理傷害，依基本等級最高再 +50%。以自身暴擊率 +50 判定暴擊，暴擊加成只有一半。需裝備弓。'
+  },
+
+  // 官方：30 秒內全素質 +5、ATK +2~20%、CRI +1~10、HIT +3~30
+  sn_sight: {
+    id: 'sn_sight', name: '狙殺瞄準 True Sight', maxLv: 10,
+    type: 'buff_sight', element: 'neutral',
+    spCost: [20, 20, 25, 25, 30, 30, 35, 35, 40, 40],
+    cooldown: [30, 30, 30, 30, 30, 30, 30, 30, 30, 30],
+    mult: [1.02, 1.04, 1.06, 1.08, 1.10, 1.12, 1.14, 1.16, 1.18, 1.20],
+    allStat: [5, 5, 5, 5, 5, 5, 5, 5, 5, 5],
+    critFlat: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    hitFlat: [3, 6, 9, 12, 15, 18, 21, 24, 27, 30],
+    duration: [30, 30, 30, 30, 30, 30, 30, 30, 30, 30],
+    desc: '全素質 +5、攻擊力 +2%~20%、暴擊率 +1~10、命中 +3~30，持續 30 秒。'
+  },
+
+  /* 官方**沒有給 ATK% 欄位**——傷害是從閃電衝擊推導的
+     （「依技能等級、施展者的閃電衝擊傷害、鋼製喙等級和基本等級而增加」）。
+     所以 `mult` 是**係數**：乘上閃電衝擊當前等級的倍率，鋼製喙的固定傷害也照同係數放大。
+     INT 遞增是使用者 2026-08-09 指定補的——官方獵鷹系列的傷害本來就吃 INT。 */
+  sn_falconassault: {
+    id: 'sn_falconassault', name: '獵鷹突擊 Falcon Assault', maxLv: 5,
+    type: 'damage', element: 'neutral',
+    spCost: [30, 34, 38, 42, 46], cooldown: [4, 4, 4, 4, 4],
+    mult: [2.0, 2.5, 3.0, 3.5, 4.0],     // 係數，不是 ATK 倍率
+    levelScaleMax: 50, intScaleMax: 100,
+    requires: { skillId: 'blitzbeat', level: 1 },
+    desc: '單體重擊。傷害＝閃電衝擊當前等級的倍率 ×2.0~4.0，鋼製喙的固定傷害同樣放大，另依基本等級（最高+50%）與 INT（最高+100%，INT99）遞增。閃電衝擊與鋼製喙練得越滿，這一招越強。'
+  },
+
+  /* ---------------- 高等巫師 High Wizard（#63）----------------
+
+     官方 6 個，全部做。id 對照：
+       HW_GANBANTEIN     咖般塔音    → hw_ganbantein
+       HW_NAPALMVULCAN   念力連擊    → hw_napalmvulcan
+       HW_SOULDRAIN      吸魂術      → hw_souldrain
+       HW_MAGICCRASHER   魔擊術      → hw_magiccrasher
+       HW_MAGICPOWER     魔力增幅    → hw_magicpower
+       HW_GRAVITATION    重力原野    → hw_gravitation                     */
+
+  /* 官方是「消耗藍/黃魔力礦石各 1，80% 消除 3×3 的地面效果」。
+     本作的地面效果全是玩家自己放的，怪物又沒有地面技能（#36 已列永久 N/A）——
+     等於沒有可以作用的對象。使用者改成「普攻機率全體暈眩」。
+     礦石**照官方消耗**（使用者 2026-08-09 定案）：全場 50% 暈眩太強，要有持續成本，
+     所以這一招的續航直接綁在礦石庫存上。 */
+  hw_ganbantein: {
+    id: 'hw_ganbantein', name: '咖般塔音 Ganbantein', maxLv: 1,
+    type: 'passive', passiveStat: 'ganbanteinProc', element: 'neutral',
+    spCost: [0], cooldown: [0],
+    procChance: [50], stunSecMin: 1, stunSecMax: 2, internalCooldown: [10],
+    mult: [1],
+    // desc 是直接印在技能分頁的純文字，不吃 markdown——別用 ** 強調
+    desc: '被動技能，普通攻擊時發動：消耗藍色魔力礦石與黃色魔力礦石各 1 個，讓場上每一隻敵人各有 50% 機率暈眩 1~2 秒。冷卻 10 秒，礦石不夠就不會發動。'
+  },
+
+  // 官方：念屬性範圍魔法，MATK 70%~1750%，5%~25% 機率詛咒，依基本等級遞增
+  hw_napalmvulcan: {
+    id: 'hw_napalmvulcan', name: '念力連擊 Napalm Vulcan', maxLv: 5,
+    type: 'magic_aoe', element: 'ghost',
+    spCost: [30, 40, 50, 60, 70], cooldown: [4, 4, 4, 4, 4],
+    mult: [0.7, 2.8, 6.3, 11.2, 17.5],
+    levelScaleMax: 50,
+    inflict: { type: 'curse', chance: [5, 10, 15, 20, 25] },
+    desc: '對全體敵人造成 MATK 70%~1750% 念屬性魔法傷害，並有 5%~25% 機率使其陷入詛咒。依基本等級最高再 +50%。'
+  },
+
+  /* 官方是「最大SP +2~20%，用單體魔法或普攻擊殺時依對方等級回 SP（110~245%）」。
+     使用者改成固定 5~50 SP、不分擊殺方式——killMonster() 不知道是誰打死的，
+     要傳「擊殺來源」得動到十幾個呼叫點，代價跟收益不成比例。 */
+  hw_souldrain: {
+    id: 'hw_souldrain', name: '吸魂術 Soul Drain', maxLv: 10,
+    type: 'passive', passiveStat: 'soulDrain', element: 'neutral',
+    spCost: [0], cooldown: [0],
+    mult: [1.02, 1.04, 1.06, 1.08, 1.10, 1.12, 1.14, 1.16, 1.18, 1.20],
+    spOnKill: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50],
+    desc: '被動技能，最大SP +2%~20%，且每次擊敗敵人回復 5~50 SP。'
+  },
+
+  /* 官方是主動技：「拿 MATK 當數值、但走**遠距離物理**傷害流程」。
+     使用者改成普攻 20% 觸發的被動，冷卻 5 秒。
+     傷害源是 MATK、減傷走物理防禦——本作第一個把這兩件事拆開的技能。 */
+  hw_magiccrasher: {
+    id: 'hw_magiccrasher', name: '魔擊術 Magic Crasher', maxLv: 1,
+    type: 'passive', passiveStat: 'magicCrasherProc', element: 'neutral',
+    spCost: [0], cooldown: [0],
+    procChance: [20], internalCooldown: [5], mult: [1],
+    desc: '被動技能，普通攻擊時 20% 機率追加一發 MATK 100% 的傷害（吃物理防禦，不吃魔防）。冷卻 5 秒。'
+  },
+
+  // 官方：自身強化 60 秒，MATK +5%~50%
+  hw_magicpower: {
+    id: 'hw_magicpower', name: '魔力增幅 Mystical Amplification', maxLv: 10,
+    type: 'buff_matk', element: 'neutral',
+    spCost: [35, 40, 45, 50, 55, 60, 65, 70, 75, 80],
+    cooldown: [60, 60, 60, 60, 60, 60, 60, 60, 60, 60],
+    mult: [1.05, 1.10, 1.15, 1.20, 1.25, 1.30, 1.35, 1.40, 1.45, 1.50],
+    duration: [60, 60, 60, 60, 60, 60, 60, 60, 60, 60],
+    desc: '魔法攻擊力 +5%~50%，持續 60 秒。'
+  },
+
+  /* 官方是「MATK 100~500% × 2/4/6/8/10 次」。本作沒有多段呈現，
+     使用者指定**直接把次數乘進倍率**（跟螺旋擊刺 #58 同一個處理）：
+     1.0×2 / 2.0×4 / 3.0×6 / 4.0×8 / 5.0×10 = 2 / 8 / 18 / 32 / 50。 */
+  hw_gravitation: {
+    id: 'hw_gravitation', name: '重力原野 Gravitation Field', maxLv: 5,
+    type: 'magic_aoe', element: 'neutral',
+    spCost: [60, 70, 80, 90, 100], cooldown: [10, 10, 10, 10, 10],
+    mult: [2, 8, 18, 32, 50],
+    levelScaleMax: 50,
+    desc: '對全體敵人造成 MATK 200%~5000% 無屬性魔法傷害（官方是 100%~500% 打 2~10 次，本作合成一次打完），依基本等級最高再 +50%。'
+  },
+
+  /* ---------------- 高階祭司 High Priest（#64）----------------
+
+     官方 4 個，**全部照官方做，沒有一條魔改**——這是六批進階二轉裡唯一一批。
+     id 對照：
+       HP_MANARECHARGE  魔力減免    → hp_manarecharge
+       HP_BASILICA      神聖殿堂    → hp_basilica
+       HP_ASSUMPTIO     聖母之祈福  → hp_assumptio
+       HP_MEDITATIO     冥想        → hp_meditatio                         */
+
+  // 官方：技能 SP 消耗 −4/8/12/16/20%
+  hp_manarecharge: {
+    id: 'hp_manarecharge', name: '魔力減免 Mana Recharge', maxLv: 5,
+    type: 'passive', passiveStat: 'skillSpCostReduce', element: 'neutral',
+    spCost: [0], cooldown: [0],
+    mult: [4, 8, 12, 16, 20],
+    desc: '被動技能，所有技能的 SP 消耗減少 4%~20%。'
+  },
+
+  // 官方：聖屬性魔法傷害 +3~15%、對暗/不死屬性目標的物理傷害 +5~25%，持續 60~180 秒
+  hp_basilica: {
+    id: 'hp_basilica', name: '神聖殿堂 Basilica', maxLv: 5,
+    type: 'buff_basilica', element: 'holy',
+    spCost: [40, 50, 60, 70, 80], cooldown: [60, 60, 60, 60, 60],
+    mult: [1.03, 1.06, 1.09, 1.12, 1.15],   // 聖屬性魔法傷害
+    physPct: [5, 10, 15, 20, 25],           // 對暗／不死屬性目標的物理傷害
+    /* 官方寫的是「暗屬性或不死屬性」，但本作沒有任何怪掛得上不死**屬性**
+       （undead 只在 ELEMENT_CHART 的防守列出現），所以同時認不死**種族**，
+       這一半才真的打得到東西。可遇怪：暗屬性 43 隻、不死種族 31 隻，聯集 74 隻。 */
+    targetElements: ['shadow', 'undead'],
+    targetRaces: ['undead'],
+    duration: [60, 90, 120, 150, 180],
+    desc: '聖屬性魔法傷害 +3%~15%，對暗屬性目標與不死種族目標的物理傷害 +5%~25%，持續 60~180 秒。'
+  },
+
+  /* 官方：裝備DEF +50~250、受到的治癒恢復量 +2~10%，持續 20~100 秒。
+     DEF +250 在本作**不會過強**——減傷公式 (4000+硬防)/(4000+10×硬防) 有邊際遞減，
+     Lv99 最佳裝備 +10 精煉的硬防已經是 515（減傷 50.7%），再 +250 只多 8.4 個百分點。
+     使用者 2026-08-09 核對官方公式後決定照官方原值。 */
+  hp_assumptio: {
+    id: 'hp_assumptio', name: '聖母之祈福 Assumptio', maxLv: 5,
+    type: 'buff_assumptio', element: 'holy',
+    spCost: [20, 30, 40, 50, 60], cooldown: [30, 30, 30, 30, 30],
+    mult: [1.02, 1.04, 1.06, 1.08, 1.10],   // 受到的治癒恢復量
+    defFlat: [50, 100, 150, 200, 250],
+    duration: [20, 40, 60, 80, 100],
+    desc: '裝備防禦力 +50~250、受到的治癒恢復量 +2%~10%，持續 20~100 秒。'
+  },
+
+  // 官方：最大SP +1~10%、SP 自然恢復 +3~30%、治癒術恢復量 +2~20%
+  hp_meditatio: {
+    id: 'hp_meditatio', name: '冥想 Meditatio', maxLv: 10,
+    type: 'passive', passiveStat: 'meditatio', element: 'neutral',
+    spCost: [0], cooldown: [0],
+    mult: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],                    // 最大SP +N%
+    spRegenPct: [3, 6, 9, 12, 15, 18, 21, 24, 27, 30],
+    healPct: [2, 4, 6, 8, 10, 12, 14, 16, 18, 20],
+    desc: '被動技能，最大SP +1%~10%、SP 自然恢復 +3%~30%、治癒術恢復量 +2%~20%。'
+  },
 };

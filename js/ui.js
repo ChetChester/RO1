@@ -219,7 +219,8 @@ function updateBuffCountdown() {
     el.innerHTML = '';
     return;
   }
-  const buffNames = { aspd: '攻速', atk: '攻擊', def: '防禦', flee: '迴避', gold: '金錢', crit: '暴擊', hit: '命中', block: '格擋' };
+  const buffNames = { aspd: '攻速', atk: '攻擊', def: '防禦', flee: '迴避', gold: '金錢', crit: '暴擊', hit: '命中', block: '格擋',
+    weaponatk: '裝備ATK', eledmg_poison: '毒傷害', meltdown: '野蠻凶砍', spawnspeed: '生怪加速' };
   el.innerHTML = state.buffs.map(b => {
     const name = buffNames[b.type] || b.type;
     const remain = Math.ceil(b.msRemaining / 1000);
@@ -1032,10 +1033,17 @@ function renderMapTab() {
     </div>
     ${!isCity ? renderMapYieldBox(currentMapObj) : ''}
     ${!isCity && MVP_MAP_DATA[currentMapObj.id] ? `
-    <label style="display:flex;align-items:center;gap:8px;margin:10px 0;cursor:pointer;font-size:14px;">
-      <input type="checkbox" ${state.mvpMode ? 'checked' : ''} onchange="toggleMvpMode(this.checked)" style="width:18px;height:18px;cursor:pointer;">
-      <span>🎯 BOSS 模式（20% 機率出 BOSS 階級魔物）</span>
+    ${/* BOSS 模式只能在近戰模式開（召喚小弟要有空位放）。擋住時把理由寫出來，
+          不然又是「勾了沒反應」——跟職業樹那個問題同一類（#61）。 */''}
+    <label style="display:flex;align-items:center;gap:8px;margin:10px 0;font-size:14px;${
+      (state.encounterMode || 'melee') === 'melee' ? 'cursor:pointer;' : 'cursor:not-allowed;opacity:.55;'}">
+      <input type="checkbox" ${state.mvpMode ? 'checked' : ''}
+        ${(state.encounterMode || 'melee') === 'melee' ? '' : 'disabled'}
+        onchange="doToggleMvpMode(this.checked)" style="width:18px;height:18px;">
+      <span>🎯 BOSS 模式（20% 機率出 BOSS 階級魔物，並帶著手下一起出現）</span>
     </label>
+    ${(state.encounterMode || 'melee') === 'melee' ? '' :
+      '<div style="font-size:11px;color:var(--ink-dim);margin-top:-6px;margin-bottom:8px;">遠攻模式場上只有 1 隻，放不下 BOSS 的手下——要開請先切回近戰模式。</div>'}
     <div style="font-size:11px;color:var(--ink-dim);margin-top:-6px;margin-bottom:8px;">此地圖可遭遇：${
       // 正牌 MVP 排前面，迷你王排後面，兩者官方就是互斥的兩類
       MVP_MAP_DATA[currentMapObj.id]
@@ -1108,7 +1116,7 @@ function renderAutoBattleTab() {
   };
   const ATTACK_TYPES = ['damage', 'magic', 'dot', 'damage_multihit', 'damage_multi', 'damage_aoe', 'magic_aoe', 'poison_proc'];
   // buff_flatstat（商人的大聲吶喊）原本漏在清單外，自動戰鬥頁面就勾不到
-  const SUPPORT_TYPES = ['buff_atk', 'buff_auraflat', 'buff_block', 'buff_def', 'buff_aspd', 'buff_flee', 'buff_gold', 'buff_crit', 'buff_poison', 'buff_statpct', 'buff_flatstat', 'buff_maxroll', 'buff_blessing', 'buff_shield', 'buff_sprate', 'buff_lukflat', 'buff_holyweapon', 'debuff_def', 'debuff', 'heal', 'heal_over_time', 'field_heal', 'field_aoe_magic', 'stun_field', 'multi_dot_stun'];
+  const SUPPORT_TYPES = ['buff_atk', 'buff_auraflat', 'buff_meltdown', 'buff_windwalk', 'buff_sight', 'buff_matk', 'buff_basilica', 'buff_assumptio', 'buff_block', 'buff_def', 'buff_aspd', 'buff_flee', 'buff_gold', 'buff_crit', 'buff_poison', 'buff_statpct', 'buff_flatstat', 'buff_maxroll', 'buff_blessing', 'buff_shield', 'buff_sprate', 'buff_lukflat', 'buff_holyweapon', 'debuff_def', 'debuff', 'heal', 'heal_over_time', 'field_heal', 'field_aoe_magic', 'stun_field', 'multi_dot_stun'];
   const attackSkills = [], supportSkills = [];
   usableSkillEntries().forEach(({ sk, lv }) => {
     const row = { ...sk, lv, jobName: jobNameOf(sk.id) };
@@ -1410,12 +1418,25 @@ function toggleAutoSupportSkill(skillId, enabled) {
 }
 
 // 遇怪模式切換
+// BOSS 模式的勾選：擋下時要把畫面上的勾勾撥回去，否則畫面與 state 會不一致
+function doToggleMvpMode(checked) {
+  toggleMvpMode(checked);
+  if (typeof renderMapTab === 'function') renderMapTab();
+}
+
 function setEncounterMode(mode) {
   state.encounterMode = mode;
   state.lastSpawnTime = 0; // 重置生怪計時
+  /* 切到遠攻就把 BOSS 模式關掉：遠攻場上只有 1 隻，BOSS 的手下一隻都放不下。
+     留著開啟只會變成「勾了卻沒有隨從」，跟召喚小弟的設計意圖對不上。 */
+  if (mode !== 'melee' && state.mvpMode) {
+    state.mvpMode = false;
+    logMsg('🎯 切換到遠攻模式，BOSS 模式已自動關閉。');
+  }
   recomputeDerived(false);  // maxMonsters 由遇怪模式推導，改完要重算
   saveGame();
   renderAutoBattleTab();
+  if (typeof renderMapTab === 'function') renderMapTab();
 }
 /* ---------------- 技能分頁（可縮放、按職業分組） ---------------- */
 let expandedJobs = {}; // { jobId: true/false }
@@ -2967,7 +2988,11 @@ function renderCharacterTab() {
       aspd: '攻速', atk: '攻擊', def: '防禦', flee: '迴避', gold: '金錢', crit: '暴擊', hit: '命中',
       statpct: 'DEX/AGI', blessing: 'STR/INT/DEX', flatstat: 'STR/ATK', agiflat: 'AGI', lukflat: 'LUK',
       sprate: 'SP回復', poison: '毒', maxroll: '傷害固定最大值', holyweapon: '聖屬武器', shield: '護盾', magnumfire: '火屬強化',
-      block: '格擋'
+      block: '格擋', auraflat: '靈氣附加傷害',
+      // 致命塗毒（#59）：兩個 buff 一組推出來，一個乘武器 ATK、一個乘毒屬性傷害
+      weaponatk: '裝備ATK', eledmg_poison: '毒屬性傷害',
+      // 神匠（#60）
+      meltdown: '野蠻凶砍', spawnspeed: '生怪加速'
     };
     const PCT_BUFFS = ['statpct', 'magnumfire'];
     buffListHtml += state.buffs.map(b => {
@@ -3057,15 +3082,29 @@ function renderJobTree() {
   const el = document.getElementById('tab-jobtree');
   /* 第四層是進階二轉（轉生後才走得到）。**沒轉生過的角色不畫這一層**——
      那是轉生的獎勵，提早攤開來只會讓還在練一轉的玩家看不懂。 */
-  const tiers = [
+  let tiers = [
     ['novice'],
     ['swordsman', 'mage', 'archer', 'merchant', 'thief', 'acolyte'],
     ['knight', 'wizard', 'hunter', 'blacksmith', 'assassin', 'priest'],
   ];
-  const showTrans = (state.rebirthCount || 0) > 0;
-  if (showTrans) tiers.push(['lordknight', 'highwizard', 'sniper', 'whitesmith', 'assassincross', 'highpriest']);
+  const rebirthed = (state.rebirthCount || 0) > 0;
+  /* 轉生後只畫**自己那一條線**（使用者 2026-08-09 指定）。
+
+     路線已經鎖死了，另外五條一輩子都走不到——攤在畫面上只會讓人以為還有得選。
+     而且進階二轉是「取代」二轉不是接在後面，所以二轉那一層直接換成進階二轉，
+     畫出來就是玩家真正會走的三格：新手 → 劍士 → 領主騎士。 */
+  if (rebirthed) {
+    const line = typeof rebirthLine === 'function' ? rebirthLine() : null;
+    if (line && line.length) {
+      tiers = line.map(j => [j]);
+    } else {
+      tiers.push(['lordknight', 'highwizard', 'sniper', 'whitesmith', 'assassincross', 'highpriest']);
+    }
+  }
   const nodeW = 108, nodeH = 64, gapX = 20, tierGapY = 130;
-  const svgW = tiers[1].length * (nodeW + gapX);
+  // 轉生後只剩單欄，寬度要看最寬的那一層（原本寫死 tiers[1]，單欄時會擠成一條）
+  const widest = Math.max(...tiers.map(t => t.length));
+  const svgW = Math.max(3, widest) * (nodeW + gapX);
   const svgH = tierGapY * (tiers.length - 1) + nodeH + 40;
 
   function xOf(tierIdx, i, count) {
@@ -3086,20 +3125,36 @@ function renderJobTree() {
       const unlocked = isCurrent || isJobUnlocked(jobId);
       const canChange = tIdx > 0 && canJobChange(jobId);
 
-      if (jd.parent) {
+      if (jd.parent && tIdx > 0) {
         const pTierIdx = tIdx - 1;
         const pTier = tiers[pTierIdx];
-        const pi = pTier.indexOf(jd.parent);
-        const px = xOf(pTierIdx, pi, pTier.length) + nodeW / 2;
-        const py = 20 + pTierIdx * tierGapY + nodeH;
-        lines += `<line x1="${px}" y1="${py}" x2="${cx}" y2="${y}" class="tree-line ${unlocked ? 'tree-line-active' : ''}" />`;
+        /* 轉生後的路線是「劍士 → 領主騎士」，而領主騎士的 `parent` 是騎士——
+           騎士那一格根本不在畫面上，`indexOf` 會回 -1、座標算出 NaN、整條線消失。
+           單欄時上一層只有一格，直接連它。 */
+        let pi = pTier.indexOf(jd.parent);
+        if (pi < 0 && pTier.length === 1) pi = 0;
+        if (pi >= 0) {
+          const px = xOf(pTierIdx, pi, pTier.length) + nodeW / 2;
+          const py = 20 + pTierIdx * tierGapY + nodeH;
+          lines += `<line x1="${px}" y1="${py}" x2="${cx}" y2="${y}" class="tree-line ${unlocked ? 'tree-line-active' : ''}" />`;
+        }
       }
 
-      // 進階二轉的技能是分批補的，還沒補到的先標出來，免得轉過去才發現沒東西點
+      /* 腳註優先序：能轉 → 轉不了的**具體理由** → 技能還沒做。
+         以前不能轉的時候整格是空的，玩家看到的是「按了沒反應」（#61）。 */
       const noSkills = jd.tier === 3 && (jd.skills || []).length === 0;
-      const foot = canChange ? '點擊轉職' : (noSkills ? '技能製作中' : '');
+      let foot = '';
+      if (canChange) foot = '點擊轉職';
+      else if (tIdx > 0 && !isCurrent) {
+        foot = (typeof jobChangeBlockReason === 'function' ? jobChangeBlockReason(jobId) : '') || '';
+      }
+      if (!foot && noSkills) foot = '技能製作中';
+      // 節點只有 108px 寬，理由放得下才畫在格子裡，放不下的用 <title> 掛成滑鼠提示
+      const full = foot;
+      if (foot.length > 11) foot = foot.slice(0, 10) + '…';
       nodes += `<g class="tree-node ${isCurrent ? 'tree-node-current' : ''} ${unlocked ? 'tree-node-unlocked' : 'tree-node-locked'}"
                    transform="translate(${x},${y})" ${canChange ? `onclick="confirmJobChange('${jobId}')"` : ''} style="${canChange ? 'cursor:pointer' : ''}">
+          ${full ? `<title>${full}</title>` : ''}
           <rect width="${nodeW}" height="${nodeH}" rx="10" class="tree-rect"/>
           <text x="${nodeW / 2}" y="24" class="tree-icon" text-anchor="middle">${jd.icon}</text>
           <text x="${nodeW / 2}" y="46" class="tree-label" text-anchor="middle">${jd.name}</text>
@@ -3559,20 +3614,23 @@ function showCraftingPanel() {
 
   if (state.unlockedMaterialCrafts && state.unlockedMaterialCrafts.length > 0) {
     html += `<h3 class="panel-title">原料鍛造</h3>`;
-    html += `<div class="empty-hint">成功率固定 ${MATERIAL_CRAFT_SUCCESS_CHANCE}%（失敗材料照樣消耗），每次花費鋅幣${MATERIAL_CRAFT_ZENY_COST}。</div>`;
+    html += `<div class="empty-hint">失敗時材料照樣消耗。成功率與花費逐項標示。</div>`;
     html += '<div class="card-list">';
     Object.keys(MATERIAL_CRAFT_RECIPES).forEach(kind => {
       const recipe = MATERIAL_CRAFT_RECIPES[kind];
       if (!state.unlockedMaterialCrafts.includes(recipe.unlockCategory)) return;
       const resultDef = ITEMS[recipe.result];
+      // 成功率與花費改成逐道配方（毒藥瓶是 25%，其餘沿用通用值）
+      const rate = materialCraftChance(recipe);
+      const cost = materialCraftCost(recipe);
       const matText = recipe.consume.map(c => `${ITEMS[c.item] ? ITEMS[c.item].name : c.item}x${c.qty}（持有${getItemQty(c.item)}）`).join('、');
-      const canCraft = recipe.consume.every(c => getItemQty(c.item) >= c.qty) && state.gold >= MATERIAL_CRAFT_ZENY_COST;
+      const canCraft = recipe.consume.every(c => getItemQty(c.item) >= c.qty) && state.gold >= cost;
       html += `<div class="card-row${canCraft ? ' enabled' : ''}">
         <div class="card-info">
           <span class="card-icon">${resultDef ? resultDef.icon : '📦'}</span>
           <div class="card-details">
-            <span class="card-name">${resultDef ? resultDef.name : recipe.result}</span>
-            <span class="card-desc">需要：${matText}、鋅幣${MATERIAL_CRAFT_ZENY_COST}</span>
+            <span class="card-name">${resultDef ? resultDef.name : recipe.result}　<span class="card-desc">成功率 ${rate}%</span></span>
+            <span class="card-desc">需要：${matText}、鋅幣${cost}</span>
           </div>
         </div>
         <button class="btn-small" ${canCraft ? '' : 'disabled'} onclick="doCraftMaterial('${kind}')">鍛造</button>

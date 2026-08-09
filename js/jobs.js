@@ -241,7 +241,8 @@ const JOB_TREE = {
      轉生的定位是「把本職練得更強」，所以這六個是原二轉的加強版，不是新路線。
 
      這一批是**框架**：職業本體、成長曲線、轉職條件都到位，`skills` 先留空，
-     36 個官方技能分批補（清單見 docs/BUGS.md #56）。留空不會壞——技能表本來就是
+     官方技能分批補（領主騎士 8 個已完成，其餘 28 個的清單見 docs/BUGS.md #57-續）。
+     留空不會壞——技能表本來就是
      id 陣列，空陣列在 jobs.js 尾端的還原、技能分頁、被動掃描全部都走得通。
 
      四個共通設定，理由寫在這裡不逐條重複：
@@ -268,6 +269,8 @@ const JOB_TREE = {
     baseLevelReq: 70, jobLevelReq: 50, jobLevelMax: 70,
     hpMod: 1.875, spMod: 3.75, atkMod: 1.8, matkMod: 0.7,
     hpSpFrom: 'knight', aspdFrom: 'knight',
+    // 進階二轉「取代」二轉（不再經過騎士那一站），所以二轉的技能整份借過來
+    borrowSkillsFrom: ['knight'],
     next: [], nextLocked: ['runeknight'],
     bonusLevels: { str:[4,10,15,21,27,33,46,47,52,58,64,70], agi:[13,38,55], vit:[1,3,8,12,17,18,23,29,36,43,60,66], int:[], dex:[11,19,31,40,48,49,62,68], luk:[5,20,28,37,57] },
     // 官方 8 個技能全數到齊（2026-08-08）
@@ -282,9 +285,11 @@ const JOB_TREE = {
     baseLevelReq: 70, jobLevelReq: 50, jobLevelMax: 70,
     hpMod: 0.6875, spMod: 11.25, atkMod: 0.5, matkMod: 2.0,
     hpSpFrom: 'wizard', aspdFrom: 'wizard', baseAspd: 150,
+    // 進階二轉「取代」二轉（不再經過騎士那一站），所以二轉的技能整份借過來
+    borrowSkillsFrom: ['wizard'],
     next: [], nextLocked: ['warlock'],
-    bonusLevels: { str:[12,56], agi:[6,10,24,34,41,43,46,47,60], vit:[38,64], int:[1,4,9,18,22,29,31,33,40,45,48,50,52,58,66,70], dex:[2,5,13,26,32,39,54,62], luk:[15,36,68] },
-    skills: [],
+    bonusLevels: { str:[12,56], agi:[6,10,24,34,41,43,46,47,60], vit:[38,64], int:[1,4,9,18,22,29,31,33,40,45,48,50,52,58,66,70], dex:[2,5,13,26,32,39,54,62], luk:[15,36,68] },
+    skills: ['hw_ganbantein', 'hw_napalmvulcan', 'hw_souldrain', 'hw_magiccrasher', 'hw_magicpower', 'hw_gravitation'],
     desc: '把咒文推到極限的人，最後連自己都成了咒文的一部分。'
   },
   sniper: {
@@ -292,9 +297,11 @@ const JOB_TREE = {
     baseLevelReq: 70, jobLevelReq: 50, jobLevelMax: 70,
     hpMod: 1.0625, spMod: 5.0, atkMod: 1.6, matkMod: 0.8,
     hpSpFrom: 'hunter', aspdFrom: 'hunter',
+    // 進階二轉「取代」二轉（不再經過騎士那一站），所以二轉的技能整份借過來
+    borrowSkillsFrom: ['hunter'],
     next: [], nextLocked: ['ranger'],
-    bonusLevels: { str:[11,25,34,47,58], agi:[3,7,15,19,27,31,39,43,52,62], vit:[9,21,37,50,66], int:[5,17,29,41,56], dex:[1,2,6,13,23,33,45,49,54,60,68,70], luk:[10,26,42,64] },
-    skills: [],
+    bonusLevels: { str:[11,25,34,47,58], agi:[3,7,15,19,27,31,39,43,52,62], vit:[9,21,37,50,66], int:[5,17,29,41,56], dex:[1,2,6,13,23,33,45,49,54,60,68,70], luk:[10,26,42,64] },
+    skills: ['sn_windwalk', 'sn_sharpshooting', 'sn_sight', 'sn_falconassault'],
     desc: '一箭，一命。距離只是他與獵物之間的一個數字。'
   },
   whitesmith: {
@@ -302,9 +309,12 @@ const JOB_TREE = {
     baseLevelReq: 70, jobLevelReq: 50, jobLevelMax: 70,
     hpMod: 1.125, spMod: 5.0, atkMod: 1.75, matkMod: 0.7,
     hpSpFrom: 'blacksmith', aspdFrom: 'blacksmith',
+    // 進階二轉「取代」二轉（不再經過騎士那一站），所以二轉的技能整份借過來
+    borrowSkillsFrom: ['blacksmith'],
     next: [], nextLocked: ['mechanic'],
-    bonusLevels: { str:[1,7,13,22,30,38,44,50,54,62,70], agi:[10,26,40,58], vit:[4,16,28,36,46,52,66], int:[6,19,33,48,60], dex:[3,9,15,24,32,42,56,64], luk:[12,20,35,68] },
-    skills: [],
+    bonusLevels: { str:[1,7,13,22,30,38,44,50,54,62,70], agi:[10,26,40,58], vit:[4,16,28,36,46,52,66], int:[6,19,33,48,60], dex:[3,9,15,24,32,42,56,64], luk:[12,20,35,68] },
+    // 官方 8 個，三個空技能（金錢鑄造／金屬塊製造／攻擊塔製作）刪除——見 js/skills.js
+    skills: ['ws_weaponrefine', 'ws_cartboost', 'ws_cartterm', 'ws_meltdown', 'ws_overthrustmax'],
     desc: '鐵砧上敲出來的不只是武器，還有一整個時代的重量。'
   },
   assassincross: {
@@ -312,9 +322,12 @@ const JOB_TREE = {
     baseLevelReq: 70, jobLevelReq: 50, jobLevelMax: 70,
     hpMod: 1.375, spMod: 5.0, atkMod: 1.75, matkMod: 0.7,
     hpSpFrom: 'assassin', aspdFrom: 'assassin',
+    // 進階二轉「取代」二轉（不再經過騎士那一站），所以二轉的技能整份借過來
+    borrowSkillsFrom: ['assassin'],
     next: [], nextLocked: ['guillotinecross'],
     bonusLevels: { str:[2,9,17,26,35,44,52,60,68], agi:[1,5,11,19,28,37,46,50,56,64,70], vit:[14,31,41,58], int:[23,48], dex:[7,21,33,43,54,66], luk:[3,15,29,39,62] },
-    skills: [],
+    // 官方 6 個，幻影步（ASC_HALLUCINATION）刪除——官方資料本身就是空的，見 js/skills.js
+    skills: ['asc_katar', 'asc_cdp', 'asc_edp', 'asc_breaker', 'asc_meteorassault'],
     desc: '影子裡的影子。你察覺的那一刻，已經是他允許的。'
   },
   highpriest: {
@@ -322,9 +335,11 @@ const JOB_TREE = {
     baseLevelReq: 70, jobLevelReq: 50, jobLevelMax: 70,
     hpMod: 0.9375, spMod: 10.0, atkMod: 0.6, matkMod: 1.4,
     hpSpFrom: 'priest', aspdFrom: 'priest', baseAspd: 150,
+    // 進階二轉「取代」二轉（不再經過騎士那一站），所以二轉的技能整份借過來
+    borrowSkillsFrom: ['priest'],
     next: [], nextLocked: ['archbishop'],
-    bonusLevels: { str:[4,11,17,27,35,56], agi:[6,29,37,48,62], vit:[7,14,34,36,45,58,68], int:[8,9,22,42,43,52,60,70], dex:[16,20,25,32,54,64], luk:[1,3,10,21,31,39,50,66] },
-    skills: [],
+    bonusLevels: { str:[4,11,17,27,35,56], agi:[6,29,37,48,62], vit:[7,14,34,36,45,58,68], int:[8,9,22,42,43,52,60,70], dex:[16,20,25,32,54,64], luk:[1,3,10,21,31,39,50,66] },
+    skills: ['hp_manarecharge', 'hp_basilica', 'hp_assumptio', 'hp_meditatio'],
     desc: '祈禱到了盡頭，連神都會側耳。'
   }
 };

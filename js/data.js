@@ -77,16 +77,46 @@ const CHINESE_RACE_MAP = {
 };
 const CHINESE_SIZE_MAP = { '小': 'small', '中': 'medium', '大': 'large' };
 
-// 體型傷害修正（官方RO Size Modifier表）：不同武器類型對不同體型敵人的傷害% 修正，只影響物理傷害
+/* 體型傷害修正（官方 `db/pre-re/size_fix.txt`）：武器類型 × 目標體型的物理傷害%。
+
+   **索引是 `aspdCategoryOf()` 不是 `weaponType`**（2026-08-09 改）。
+   舊版用 weaponType 有兩個洞，兩個都讓傷害偏高：
+
+     1. **斧頭的 `weaponType` 是 `mace`**（87 把帶「斧」的武器裡 53 把是 mace），
+        所以斧頭吃的是鈍器那一列。官方斧頭打小型只有 **50%**，舊表給 100%——
+        以本作可遇怪的體型分佈（小 141／中 227／大 69）加權，斧頭整整**偏高 41%**。
+     2. **rod／gun／book／katar 四類在表上根本沒有那一列**，共 **532 把武器**
+        掉到 default 的 100/100/100。拳刃（十字刺客的主武器）官方是 75/100/75。
+     另外 mace（官方 75/100/100）、knuckle（100/75/50）、bow（100/100/75）
+     三列的數字本來也跟官方對不上。
+
+   `aspdCategoryOf()` 早就分得出 axe1/axe2/mace/rod1/rod2/book/katar/whip/instrument
+   與各種槍，所以改索引就解決，不必動 ITEMS 的資料。 */
 const SIZE_MODIFIER = {
-  dagger:  { small: 100, medium: 75,  large: 50  },
-  sword:   { small: 75,  medium: 100, large: 75  },
-  tsword:  { small: 75,  medium: 75,  large: 100 },
-  spear:   { small: 75,  medium: 75,  large: 100 },
-  mace:    { small: 100, medium: 100, large: 100 },
-  bow:     { small: 100, medium: 75,  large: 75  },
-  knuckle: { small: 100, medium: 100, large: 100 },
-  default: { small: 100, medium: 100, large: 100 }
+  bare:       { small: 100, medium: 100, large: 100 },
+  dagger:     { small: 100, medium: 75,  large: 50  },
+  sword1:     { small: 75,  medium: 100, large: 75  },
+  sword2:     { small: 75,  medium: 75,  large: 100 },
+  spear1:     { small: 75,  medium: 75,  large: 100 },
+  spear2:     { small: 75,  medium: 75,  large: 100 },
+  axe1:       { small: 50,  medium: 75,  large: 100 },
+  axe2:       { small: 50,  medium: 75,  large: 100 },
+  mace:       { small: 75,  medium: 100, large: 100 },
+  rod1:       { small: 100, medium: 100, large: 100 },
+  rod2:       { small: 100, medium: 100, large: 100 },
+  bow:        { small: 100, medium: 100, large: 75  },
+  knuckle:    { small: 100, medium: 75,  large: 50  },
+  instrument: { small: 75,  medium: 100, large: 75  },
+  whip:       { small: 75,  medium: 100, large: 75  },
+  book:       { small: 100, medium: 100, large: 50  },
+  katar:      { small: 75,  medium: 100, large: 75  },
+  // 槍械官方全部 100/100/100（本作還沒有槍手職業，先照官方擺著）
+  pistol:     { small: 100, medium: 100, large: 100 },
+  rifle:      { small: 100, medium: 100, large: 100 },
+  gatling:    { small: 100, medium: 100, large: 100 },
+  shotgun:    { small: 100, medium: 100, large: 100 },
+  grenade:    { small: 100, medium: 100, large: 100 },
+  default:    { small: 100, medium: 100, large: 100 }
 };
 
 const ITEMS = {
