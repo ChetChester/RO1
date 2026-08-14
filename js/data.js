@@ -57,13 +57,29 @@ function getElementMultiplier(atkElement, defElement) {
   const mult = chart[defElement];
   return mult !== undefined ? mult / 100 : 1;
 }
-// 攻擊怪物時優先採用怪物自身的屬性抗性表（來自最新怪物資料，已包含屬性等級1~4的實際數值），
-// 沒有抗性表的怪物（尚未套用新資料）才退回舊的等級1屬性克制表
-function getElementMultiplierVsMonster(atkElement, monDef) {
-  if (monDef && monDef.elementResistance && monDef.elementResistance[atkElement] !== undefined) {
+/* 賢者的屬性元素更換（#71）：把**某一隻怪**暫時變成別的屬性。
+   覆寫寫在怪物實體上（`mon.eleOverride` / `mon.eleOverrideEnd`），
+   不能寫進 `MONSTERS[defId]`——那是同種怪共用的定義，改下去整張地圖一起變。 */
+function monElementOverride(mon) {
+  if (!mon || !mon.eleOverride) return null;
+  if (Date.now() >= (mon.eleOverrideEnd || 0)) { mon.eleOverride = null; return null; }
+  return mon.eleOverride;
+}
+// 怪物當下的屬性（吃過覆寫）。UI 與訊息要顯示屬性時走這支
+function monElementOf(monDef, mon) {
+  return monElementOverride(mon) || (monDef && monDef.element) || 'none';
+}
+/* 攻擊怪物時優先採用怪物自身的屬性抗性表（來自最新怪物資料，已包含屬性等級1~4的實際數值），
+   沒有抗性表的怪物（尚未套用新資料）才退回舊的等級1屬性克制表。
+
+   第三個參數 `mon` 是**怪物實體**（可省略）。有屬性覆寫時要**跳過 elementResistance**——
+   那張表編碼的是原本的屬性與屬性等級，覆寫之後整張表都不再適用，只能回頭查克制表。 */
+function getElementMultiplierVsMonster(atkElement, monDef, mon) {
+  const ov = monElementOverride(mon);
+  if (!ov && monDef && monDef.elementResistance && monDef.elementResistance[atkElement] !== undefined) {
     return monDef.elementResistance[atkElement] / 100;
   }
-  return getElementMultiplier(atkElement, (monDef && monDef.element) || 'none');
+  return getElementMultiplier(atkElement, ov || (monDef && monDef.element) || 'none');
 }
 
 // 中文欄位 → 引擎內部key 對照表（怪物資料來源用繁體中文，「闇」為「暗」的異體字需特別對應）
@@ -5297,10 +5313,10 @@ const ITEMS = {
   "elemental_water": {"id":"elemental_water","imgId":12115,"name":"水之元素卷轴","type":"material","icon":"📦","weight":1,"sell":1,"desc":"当使用此物品时，会短暂赋予使用者武器上有'水'的属性。 _ 重量: 1 ","buyPrice":2},
   "elemental_earth": {"id":"elemental_earth","imgId":12116,"name":"地之元素卷轴","type":"material","icon":"📦","weight":1,"sell":1,"desc":"当使用此物品时，会短暂赋予使用者武器上有'地'的属性。 _ 重量: 1 ","buyPrice":2},
   "elemental_wind": {"id":"elemental_wind","imgId":12117,"name":"风之元素卷轴","type":"material","icon":"📦","weight":1,"sell":1,"desc":"当使用此物品时，会短暂赋予使用者武器上有'风'的属性。 _ 重量: 1 ","buyPrice":2},
-  "resist_fire": {"id":"resist_fire","imgId":12118,"name":"火属性抵抗药水","type":"material","icon":"📦","weight":1,"sell":1,"desc":"能增强对'火'属性抵抗力的药水，不过对于相克属性则会受到更严重的伤害，敬请注意 _ 重量: 1 ","buyPrice":2},
-  "resist_water": {"id":"resist_water","imgId":12119,"name":"水属性抵抗药水","type":"material","icon":"📦","weight":1,"sell":1,"desc":"能增强对'水'属性抵抗力的药水，不过对于相克属性则会受到更严重的伤害，敬请注意 _ 重量: 1 ","buyPrice":2},
-  "resist_earth": {"id":"resist_earth","imgId":12120,"name":"地属性抵抗药水","type":"material","icon":"📦","weight":1,"sell":1,"desc":"能增强对'地'属性抵抗力的药水，不过对于相克属性则会受到更严重的伤害，敬请注意 _ 重量: 1 ","buyPrice":2},
-  "resist_wind": {"id":"resist_wind","imgId":12121,"name":"风属性抵抗药水","type":"material","icon":"📦","weight":1,"sell":1,"desc":"能增强对'风'属性抵抗力的药水，不过对于相克属性则会受到更严重的伤害，敬请注意 _ 重量: 1 ","buyPrice":2},
+  "resist_fire": {"id":"resist_fire","imgId":12118,"name":"火属性抵抗药水","type":"material","icon":"📦","weight":1,"sell":1,"desc":"能增强对'火'属性抵抗力的药水，不过对于相克属性则会受到更严重的伤害，敬请注意 _ 重量: 1 ","buyPrice":2,"eleResist":{"element":"fire","pct":20,"sec":1800},"type":"consumable"},
+  "resist_water": {"id":"resist_water","imgId":12119,"name":"水属性抵抗药水","type":"material","icon":"📦","weight":1,"sell":1,"desc":"能增强对'水'属性抵抗力的药水，不过对于相克属性则会受到更严重的伤害，敬请注意 _ 重量: 1 ","buyPrice":2,"eleResist":{"element":"water","pct":20,"sec":1800},"type":"consumable"},
+  "resist_earth": {"id":"resist_earth","imgId":12120,"name":"地属性抵抗药水","type":"material","icon":"📦","weight":1,"sell":1,"desc":"能增强对'地'属性抵抗力的药水，不过对于相克属性则会受到更严重的伤害，敬请注意 _ 重量: 1 ","buyPrice":2,"eleResist":{"element":"earth","pct":20,"sec":1800},"type":"consumable"},
+  "resist_wind": {"id":"resist_wind","imgId":12121,"name":"风属性抵抗药水","type":"material","icon":"📦","weight":1,"sell":1,"desc":"能增强对'风'属性抵抗力的药水，不过对于相克属性则会受到更严重的伤害，敬请注意 _ 重量: 1 ","buyPrice":2,"eleResist":{"element":"wind","pct":20,"sec":1800},"type":"consumable"},
   "sesame_pastry": {"id":"sesame_pastry","imgId":12122,"name":"茶食","type":"material","icon":"📦","weight":7,"sell":1,"desc":"用松花粉、栗子粉、和蜂蜜一起搅拌后，压在茶食板里所制成的果子。 大部分刻印着 寿、福、康、宁 等字样，或是有 云彩、太极纹样的花纹，和茶一起饮用时会提高茶的味道。 HIT会临时的增加30 _ 重量: ","buyPrice":2},
   "honey_pastry": {"id":"honey_pastry","imgId":12123,"name":"油果","type":"material","icon":"📦","weight":7,"sell":1,"desc":"把谷食用酒和蜂蜜一起搅拌后所制成的果子，有时候也被称为油蜜果，甜甜的好吃的传统果子。 FLEE会临时的增加30 _ 重量: 7 ","buyPrice":2},
   "rainbow_cake": {"id":"rainbow_cake","imgId":12124,"name":"彩色糕饼","type":"material","icon":"📦","weight":7,"sell":1,"desc":"有彩色般的颜色、有淡淡的口感的糕饼，好像是用在遥远的东方国家里庆典时使用似的， 攻击力和魔法攻击力会临时的增加10 _ 重量: 7 ","buyPrice":2},
@@ -32708,10 +32724,22 @@ const WEAPON_REQ_CATEGORIES = {
   spear:   ['spear1', 'spear2'],
   bow:     ['bow'],
   rod:     ['rod1', 'rod2'],
+  // #68 詩人／舞孃。沒有這兩列的話 weaponReqMet() 會「查不到分類就一律放行」，
+  // 樂器／鞭子專用技能等於沒有武器限制
+  instrument: ['instrument'],
+  whip:    ['whip'],
+  knuckle: ['knuckle'],
+  book:    ['book'],
+  // #70 武僧的鐵沙掌：官方寫的是「空手或拳套」，所以 bare 也算一種合格的「武器」
+  barefist: ['bare', 'knuckle'],
+  // #72 鍊金術士的熟練度官方寫「斧頭或單手劍」——跟商人系的 axemace（斧或鈍器）不是同一組
+  axesword: ['axe1', 'axe2', 'sword1'],
 };
 const WEAPON_REQ_NAMES = {
   sword: '單手劍或短劍', sword2: '雙手劍', dagger: '短劍', katar: '拳刃',
   mace: '鈍器', axe: '斧頭', axemace: '斧頭或鈍器', spear: '矛類武器', bow: '弓', rod: '法杖',
+  instrument: '樂器', whip: '鞭子', knuckle: '拳套', book: '書本',
+  barefist: '空手或拳套', axesword: '斧頭或單手劍',
 };
 function weaponReqName(req) { return WEAPON_REQ_NAMES[req] || req; }
 // 目前手上的武器符不符合這個限定；沒寫限定的技能一律通過
@@ -32720,6 +32748,22 @@ function weaponReqMet(req) {
   const cats = WEAPON_REQ_CATEGORIES[req];
   if (!cats) return true;
   return cats.includes(aspdCategoryOf(getEquipBaseItemId('weapon')));
+}
+
+/* ---------------- 技能的裝備欄位限定（requiresEquip）----------------
+   跟 requiresWeapon 是**兩件不同的事**：
+     requiresWeapon  手上是哪一類武器（查 aspdCategoryOf 的分類）
+     requiresEquip   某個裝備欄位有沒有東西，不管是哪一件
+   十字軍有五個技能官方就寫「盾牌專用技能」——跟盾牌是哪一面無關，
+   拿武器分類那套是套不上的（盾牌根本不在 aspdCategoryOf 的值域裡）。
+
+   兩者可以並存：一個技能同時寫 requiresWeapon 與 requiresEquip 就是兩個條件都要滿足。
+   跟 weaponReqMet 一樣，主動技在 castSkill() 擋、被動技在 recomputeDerived() 擋。 */
+const EQUIP_REQ_NAMES = { shield: '盾牌', armor: '鎧甲', garment: '肩披', footgear: '鞋子', headgear: '頭飾', accessory: '飾品' };
+function equipReqName(req) { return EQUIP_REQ_NAMES[req] || req; }
+function equipReqMet(req) {
+  if (!req) return true;
+  return !!(typeof state !== 'undefined' && state && state.equip && state.equip[req]);
 }
 /* 查攻速表要用哪個職業的資料。進階二轉（領主騎士…）官方的攻速跟原二轉**完全相同**，
    所以不另外建表，靠 JOB_TREE 的 `aspdFrom` 指回本職。
@@ -32730,6 +32774,47 @@ function aspdJobKey(jobId) {
   const j = JOB_TREE[jobId];
   return (j && j.aspdFrom) || jobId;
 }
+
+/* 詩人與舞孃拆表（#68）。
+
+   上游的攻速表把兩個職業合成一列 `x_詩人_舞孃`，而且**只列了樂器沒有鞭子**——
+   舞孃官方是用鞭子的，照抄那張表會變成「舞孃拿不動自己的武器」
+   （`jobCanUseWeapon()` 就是查這張表，查不到＝不能裝備）。
+
+   所以在這裡由那一列派生出兩張：詩人保留樂器、舞孃把樂器換成鞭子，
+   數值沿用同一個（官方 宮廷樂師 instrument 與 浪跡舞者 whip 也是同一個值，是對稱的）。
+   直接改 `js/aspd_data.js` 會在下次重新產生時被蓋掉，所以派生放在這裡。 */
+(function splitBardDancerAspd() {
+  if (typeof ASPD_WEAPON_BASE === 'undefined') return;
+  const src = ASPD_WEAPON_BASE['x_詩人_舞孃'];
+  if (!src) return;
+  const clone = () => ({ name: src.name, weapons: Object.assign({}, src.weapons), shield: Object.assign({}, src.shield) });
+  if (!ASPD_WEAPON_BASE.bard) {
+    const b = clone(); b.name = '詩人';
+    ASPD_WEAPON_BASE.bard = b;
+  }
+  if (!ASPD_WEAPON_BASE.dancer) {
+    const d = clone(); d.name = '舞孃';
+    d.weapons.whip = d.weapons.instrument;
+    delete d.weapons.instrument;
+    ASPD_WEAPON_BASE.dancer = d;
+  }
+})();
+
+/* 流氓的攻速表（#69）。
+
+   上游 `x_流氓_神行太保` 那一列寫著 **`axe1: -6`**——全表其他數字都在 100~156 之間，
+   −6 是**盾牌欄的值跑到武器欄**（同一列的 shield 就是 −5，神行太保那列也是同樣的 −6）。
+   照抄的話：一是流氓變成拿得動斧頭（官方只有短劍／單手劍／弓），
+   二是拿了斧頭攻速會被夾到下限 100。所以派生時把那格拿掉。 */
+(function fixRogueAspd() {
+  if (typeof ASPD_WEAPON_BASE === 'undefined') return;
+  const src = ASPD_WEAPON_BASE['x_流氓_神行太保'];
+  if (!src || ASPD_WEAPON_BASE.rogue) return;
+  const r = { name: '流氓', weapons: Object.assign({}, src.weapons), shield: Object.assign({}, src.shield) };
+  if (!(r.weapons.axe1 > 0)) delete r.weapons.axe1;
+  ASPD_WEAPON_BASE.rogue = r;
+})();
 // 這個職業（含整條職業鏈）能不能拿這種武器：官方攻速表裡有這個分類就是能拿
 function jobCanUseWeapon(jobId, itemId) {
   const cat = aspdCategoryOf(itemId);

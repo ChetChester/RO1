@@ -220,7 +220,14 @@ function updateBuffCountdown() {
     return;
   }
   const buffNames = { aspd: '攻速', atk: '攻擊', def: '防禦', flee: '迴避', gold: '金錢', crit: '暴擊', hit: '命中', block: '格擋',
-    weaponatk: '裝備ATK', eledmg_poison: '毒傷害', meltdown: '野蠻凶砍', spawnspeed: '生怪加速' };
+    weaponatk: '裝備ATK', eledmg_poison: '毒傷害', meltdown: '野蠻凶砍', spawnspeed: '生怪加速',
+    reflect: '反射', providence: '神祐之光',
+    perfectdodge: '完全迴避', critdmg: '暴擊傷害', maxhppct: '最大HP', maxsppct: '最大SP',
+    skillcd: '技能冷卻', exp: '經驗值', atkflat: 'ATK', defflat: 'DEF', spcost: '技能SP消耗',
+    songelereduce: '四屬性耐性', songailresist: '異常狀態抗性', gemfree: '魔力礦石',
+    dontforgetme: '勿忘我', dmgtaken: '受傷減免',
+    eleweapon: '武器屬性', eledmg_fire: '火傷害', eledmg_water: '水傷害',
+    eledmg_wind: '風傷害', eledmg_earth: '地傷害', eleresist: '屬性抵抗' };
   el.innerHTML = state.buffs.map(b => {
     const name = buffNames[b.type] || b.type;
     const remain = Math.ceil(b.msRemaining / 1000);
@@ -284,6 +291,14 @@ function renderTopBar() {
         const unit = k === 'fleeFlat' ? '' : '%';
         return `<span class="p-debuff" title="${PLAYER_DEBUFF_META[k].name} ${v > 0 ? '+' : ''}${v}${unit}">${PLAYER_DEBUFF_META[k].icon}</span>`;
       }).join('');
+    }
+    /* 武僧的氣球體（#70）：掛在同一排。這是玩家唯一看得到「還差幾顆」的地方——
+       爆氣、金剛不壞、阿修羅霸凰拳都靠它，沒有指示器的話整套系統是黑箱。
+       沒點蓄氣的職業 spiritsMax 是 0，整塊不出現。 */
+    if (state.spiritsMax > 0) {
+      const have = Math.min(state.spirits || 0, state.spiritsMax);
+      html += `<span class="p-debuff" title="氣球體 ${have}/${state.spiritsMax}">`
+        + '🔵'.repeat(have) + '⚪'.repeat(state.spiritsMax - have) + '</span>';
     }
     if (ailEl.innerHTML !== html) ailEl.innerHTML = html;
   }
@@ -1116,7 +1131,7 @@ function renderAutoBattleTab() {
   };
   const ATTACK_TYPES = ['damage', 'magic', 'dot', 'damage_multihit', 'damage_multi', 'damage_aoe', 'magic_aoe', 'poison_proc'];
   // buff_flatstat（商人的大聲吶喊）原本漏在清單外，自動戰鬥頁面就勾不到
-  const SUPPORT_TYPES = ['buff_atk', 'buff_auraflat', 'buff_meltdown', 'buff_windwalk', 'buff_sight', 'buff_matk', 'buff_basilica', 'buff_assumptio', 'buff_block', 'buff_def', 'buff_aspd', 'buff_flee', 'buff_gold', 'buff_crit', 'buff_poison', 'buff_statpct', 'buff_flatstat', 'buff_maxroll', 'buff_blessing', 'buff_shield', 'buff_sprate', 'buff_lukflat', 'buff_holyweapon', 'debuff_def', 'debuff', 'heal', 'heal_over_time', 'field_heal', 'field_aoe_magic', 'stun_field', 'multi_dot_stun'];
+  const SUPPORT_TYPES = ['buff_atk', 'buff_auraflat', 'buff_meltdown', 'buff_windwalk', 'buff_sight', 'buff_matk', 'buff_basilica', 'buff_assumptio', 'buff_reflect', 'buff_providence', 'buff_spearquicken', 'buff_block', 'buff_def', 'buff_aspd', 'buff_flee', 'buff_gold', 'buff_crit', 'buff_poison', 'buff_statpct', 'buff_flatstat', 'buff_maxroll', 'buff_blessing', 'buff_shield', 'buff_sprate', 'buff_lukflat', 'buff_holyweapon', 'debuff_def', 'debuff', 'heal', 'heal_over_time', 'field_heal', 'field_aoe_magic', 'stun_field', 'multi_dot_stun'];
   const attackSkills = [], supportSkills = [];
   usableSkillEntries().forEach(({ sk, lv }) => {
     const row = { ...sk, lv, jobName: jobNameOf(sk.id) };
@@ -1240,6 +1255,8 @@ function renderAutoBattleTab() {
         ${state.encounterMode === 'ranged' ? '遠攻：怪物死後才會再生下一隻。' : '近戰：0隻時0.5秒一隻，1隻以上時3秒一隻，最多5隻。'}
       </div>
     </div>
+
+    ${sageConverterHtml()}
 
     <!-- 攻擊技能設定 -->
     <div class="ab-section">
@@ -1564,8 +1581,120 @@ function renderSkillsTab() {
     html += '</div></div>';
   }
 
+  /* 抄襲（#69）：官方是「記住最後一個打到你的技能」，使用者 2026-08-10 改成自己挑。
+     沒有這個選單的話技能點下去完全沒有出口——被動只記了等級上限，
+     真正決定抄哪一個的是這裡。 */
+  if (state.plagiarismLv > 0) {
+    const picks = (typeof plagiarismChoices === 'function' ? plagiarismChoices() : [])
+      .slice().sort((a, b) => a.name.localeCompare(b.name, 'zh-Hant'));
+    const cur = state.plagiarismSkillId || '';
+    const curSk = cur ? SKILLS[cur] : null;
+    html += `<div class="skill-job-section expanded">
+      <div class="skill-job-header">📖 抄襲<span class="skill-job-tier">可用到 Lv${state.plagiarismLv}</span></div>
+      <div class="skill-list">
+        <div class="skill-row learned">
+          <div class="skill-info">
+            <div class="skill-name">記住一個攻擊技能</div>
+            <div class="skill-desc">從所有攻擊技能裡挑一個，能用的等級不會超過抄襲本身的等級。</div>
+            <div class="skill-cost">
+              <select onchange="doSetPlagiarism(this.value)">
+                <option value=""${cur ? '' : ' selected'}>（沒有記住任何技能）</option>
+                ${picks.map(s => `<option value="${s.id}"${s.id === cur ? ' selected' : ''}>${s.name}（上限 Lv${Math.min(state.plagiarismLv, s.maxLv || 1)}）</option>`).join('')}
+              </select>
+              ${curSk ? `　目前：<b>${curSk.name}</b> Lv${skillLv(cur)}` : ''}
+            </div>
+          </div>
+        </div>
+      </div></div>`;
+  }
+
+  /* 自動念咒（#71）：官方是「選擇特定已學到的魔法」，所以一樣需要一個選單。
+     發動等級上限是本技能等級的一半（官方規則），選單裡直接把上限標出來。 */
+  if (state.sageAutoSpell) {
+    const picks = (typeof sageAutoSpellChoices === 'function' ? sageAutoSpellChoices() : [])
+      .slice().sort((a, b) => a.name.localeCompare(b.name, 'zh-Hant'));
+    const cur = state.sageAutoSpellId || '';
+    const curSk = cur ? SKILLS[cur] : null;
+    html += `<div class="skill-job-section expanded">
+      <div class="skill-job-header">📘 自動念咒<span class="skill-job-tier">可用到 Lv${Math.max(1, Math.floor(state.sageAutoSpell.lv / 2))}</span></div>
+      <div class="skill-list">
+        <div class="skill-row learned">
+          <div class="skill-info">
+            <div class="skill-name">選一個要自動施放的魔法</div>
+            <div class="skill-desc">從已學會的魔法裡挑一個，發動等級不會超過自動念咒等級的一半。</div>
+            <div class="skill-cost">
+              <select onchange="doSetSageAutoSpell(this.value)">
+                <option value=""${cur ? '' : ' selected'}>（沒有選擇魔法）</option>
+                ${picks.map(sk => `<option value="${sk.id}"${sk.id === cur ? ' selected' : ''}>${sk.name}（發動 Lv${sk.maxLv}）</option>`).join('')}
+              </select>
+              ${curSk ? `　目前：<b>${curSk.name}</b> Lv${sageAutoSpellLv(cur)}` : ''}
+            </div>
+          </div>
+        </div>
+      </div></div>`;
+  }
+
   html += '</div>';
   el.innerHTML = html;
+}
+
+/* 賢者的兩個面板控制（#71）。官方這兩個都是「消耗道具的主動技」，
+   使用者 2026-08-10 指定改成自動戰鬥分頁上的設定，選了就自動維持／自動觸發。
+   兩個都是轉職自動獲得，所以沒學過的職業整塊不出現。 */
+const SAGE_ELEMENTS = [['fire', '火'], ['water', '水'], ['wind', '風'], ['earth', '地']];
+function sageConverterHtml() {
+  const hasConverter = !!state.elementConverter;
+  const hasChange = state.elementChanges && Object.keys(state.elementChanges).length > 0;
+  if (!hasConverter && !hasChange) return '';
+  const opt = (cur, val, label) => `<option value="${val}"${cur === val ? ' selected' : ''}>${label}</option>`;
+  let html = '<div class="ab-section"><h4 class="ab-section-title">🔮 賢者的元素操作</h4>';
+  if (hasConverter) {
+    const cur = state.converterElement || '';
+    html += `<div class="ab-config-row">
+      <label class="ab-config-label">肯貝特武器附魔</label>
+      <select class="ab-select" onchange="setSageConverter(this.value)">
+        ${opt(cur, '', '不使用')}
+        ${SAGE_ELEMENTS.map(([k, n]) => opt(cur, k, `${n}屬性（消耗對應靈礦石，不足則付 1000z）`)).join('')}
+      </select>
+    </div>
+    <div class="ab-info-text">選定後會自動維持 20 分鐘的武器屬性。自己放屬性附加時不會被搶走。</div>`;
+  }
+  if (hasChange) {
+    const cur = state.elementChangePick || '';
+    html += `<div class="ab-config-row">
+      <label class="ab-config-label">元素更換</label>
+      <select class="ab-select" onchange="setSageElementChange(this.value)">
+        ${opt(cur, '', '不使用')}
+        ${SAGE_ELEMENTS.map(([k, n]) => opt(cur, k, `把敵人變成${n}屬性`)).join('')}
+      </select>
+    </div>
+    <div class="ab-info-text">普通攻擊 20% 機率把目標變成該屬性 10 秒（首領階級也有效），消耗對應靈礦石，不足則付 1000z。</div>`;
+  }
+  return html + '</div>';
+}
+function setSageConverter(el) {
+  state.converterElement = el || null;
+  state._converterWarned = false;
+  saveGame();
+  renderAutoBattleTab();
+}
+function setSageElementChange(el) {
+  state.elementChangePick = el || null;
+  saveGame();
+  renderAutoBattleTab();
+}
+function doSetSageAutoSpell(skillId) {
+  if (typeof setSageAutoSpell !== 'function') return;
+  setSageAutoSpell(skillId || null);
+  renderSkillsTab();
+  if (typeof renderAll === 'function') renderAll();
+}
+
+function doSetPlagiarism(skillId) {
+  if (typeof setPlagiarismSkill !== 'function') return;
+  setPlagiarismSkill(skillId || null);
+  renderSkillsTab();
+  if (typeof renderAll === 'function') renderAll();
 }
 
 // 切換職業技能區塊的展開/收合
@@ -2992,7 +3121,21 @@ function renderCharacterTab() {
       // 致命塗毒（#59）：兩個 buff 一組推出來，一個乘武器 ATK、一個乘毒屬性傷害
       weaponatk: '裝備ATK', eledmg_poison: '毒屬性傷害',
       // 神匠（#60）
-      meltdown: '野蠻凶砍', spawnspeed: '生怪加速'
+      meltdown: '野蠻凶砍', spawnspeed: '生怪加速',
+      // 十字軍（#66）
+      reflect: '反射', providence: '神祐之光',
+      // 詩人／舞孃（#68）
+      perfectdodge: '完全迴避', critdmg: '暴擊傷害', maxhppct: '最大HP', maxsppct: '最大SP',
+      skillcd: '技能冷卻', exp: '經驗值', atkflat: 'ATK', defflat: 'DEF', spcost: '技能SP消耗',
+      songelereduce: '四屬性耐性', songailresist: '異常狀態抗性', gemfree: '魔力礦石',
+      dontforgetme: '勿忘我',
+      // 武僧（#70）：爆氣推 crit + sprate、金剛不壞推 dmgtaken
+      dmgtaken: '受傷減免',
+      // 賢者（#71）：屬性附加推 eleweapon、元素領域推 eledmg_<屬性> 與一組數值 buff
+      eleweapon: '武器屬性', eledmg_fire: '火傷害', eledmg_water: '水傷害',
+      eledmg_wind: '風傷害', eledmg_earth: '地傷害',
+      // 鍊金術士（#72）：屬性抵抗藥水
+      eleresist: '屬性抵抗'
     };
     const PCT_BUFFS = ['statpct', 'magnumfire'];
     buffListHtml += state.buffs.map(b => {
@@ -3085,7 +3228,7 @@ function renderJobTree() {
   let tiers = [
     ['novice'],
     ['swordsman', 'mage', 'archer', 'merchant', 'thief', 'acolyte'],
-    ['knight', 'wizard', 'hunter', 'blacksmith', 'assassin', 'priest'],
+    ['knight', 'crusader', 'wizard', 'sage', 'hunter', 'bard', 'dancer', 'blacksmith', 'alchemist', 'assassin', 'rogue', 'priest', 'monk'],
   ];
   const rebirthed = (state.rebirthCount || 0) > 0;
   /* 轉生後只畫**自己那一條線**（使用者 2026-08-09 指定）。

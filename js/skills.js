@@ -174,8 +174,31 @@ const SKILLS = {
      這些在 #22 寫下時都還不存在。 */
   frostjoke: {"id":"frostjoke","name":"冷笑話","maxLv":5,"type":"ailment_aoe","element":"water","ailment":"freeze","successChance":[15,20,25,30,35],"spCost":[10,10,10,10,10],"cooldown":[10,10,10,10,10],"desc":"講一個冷到結凍的笑話，對全部敵人各有15%~35%機率造成冰凍（依等級）。"},
   impositio_manus: {"id":"impositio_manus","name":"神威祈福","maxLv":5,"type":"buff_atk","spCost":[20,20,20,20,20],"cooldown":[30,30,30,30,30],"mult":[1.05,1.1,1.15,1.2,1.25],"duration":[60,60,60,60,60],"desc":"祝福自身，攻擊力+5%~25%，持續60秒（依等級）。（官方是固定值 ATK+5×等級，本作的攻擊力buff一律是倍率制，改成等效的百分比）"},
-  autoguard: {"id":"autoguard","name":"自動防禦","maxLv":10,"type":"buff_block","spCost":[10,10,10,10,10,12,12,12,12,12],"cooldown":[15,15,15,15,15,15,15,15,15,15],"blockChance":[5,10,15,20,25,30,35,40,45,50],"duration":[20,20,20,20,20,30,30,30,30,30],"desc":"進入防禦姿態，有5%~50%機率完全擋下敵人的物理攻擊，持續20~30秒（依等級）。"},
-  grandcross: {"id":"grandcross","name":"聖十字審判","maxLv":10,"type":"magic_aoe","element":"holy","spCost":[37,40,43,46,49,52,55,58,61,64],"cooldown":[8,8,8,8,8,8,8,8,8,8],"mult":[1.4,1.8,2.2,2.6,3,3.4,3.8,4.2,4.6,5],"desc":"以聖十字之力對全部敵人造成聖屬性魔法傷害MATK×140%~500%（依等級）。（官方會同時傷到自己，本作不做——放置遊戲裡自傷技能只會被玩家關掉）"},
+  /* 自動防禦與聖十字審判是十字軍的技能，但 id **沒有 cr_ 前綴**——
+     `clock_card` 與 `solace_card` 兩張卡片的 autoSpell 指名這兩個 id，
+     改名等於把那兩張卡打斷。既有 id 留著，內容更新成官方數值。 */
+  autoguard: {
+    id: 'autoguard', name: '自動防禦 Auto Guard', maxLv: 10,
+    type: 'buff_block', requiresEquip: 'shield',
+    spCost: [12, 14, 16, 18, 20, 22, 24, 26, 28, 30],
+    cooldown: [15, 15, 15, 15, 15, 15, 15, 15, 15, 15],
+    blockChance: [5, 10, 14, 18, 21, 24, 26, 28, 29, 30],
+    duration: [300, 300, 300, 300, 300, 300, 300, 300, 300, 300],
+    desc: '需裝備盾牌。進入防禦姿態，有 5%~30% 機率完全擋下敵人的物理攻擊，持續 300 秒。'
+  },
+  /* 官方：消耗當前 HP 20%，3 次聖屬性魔法 AoE，自己也吃一半傷害。
+     使用者 2026-08-09 指定做出自傷，但加兩道保險：HP 低於 25% 時放不出來、
+     自傷永遠留 1 HP。次數直接乘進倍率（跟重力原野同一套做法）。 */
+  grandcross: {
+    id: 'grandcross', name: '聖十字審判 Grand Cross', maxLv: 10,
+    type: 'magic_aoe', element: 'holy',
+    spCost: [37, 44, 51, 58, 65, 72, 78, 86, 93, 100],
+    cooldown: [8, 8, 8, 8, 8, 8, 8, 8, 8, 8],
+    mult: [4.2, 5.4, 6.6, 7.8, 9.0, 10.2, 11.4, 12.6, 13.8, 15.0],   // 官方 140%~500% × 3 次
+    hpCostPct: 20, selfDamagePct: 50, minHpPctToCast: 25,
+    desc: '需要 HP 25% 以上才放得出來。消耗當前 HP 的 20%，對全部敵人造成 3 次聖屬性魔法傷害'
+        + '（合計 MATK×420%~1500%），自己也會受到一半傷害（不會因此死亡，最低留 1 HP）。'
+  },
   dispell_magic: {"id":"dispell_magic","name":"魔法效果解除","maxLv":5,"type":"dispel_aoe","spCost":[35,35,35,35,35],"cooldown":[20,20,20,20,20],"aoeFromLv":3,"desc":"解除敵人身上的增益效果（力量提升、自動防禦、反射盾那一類）。Lv3以上對全體生效。"},
   strecovery: {"id":"strecovery","name":"痊癒術","maxLv":1,"type":"cure","spCost":[25],"cooldown":[15],"desc":"解除自身的昏迷、冰凍、石化、睡眠、混亂、沉默、黑暗、詛咒、中毒、出血。"},
 
@@ -615,5 +638,1300 @@ const SKILLS = {
     spRegenPct: [3, 6, 9, 12, 15, 18, 21, 24, 27, 30],
     healPct: [2, 4, 6, 8, 10, 12, 14, 16, 18, 20],
     desc: '被動技能，最大SP +1%~10%、SP 自然恢復 +3%~30%、治癒術恢復量 +2%~20%。'
+  },
+
+  /* ================= 十字軍（CR_，二轉分支第一個）=================
+     官方 12 個技能，本作做 10 個：
+
+       CR_AUTOGUARD      自動防禦      → autoguard（id 見上面的註解）
+       CR_SHIELDCHARGE   盾擊          → cr_shieldcharge
+       CR_SHIELDBOOMERANG 迴旋盾擊     → cr_shieldboomerang
+       CR_DEFENDER       光之盾        → cr_defender
+       CR_REFLECTSHIELD  反射盾        → cr_reflectshield
+       CR_TRUST          信任          → cr_trust
+       CR_HOLYCROSS      聖十字攻擊    → cr_holycross
+       CR_GRANDCROSS     聖十字審判    → grandcross（id 見上面的註解）
+       CR_PROVIDENCE     神祐之光      → cr_providence
+       CR_SPEARQUICKEN   長矛加速術    → cr_spearquicken
+
+       CR_SHRINK         退縮          → cr_shrink（官方 maxLv 0，改成轉職自動獲得的被動）
+
+       CR_DEVOTION       犧牲          → **擱置**。官方是把隊友受到的傷害轉到自己身上，
+                                         本作沒有隊伍系統。使用者 2026-08-09 表示之後
+                                         有考慮開隊友模式，所以不當永久 N/A，先不做。
+
+     五個盾牌專用技能寫 `requiresEquip: 'shield'`，長矛加速術寫 `requiresWeapon: 'spear'`。 */
+
+  cr_shieldcharge: {
+    id: 'cr_shieldcharge', name: '盾擊 Shield Charge', maxLv: 5,
+    type: 'damage', element: 'neutral', requiresEquip: 'shield',
+    spCost: [10, 10, 10, 10, 10], cooldown: [4, 4, 4, 4, 4],
+    mult: [1.2, 1.4, 1.6, 1.8, 2.0],
+    inflict: { type: 'stun', chance: [20, 25, 30, 35, 40] },
+    desc: '需裝備盾牌。以盾牌重擊目標，造成 ATK 120%~200% 傷害，20%~40% 機率使其暈眩。'
+        + '（官方的擊退格數本作沒有位移，不實作）'
+  },
+  /* 官方：ATK 80%~400%，傷害「會根據盾牌的精煉值和重量而增加」。
+     盾重與精煉加進**武器那一桶**，跟螺旋擊刺的武器重量同一條路——
+     這樣它才會跟武器 ATK 一起吃屬性、體型與武器浮動。
+     重量係數 1.0：ITEMS 的 weight 是官方原始值（顯示值的 10 倍），引擎端會先除以 10。 */
+  cr_shieldboomerang: {
+    id: 'cr_shieldboomerang', name: '迴旋盾擊 Shield Boomerang', maxLv: 5,
+    type: 'damage', element: 'neutral', requiresEquip: 'shield',
+    spCost: [12, 12, 12, 12, 12], cooldown: [5, 5, 5, 5, 5],
+    mult: [0.8, 1.6, 2.4, 3.2, 4.0],
+    shieldWeightMult: 1.0, shieldRefineMult: 4,
+    desc: '需裝備盾牌。投擲盾牌造成 ATK 80%~400% 傷害，並依盾牌的重量與精煉值額外增傷。'
+  },
+  /* 官方是主動 buff、只擋**遠距離**物理（−20%~−80%），代價是攻速 −20%~0%。
+     本作怪物沒有遠近之分，照官方數值套到全部傷害會變成全域減傷 80%。
+     使用者 2026-08-09 指定：改成**被動**、免傷 10%~40%、攻速懲罰照官方保留、需裝盾，
+     並加上 **5 秒內部冷卻**——常駐減傷對場上五隻怪的每一下都生效，等於憑空多一倍有效血量；
+     加了冷卻就變成「每 5 秒吃掉最痛的那一下」，跟致命塗毒那批觸發式被動同一種節奏。 */
+  cr_defender: {
+    id: 'cr_defender', name: '光之盾 Defender', maxLv: 5,
+    type: 'passive', passiveStat: 'defenderPassive', requiresEquip: 'shield',
+    spCost: [0], cooldown: [0],
+    mult: [10, 20, 30, 35, 40],          // 觸發機率 %（成功＝這一擊完全不痛）
+    internalCooldown: [5, 5, 5, 5, 5],
+    aspdPenalty: [20, 15, 10, 5, 0],     // 攻速 −N%（常駐，不受冷卻影響）
+    desc: '被動技能，需裝備盾牌。被攻擊時有 10%~40% 機率完全免除該次傷害（內部冷卻 5 秒），'
+        + '攻擊速度則常駐 −20%~0%（等級越高懲罰越小）。'
+  },
+  /* 官方 maxLv 0（未開放）的開關技能，效果是「自動防禦成功時 50% 機率暈眩對方」。
+     使用者 2026-08-09 指定改成**被動、轉職自動獲得**（`autoGrant`）——
+     一個 1 秒暈眩不值得花技能點，做成要點的等於做了個沒人點的技能。 */
+  cr_shrink: {
+    id: 'cr_shrink', name: '退縮 Shrink', maxLv: 1,
+    type: 'passive', passiveStat: 'shrinkStun', autoGrant: true,
+    spCost: [0], cooldown: [0],
+    mult: [50], stunSec: [1],
+    desc: '被動技能，轉職時自動獲得。以自動防禦擋下攻擊時，有 50% 機率使對方暈眩 1 秒。'
+  },
+  cr_reflectshield: {
+    id: 'cr_reflectshield', name: '反射盾 Reflect Shield', maxLv: 10,
+    type: 'buff_reflect', requiresEquip: 'shield',
+    spCost: [35, 40, 45, 50, 55, 60, 65, 70, 75, 80],
+    cooldown: [30, 30, 30, 30, 30, 30, 30, 30, 30, 30],
+    reflectPct: [13, 16, 19, 22, 25, 28, 31, 34, 37, 40],
+    duration: [300, 300, 300, 300, 300, 300, 300, 300, 300, 300],
+    desc: '需裝備盾牌。受到近距離物理傷害時，將 13%~40% 反射給對方，持續 300 秒。'
+  },
+  cr_trust: {
+    id: 'cr_trust', name: '信任 Faith', maxLv: 10,
+    type: 'passive', passiveStat: 'trustPassive',
+    spCost: [0], cooldown: [0],
+    mult: [200, 400, 600, 800, 1000, 1200, 1400, 1600, 1800, 2000],   // 最大HP 固定值
+    holyResist: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50],
+    desc: '被動技能，最大HP +200~+2000、受到的聖屬性傷害 −5%~−50%。'
+  },
+  /* 官方：聖屬性近距離物理 135%~450%，黑暗 3%~30%，「裝備雙手矛時傷害會變成雙倍」。 */
+  cr_holycross: {
+    id: 'cr_holycross', name: '聖十字攻擊 Holy Cross', maxLv: 10,
+    type: 'damage', element: 'holy',
+    spCost: [11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+    cooldown: [3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
+    mult: [1.35, 1.7, 2.05, 2.4, 2.75, 3.1, 3.45, 3.8, 4.15, 4.5],
+    twoHandSpearMult: 2,
+    inflict: { type: 'blind', chance: [3, 6, 9, 12, 15, 18, 21, 24, 27, 30] },
+    desc: '以聖十字對目標造成聖屬性 ATK 135%~450% 傷害，3%~30% 機率使其黑暗。裝備雙手矛時傷害加倍。'
+  },
+  /* 官方是對友方單體施放，本作沒有隊友 → 改成自身 buff。
+     兩個減傷都用既有的欄位（eleReduce_holy / raceDmgReduce_demon），不另開機制。 */
+  cr_providence: {
+    id: 'cr_providence', name: '神祐之光 Providence', maxLv: 5,
+    type: 'buff_providence', element: 'holy',
+    spCost: [30, 30, 30, 30, 30], cooldown: [30, 30, 30, 30, 30],
+    reducePct: [5, 10, 15, 20, 25],
+    duration: [180, 180, 180, 180, 180],
+    desc: '受到的聖屬性傷害與惡魔種族的傷害 −5%~−25%，持續 180 秒。（官方是對隊友施放，本作沒有隊伍，改成自身）'
+  },
+  cr_spearquicken: {
+    id: 'cr_spearquicken', name: '長矛加速術 Spear Quicken', maxLv: 10,
+    type: 'buff_spearquicken', requiresWeapon: 'spear',
+    spCost: [24, 28, 32, 36, 40, 44, 48, 52, 56, 60],
+    cooldown: [30, 30, 30, 30, 30, 30, 30, 30, 30, 30],
+    mult: [1.3, 1.3, 1.3, 1.3, 1.3, 1.3, 1.3, 1.3, 1.3, 1.3],   // 攻速 +30%（官方各級相同）
+    critFlat: [3, 6, 9, 12, 15, 18, 21, 24, 27, 30],
+    fleeFlat: [2, 4, 6, 8, 10, 12, 14, 16, 18, 20],
+    duration: [30, 60, 90, 120, 150, 180, 210, 240, 270, 300],
+    desc: '需裝備矛類武器。攻擊速度 +30%、暴擊率 +3~30、迴避 +2~20，持續 30~300 秒。'
+  },
+
+  /* ================= 詩人 BA_ / 舞孃 DC_ / 共用 BD_（#68）=================
+
+     官方每個職業 9 個自己的技能 + 11 個共用的 BD_，兩邊靠性別二選一。
+
+     四個共通的改動（使用者 2026-08-09 指定）：
+
+     1. **隊員增益 → 自身 buff**。官方那批寫的是「自身與周圍 31×31 內隊員」，
+        本作單人，效果原封不動套在自己身上。
+     2. **範圍弱化技 → 普攻觸發的被動**。冷笑話、驚聲尖叫、不諧和音、醜陋之舞、
+        陣痛之聲、眨眼之誘六個，全部改成普攻機率觸發＋內部冷卻。
+     3. **互斥組**。官方每個演奏／舞蹈技能都寫「無法與其它演奏技能效果重疊」：
+        `exclusiveGroup: 'song'` 同時只能開一個、`'ensemble'` 同時只能開一個，
+        但兩組之間不互斥（可以「一個專用技 + 一個合奏」）。
+     4. **合奏單人減半**（`soloMult: 0.5`）。官方合奏要 9×9 內有一個異性的詩舞系隊員；
+        本作沒有隊伍，所以單人放得出來但只有一半。日後開隊友模式時兩人各放一次
+        就是兩份半效果疊起來＝官方完整效果，資料不必改。
+
+     移速一律照既定慣例（騎乘術／月夜貓／手推車加速）改成**生怪加速**。 */
+
+  // ---- 詩人自己的 9 個 ----
+  ba_musicallesson: {
+    id: 'ba_musicallesson', name: '操控樂器 Musical Lesson', maxLv: 10,
+    type: 'passive', passiveStat: 'songMastery', requiresWeapon: 'instrument',
+    spCost: [0], cooldown: [0],
+    mult: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],                        // 最大SP +N%
+    atkFlat: [3, 6, 9, 12, 15, 18, 21, 24, 27, 30],
+    aspdPct: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    spawnSpeedPct: [2.5, 5, 7.5, 10, 12.5, 15, 17.5, 20, 22.5, 25],
+    desc: '被動技能。最大SP +1%~10%；裝備樂器時 ATK +3~30、攻速 +1%~10%。'
+        + '（官方的合奏移速加成，本作沒有移動，改成生怪加速 +2.5%~25%）'
+  },
+  frostjoke: {
+    id: 'frostjoke', name: '冷笑話 Frost Joke', maxLv: 5,
+    type: 'passive', passiveStat: 'onAttackAoeAilment', element: 'water',
+    spCost: [0], cooldown: [0],
+    ailment: 'freeze', mult: [0],
+    procChance: [20, 25, 30, 35, 40], internalCooldown: [5, 5, 5, 5, 5],
+    desc: '被動技能。普通攻擊有 20%~40% 機率講一個冷到結凍的笑話，使全體敵人冰凍（內部冷卻 5 秒）。'
+  },
+  ba_dissonance: {
+    id: 'ba_dissonance', name: '不諧和音 Dissonance', maxLv: 5,
+    type: 'passive', passiveStat: 'onAttackAoeMagic', element: 'neutral',
+    spCost: [0], cooldown: [0],
+    mult: [1.1, 1.2, 1.3, 1.4, 1.5],
+    procChance: [20, 20, 20, 20, 20], internalCooldown: [5, 5, 5, 5, 5],
+    desc: '被動技能。普通攻擊有 20% 機率對全體敵人發出音波，造成 MATK 110%~150% 的無屬性魔法傷害（內部冷卻 5 秒）。'
+        + '（官方限 PVP／攻城戰，本作改成對怪物生效）'
+  },
+  ba_whistle: {
+    id: 'ba_whistle', name: '吹口哨 Whistle', maxLv: 10,
+    type: 'buff_song', exclusiveGroup: 'song', requiresWeapon: 'instrument',
+    spCost: [22, 24, 26, 28, 30, 32, 34, 36, 38, 40],
+    cooldown: [10, 10, 10, 10, 10, 10, 10, 10, 10, 10],
+    fleeFlat: [20, 22, 24, 26, 28, 30, 32, 34, 36, 40],
+    perfectDodgeFlat: [1, 1, 2, 2, 3, 3, 4, 4, 5, 5],
+    duration: [180, 180, 180, 180, 180, 180, 180, 180, 180, 180],
+    desc: '需裝備樂器。迴避 +20~40、完全迴避 +1~5，持續 180 秒。（演奏技能同時只能開一個）'
+  },
+  ba_assassincross: {
+    id: 'ba_assassincross', name: '刺客的黃昏 Assassin Cross', maxLv: 10,
+    type: 'buff_song', exclusiveGroup: 'song', requiresWeapon: 'instrument',
+    spCost: [40, 45, 50, 55, 60, 65, 70, 75, 80, 85],
+    cooldown: [10, 10, 10, 10, 10, 10, 10, 10, 10, 10],
+    aspdPct: [1, 3, 5, 7, 9, 11, 13, 15, 17, 20],
+    duration: [180, 180, 180, 180, 180, 180, 180, 180, 180, 180],
+    desc: '需裝備樂器。攻擊速度 +1%~20%，持續 180 秒。（演奏技能同時只能開一個）'
+  },
+  ba_poembragi: {
+    id: 'ba_poembragi', name: '布萊奇之詩 Poem of Bragi', maxLv: 10,
+    type: 'buff_song', exclusiveGroup: 'song', requiresWeapon: 'instrument',
+    spCost: [65, 70, 75, 80, 85, 90, 95, 100, 105, 110],
+    cooldown: [10, 10, 10, 10, 10, 10, 10, 10, 10, 10],
+    skillCdPct: [3, 6, 9, 12, 15, 18, 21, 24, 27, 30],
+    duration: [180, 180, 180, 180, 180, 180, 180, 180, 180, 180],
+    desc: '需裝備樂器。技能冷卻時間 −3%~30%，持續 180 秒。'
+        + '（官方是變動詠唱與共同延遲，本作沒有詠唱，照 #55 的慣例折成技能冷卻）'
+  },
+  ba_appleidun: {
+    id: 'ba_appleidun', name: '伊登的蘋果 Apple of Idun', maxLv: 10,
+    type: 'buff_song', exclusiveGroup: 'song', requiresWeapon: 'instrument',
+    spCost: [40, 45, 50, 55, 60, 65, 70, 75, 80, 85],
+    cooldown: [10, 10, 10, 10, 10, 10, 10, 10, 10, 10],
+    maxHpPct: [10, 11, 12, 13, 14, 15, 16, 17, 18, 20],
+    healRecvPct: [2, 4, 6, 8, 10, 12, 14, 16, 18, 20],
+    duration: [180, 180, 180, 180, 180, 180, 180, 180, 180, 180],
+    desc: '需裝備樂器。最大HP +10%~20%、受到的HP恢復量 +2%~20%，持續 180 秒。（演奏技能同時只能開一個）'
+  },
+  ba_musicalstrike: {
+    id: 'ba_musicalstrike', name: '樂器攻擊 Musical Strike', maxLv: 5,
+    type: 'damage_multi', element: 'neutral', requiresWeapon: 'instrument',
+    spCost: [12, 12, 12, 12, 12], cooldown: [2, 2, 2, 2, 2],
+    hits: [2, 2, 2, 2, 2],
+    mult: [1.5, 1.9, 2.3, 2.7, 3.1],
+    consumeAmmo: 1,
+    desc: '需裝備樂器，消耗箭矢 1 枝。利用樂器發射箭矢造成 2 次遠距離物理傷害，每次 ATK 150%~310%。'
+  },
+  ba_pangvoice: {
+    id: 'ba_pangvoice', name: '陣痛之聲 Pang Voice', maxLv: 1,
+    type: 'passive', passiveStat: 'onAttackDualAilment', autoGrant: true,
+    spCost: [0], cooldown: [0], mult: [0],
+    procChance: [20], internalCooldown: [0],
+    ailments: [{ type: 'confusion', chance: 50 }, { type: 'bleed', chance: 50 }],
+    desc: '被動技能，轉職時自動獲得。普通攻擊有 20% 機率大吼，各 50% 機率使目標混亂與出血。'
+  },
+
+  // ---- 舞孃自己的 9 個 ----
+  dc_dancinglesson: {
+    id: 'dc_dancinglesson', name: '練習舞蹈 Dancing Lesson', maxLv: 10,
+    type: 'passive', passiveStat: 'songMastery', requiresWeapon: 'whip',
+    spCost: [0], cooldown: [0],
+    mult: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],                        // 最大SP +N%
+    atkFlat: [3, 6, 9, 12, 15, 18, 21, 24, 27, 30],
+    critFlat: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    spawnSpeedPct: [2.5, 5, 7.5, 10, 12.5, 15, 17.5, 20, 22.5, 25],
+    desc: '被動技能。最大SP +1%~10%；裝備鞭子時 ATK +3~30、暴擊率 +1~10。'
+        + '（官方的合奏移速加成，本作沒有移動，改成生怪加速 +2.5%~25%）'
+  },
+  dc_scream: {
+    id: 'dc_scream', name: '驚聲尖叫 Scream', maxLv: 5,
+    type: 'passive', passiveStat: 'onAttackAoeAilment', element: 'neutral',
+    spCost: [0], cooldown: [0],
+    ailment: 'stun', ailSec: [0.5, 0.5, 0.5, 0.5, 0.5], mult: [0],
+    procChance: [20, 25, 30, 35, 40], internalCooldown: [5, 5, 5, 5, 5],
+    desc: '被動技能。普通攻擊有 20%~40% 機率尖叫，使全體敵人暈眩 0.5 秒（內部冷卻 5 秒）。'
+  },
+  dc_uglydance: {
+    id: 'dc_uglydance', name: '醜陋之舞 Ugly Dance', maxLv: 5,
+    type: 'passive', passiveStat: 'onAttackAoeAilment', element: 'neutral',
+    spCost: [0], cooldown: [0],
+    ailment: 'stun', ailSec: [1, 1, 1, 1, 1], mult: [0],
+    procChance: [20, 20, 20, 20, 20], internalCooldown: [10, 9, 8, 7, 5],
+    desc: '被動技能。攻擊時有 20% 機率使全體敵人暈眩 1 秒（內部冷卻 10~5 秒，等級越高越短）。'
+        + '（官方是「虛耗目標 SP」，怪物沒有 SP，改成控場）'
+  },
+  dc_humming: {
+    id: 'dc_humming', name: '哼唱之音 Humming', maxLv: 10,
+    type: 'buff_song', exclusiveGroup: 'song', requiresWeapon: 'whip',
+    spCost: [33, 36, 39, 42, 45, 48, 51, 54, 57, 60],
+    cooldown: [10, 10, 10, 10, 10, 10, 10, 10, 10, 10],
+    hitFlat: [4, 8, 12, 16, 20, 24, 28, 32, 36, 40],
+    duration: [180, 180, 180, 180, 180, 180, 180, 180, 180, 180],
+    desc: '需裝備鞭子。命中 +4~40，持續 180 秒。（舞蹈技能同時只能開一個）'
+  },
+  dc_dontforgetme: {
+    id: 'dc_dontforgetme', name: '勿忘我 Don\'t Forget Me', maxLv: 10,
+    type: 'debuff_aspd_aoe', exclusiveGroup: 'song', requiresWeapon: 'whip',
+    spCost: [38, 41, 44, 47, 50, 53, 56, 59, 62, 65],
+    cooldown: [15, 15, 15, 15, 15, 15, 15, 15, 15, 15],
+    aspdCutPct: [3, 6, 9, 12, 15, 18, 21, 24, 27, 30],
+    duration: [60, 60, 60, 60, 60, 60, 60, 60, 60, 60],
+    desc: '需裝備鞭子。場上敵人的攻擊速度 −3%~30%，持續 60 秒；期間新出現的敵人也會被拖慢。'
+        + '（官方只對敵方玩家有效，本作改成對怪物）'
+  },
+  dc_fortunekiss: {
+    id: 'dc_fortunekiss', name: '女神之吻 Fortune Kiss', maxLv: 10,
+    type: 'buff_song', exclusiveGroup: 'song', requiresWeapon: 'whip',
+    spCost: [40, 45, 50, 55, 60, 65, 70, 75, 80, 85],
+    cooldown: [10, 10, 10, 10, 10, 10, 10, 10, 10, 10],
+    critFlat: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    critDmgPct: [2, 4, 6, 8, 10, 12, 14, 16, 18, 20],
+    duration: [180, 180, 180, 180, 180, 180, 180, 180, 180, 180],
+    desc: '需裝備鞭子。暴擊率 +1~10、暴擊傷害 +2%~20%，持續 180 秒。（舞蹈技能同時只能開一個）'
+  },
+  dc_serviceforyou: {
+    id: 'dc_serviceforyou', name: '為您服務 Service For You', maxLv: 10,
+    type: 'buff_song', exclusiveGroup: 'song', requiresWeapon: 'whip',
+    spCost: [60, 63, 66, 69, 72, 75, 78, 81, 84, 87],
+    cooldown: [10, 10, 10, 10, 10, 10, 10, 10, 10, 10],
+    maxSpPct: [10, 11, 12, 13, 14, 15, 16, 17, 18, 20],
+    spCostCutPct: [6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+    duration: [180, 180, 180, 180, 180, 180, 180, 180, 180, 180],
+    desc: '需裝備鞭子。最大SP +10%~20%、技能SP消耗 −6%~15%，持續 180 秒。（舞蹈技能同時只能開一個）'
+  },
+  dc_throwarrow: {
+    id: 'dc_throwarrow', name: '纏箭投擲 Throw Arrow', maxLv: 5,
+    type: 'damage_multi', element: 'neutral', requiresWeapon: 'whip',
+    spCost: [12, 12, 12, 12, 12], cooldown: [2, 2, 2, 2, 2],
+    hits: [2, 2, 2, 2, 2],
+    mult: [1.5, 1.9, 2.3, 2.7, 3.1],
+    consumeAmmo: 1,
+    desc: '需裝備鞭子，消耗箭矢 1 枝。以鞭子纏住箭矢投擲，造成 2 次遠距離物理傷害，每次 ATK 150%~310%。'
+  },
+  dc_winkcharm: {
+    id: 'dc_winkcharm', name: '眨眼之誘 Wink of Charm', maxLv: 1,
+    type: 'passive', passiveStat: 'onAttackDualAilment', autoGrant: true,
+    spCost: [0], cooldown: [0], mult: [0],
+    procChance: [20], internalCooldown: [0],
+    ailments: [{ type: 'confusion', chance: 50 }, { type: 'bleed', chance: 50 }],
+    desc: '被動技能，轉職時自動獲得。普通攻擊有 20% 機率放電，各 50% 機率使目標混亂與出血。'
+  },
+
+  // ---- 詩人與舞孃共用的 BD_ ----
+  bd_adaptation: {
+    id: 'bd_adaptation', name: '臨機應變 Adaptation', maxLv: 1,
+    type: 'buff_song', exclusiveGroup: 'adapt',
+    spCost: [10], cooldown: [10],
+    spCostCutPct: [20], duration: [180],
+    desc: '技能SP消耗 −20%，持續 180 秒。（不佔演奏／合奏的名額）'
+  },
+  bd_encore: {
+    id: 'bd_encore', name: '安可 Encore', maxLv: 1,
+    type: 'encore',
+    spCost: [1], cooldown: [10],
+    desc: '再放一次上一個演奏／舞蹈／合奏技能，只花該技能一半的 SP。'
+  },
+  bd_lullaby: {
+    id: 'bd_lullaby', name: '搖籃曲 Lullaby', maxLv: 1,
+    type: 'ailment_aoe', element: 'neutral', exclusiveGroup: 'ensemble',
+    ailment: 'sleep', successChance: [25],
+    spCost: [40], cooldown: [20],
+    desc: '使全體敵人各有 25% 機率陷入睡眠。（合奏技能，單人只有一半效果——官方是 50%）'
+  },
+  bd_intoabyss: {
+    id: 'bd_intoabyss', name: '觸媒之所 Into the Abyss', maxLv: 1,
+    type: 'buff_ensemble', exclusiveGroup: 'ensemble', soloMult: 0.5,
+    spCost: [70], cooldown: [15],
+    gemFreeChance: [100], duration: [180],
+    desc: '使用魔力礦石的技能有機率不消耗礦石，持續 180 秒。'
+        + '（官方是「消耗量 −1」，礦石本來就只吃 1 個，單人減半改成 50% 機率不消耗）'
+  },
+  bd_rokisweil: {
+    id: 'bd_rokisweil', name: '洛奇的悲鳴 Loki\'s Veil', maxLv: 1,
+    type: 'ailment_aoe', element: 'neutral', exclusiveGroup: 'ensemble',
+    ailment: 'silence', successChance: [50],
+    spCost: [180], cooldown: [30],
+    desc: '使全體敵人各有 50% 機率沉默，無法使用技能。（合奏技能，單人只有一半效果——官方是必定成功）'
+  },
+  bd_eternalchaos: {
+    id: 'bd_eternalchaos', name: '永遠的混沌 Eternal Chaos', maxLv: 1,
+    type: 'debuff_def_aoe', element: 'neutral', exclusiveGroup: 'ensemble',
+    spCost: [120], cooldown: [30],
+    mult: [0.5], duration: [60],
+    desc: '使全體敵人的物理防禦力 −50%，持續 60 秒。（合奏技能，單人只有一半效果——官方是直接歸零）'
+  },
+  bd_siegfried: {
+    id: 'bd_siegfried', name: '不死神齊格弗里德 Siegfried', maxLv: 5,
+    type: 'buff_ensemble', exclusiveGroup: 'ensemble', soloMult: 0.5,
+    spCost: [40, 44, 48, 52, 56], cooldown: [15, 15, 15, 15, 15],
+    eleResistPct: [3, 6, 9, 12, 15],
+    ailResistPct: [5, 10, 15, 20, 25],
+    duration: [180, 180, 180, 180, 180],
+    desc: '受到的地／水／火／風屬性傷害減少、異常狀態抗性上升，持續 180 秒。（合奏技能，單人只有一半效果）'
+  },
+  bd_richmankim: {
+    id: 'bd_richmankim', name: '經驗值倍增 Mental Sensing', maxLv: 5,
+    type: 'buff_ensemble', exclusiveGroup: 'ensemble', soloMult: 0.5,
+    spCost: [62, 68, 74, 80, 86], cooldown: [15, 15, 15, 15, 15],
+    expPct: [20, 30, 40, 50, 60],
+    duration: [180, 180, 180, 180, 180],
+    desc: '打怪獲得的經驗值增加，持續 180 秒。（合奏技能，單人只有一半效果——官方是 +20%~60%）'
+  },
+  bd_drumbattlefield: {
+    id: 'bd_drumbattlefield', name: '戰鼓震天 Battle Theme', maxLv: 5,
+    type: 'buff_ensemble', exclusiveGroup: 'ensemble', soloMult: 0.5,
+    spCost: [50, 54, 58, 62, 66], cooldown: [15, 15, 15, 15, 15],
+    atkFlat: [20, 25, 30, 35, 40],
+    defFlat: [15, 30, 45, 60, 75],
+    duration: [180, 180, 180, 180, 180],
+    desc: 'ATK 與 DEF 上升，持續 180 秒。（合奏技能，單人只有一半效果——官方是 ATK +20~40、DEF +15~75）'
+  },
+  bd_ringnibelungen: {
+    id: 'bd_ringnibelungen', name: '尼貝隆根之戒指 Ring of Nibelungen', maxLv: 5,
+    type: 'buff_ensemble', exclusiveGroup: 'ensemble', soloMult: 0.5,
+    spCost: [64, 60, 56, 52, 48], cooldown: [15, 15, 15, 15, 15],
+    atkFlat: [10, 14, 18, 22, 26],
+    critFlat: [4, 6, 8, 10, 12],
+    hitFlat: [10, 14, 18, 22, 26],
+    duration: [60, 60, 60, 60, 60],
+    desc: 'ATK、暴擊率與命中同時上升，持續 60 秒。'
+        + '（官方是「隨機獲得一種強化效果」，本作把常見的三種一起給但各只有一部分；合奏技能，單人只有一半效果）'
+  },
+
+  /* ================= 流氓 RG_（#69）=================
+
+     官方 17 個技能，本作做 13 個。使用者 2026-08-10 指定的大方向是
+     **把九個主動技全部改成普攻觸發的被動**（偷錢、卸除×4、潛擊、脅持、緊密的約束），
+     各自帶內部冷卻——流氓在放置遊戲裡本來就是「一直普攻、時不時偷一手」的節奏。
+
+       RG_SNATCHER      強奪        → rg_snatcher（併進既有的偷竊機率）
+       RG_STEALCOIN     偷錢        → rg_stealcoin（被動化）
+       RG_BACKSTAP      背刺        → rg_backstap（唯一保留成主動的攻擊技）
+       RG_TUNNELDRIVE   潛遁        → rg_tunneldrive（移速做不了 → 暴擊 +5%）
+       RG_RAID          潛擊        → rg_raid（被動化，前置＝潛遁）
+       RG_INTIMIDATE    脅持        → rg_intimidate（位移做不了，只留傷害）
+       RG_PLAGIARISM    抄襲        → rg_plagiarism（改成自己挑一個攻擊技能）
+       RG_STRIP*        卸除四連    → rg_striphelm / rg_stripshield / rg_striparmor / rg_stripweapon
+       RG_COMPULSION    強制減價    → rg_compulsion
+       RG_CLOSECONFINE  緊密的約束  → rg_closeconfine（官方 maxLv 0，轉職自動獲得）
+
+       RG_GANGSTER      流氓天國    → **擱置**。使用者指定「隊伍裡有其他流氓時偷竊／偷錢機率各 +10%」，
+                                      本作還沒有隊伍系統，跟十字軍的犧牲同一批等隊友模式
+       RG_CLEANER / RG_FLAGGRAFFITI / RG_GRAFFITI → 刪除（公會旗幟，官方自己標「效果並未開放」） */
+
+  rg_snatcher: {
+    id: 'rg_snatcher', name: '強奪 Snatcher', maxLv: 10,
+    type: 'passive', passiveStat: 'snatcher',
+    spCost: [0], cooldown: [0],
+    mult: [7, 8, 10, 11, 13, 14, 16, 17, 19, 20],
+    desc: '被動技能。偷竊的發動機率 +7%~20%。'
+  },
+  /* 官方成功率只有 1%~10%，而且看 DEX/LUK 與等級差。
+     使用者 2026-08-10 指定：DEX 99 時再 +20%、LUK 99 時再 +10%（線性換算），
+     偷到的錢是「打死這隻怪會拿到的金額」的 10%，CD 5 秒。 */
+  rg_stealcoin: {
+    id: 'rg_stealcoin', name: '偷錢 Steal Coin', maxLv: 10,
+    type: 'passive', passiveStat: 'stealCoin',
+    spCost: [0], cooldown: [0],
+    mult: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    dexMaxBonus: [20, 20, 20, 20, 20, 20, 20, 20, 20, 20],
+    lukMaxBonus: [10, 10, 10, 10, 10, 10, 10, 10, 10, 10],
+    stealPct: 10, internalCooldown: [5, 5, 5, 5, 5, 5, 5, 5, 5, 5],
+    desc: '被動技能。普通攻擊有 1%~10% 機率偷錢（DEX 99 時再 +20%、LUK 99 時再 +10%），'
+        + '偷到的金額是擊殺該怪獎勵的 10%（內部冷卻 5 秒）。'
+  },
+  rg_backstap: {
+    id: 'rg_backstap', name: '背刺 Back Stab', maxLv: 10,
+    type: 'damage', element: 'neutral',
+    spCost: [16, 16, 16, 16, 16, 16, 16, 16, 16, 16],
+    cooldown: [3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
+    mult: [3.4, 3.8, 4.2, 4.6, 5.0, 5.4, 5.8, 6.2, 6.6, 7.0],
+    hitBonusOnCast: [4, 8, 12, 16, 20, 24, 28, 32, 36, 40],
+    daggerMult: 2, bowMult: 0.5,
+    desc: '繞到目標背後造成 ATK 340%~700% 傷害，這一擊的命中 +4~40。'
+        + '裝備短劍時傷害加倍、裝備弓時傷害減半（官方規則）。'
+  },
+  rg_tunneldrive: {
+    id: 'rg_tunneldrive', name: '潛遁 Tunnel Drive', maxLv: 1,
+    type: 'passive', passiveStat: 'critPct',
+    spCost: [0], cooldown: [0],
+    mult: [5],
+    desc: '被動技能。暴擊率 +5%。（官方是「隱匿狀態下可移動」，本作沒有移動，改成暴擊加成）'
+  },
+  rg_raid: {
+    id: 'rg_raid', name: '潛擊 Raid', maxLv: 5,
+    type: 'passive', passiveStat: 'raidProc', element: 'neutral',
+    spCost: [0], cooldown: [0],
+    requires: { skillId: 'rg_tunneldrive', level: 1 },
+    mult: [2, 3.5, 5, 6.5, 8],
+    procChance: [20, 20, 20, 20, 20],
+    ailChance: [13, 16, 19, 22, 25],
+    dmgTakenPct: 30, boostSec: 10,
+    internalCooldown: [10, 10, 10, 10, 10],
+    desc: '被動技能，需先學會潛遁。普通攻擊有 20% 機率對全體敵人造成 ATK 200%~800% 傷害，'
+        + '13%~25% 機率使其暈眩或黑暗，被打中的目標 10 秒內受到的傷害 +30%（內部冷卻 10 秒）。'
+  },
+  rg_intimidate: {
+    id: 'rg_intimidate', name: '脅持 Intimidate', maxLv: 5,
+    type: 'passive', passiveStat: 'intimidateProc', element: 'neutral',
+    spCost: [0], cooldown: [0],
+    mult: [1.3, 1.6, 1.9, 2.2, 2.5],
+    procChance: [20, 20, 20, 20, 20],
+    internalCooldown: [5, 5, 5, 5, 5],
+    desc: '被動技能。普通攻擊有 20% 機率追加一次 ATK 130%~250% 的傷害（內部冷卻 5 秒）。'
+        + '（官方會把自己與目標一起傳送走，本作沒有位移，只保留傷害）'
+  },
+  /* 官方是「記住最後一個打到你的技能」。使用者 2026-08-10 改成
+     **自己從全技能庫的攻擊技能裡挑一個**，等級上限就是抄襲的等級。 */
+  rg_plagiarism: {
+    id: 'rg_plagiarism', name: '抄襲 Plagiarism', maxLv: 10,
+    type: 'passive', passiveStat: 'plagiarism',
+    spCost: [0], cooldown: [0],
+    mult: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],       // 可記住的技能等級
+    aspdPct: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    desc: '被動技能。攻擊速度 +1%~10%，並可從所有攻擊技能中記住一個來使用，'
+        + '能用的等級不會超過抄襲本身的等級（Lv1~10）。'
+  },
+  /* 卸除四連。官方對玩家是剝除裝備（本作永久 N/A），對怪物是素質下降；
+     使用者 2026-08-10 指定的對應與機率如下，四個都是普攻 10%~30% 觸發的被動。
+     四個各佔一格，所以會疊在一起（頭盔的 ATK 那條也能跟卸除武器疊）。 */
+  rg_striphelm: {
+    id: 'rg_striphelm', name: '卸除頭盔 Strip Helm', maxLv: 5,
+    type: 'passive', passiveStat: 'stripProc',
+    spCost: [0], cooldown: [0],
+    mult: [10, 15, 20, 25, 30],
+    stripKind: 'matk', stripMult: [0.75, 0.75, 0.75, 0.75, 0.75], stripFallbackMult: 0.9,
+    stripLabel: '魔法攻擊力', stripDuration: [75, 90, 105, 120, 135],
+    internalCooldown: [5, 5, 5, 5, 5],
+    desc: '被動技能。普通攻擊有 10%~30% 機率使目標的 MATK −25%（沒有 MATK 的怪改為 ATK −10%，'
+        + '可與卸除武器疊加），持續 75~135 秒（內部冷卻 5 秒）。'
+  },
+  rg_stripshield: {
+    id: 'rg_stripshield', name: '卸除盾牌 Strip Shield', maxLv: 5,
+    type: 'passive', passiveStat: 'stripProc',
+    spCost: [0], cooldown: [0],
+    mult: [10, 15, 20, 25, 30],
+    stripKind: 'def', stripMult: [0.85, 0.85, 0.85, 0.85, 0.85],
+    stripLabel: '防禦力', stripDuration: [75, 90, 105, 120, 135],
+    internalCooldown: [5, 5, 5, 5, 5],
+    desc: '被動技能。普通攻擊有 10%~30% 機率使目標的防禦力 −15%，持續 75~135 秒（內部冷卻 5 秒）。'
+  },
+  rg_striparmor: {
+    id: 'rg_striparmor', name: '卸除鎧甲 Strip Armor', maxLv: 5,
+    type: 'passive', passiveStat: 'stripProc',
+    spCost: [0], cooldown: [0],
+    mult: [10, 15, 20, 25, 30],
+    stripKind: 'def', stripMult: [0.9, 0.9, 0.9, 0.9, 0.9],
+    stripLabel: '防禦力', stripDuration: [75, 90, 105, 120, 135],
+    internalCooldown: [5, 5, 5, 5, 5],
+    desc: '被動技能。普通攻擊有 10%~30% 機率使目標的防禦力 −10%（可與卸除盾牌疊加），'
+        + '持續 75~135 秒（內部冷卻 5 秒）。（官方削的是 VIT，本作怪物沒有 VIT，改為防禦力）'
+  },
+  rg_stripweapon: {
+    id: 'rg_stripweapon', name: '卸除武器 Strip Weapon', maxLv: 5,
+    type: 'passive', passiveStat: 'stripProc',
+    spCost: [0], cooldown: [0],
+    mult: [10, 15, 20, 25, 30],
+    stripKind: 'atk', stripMult: [0.75, 0.75, 0.75, 0.75, 0.75],
+    stripLabel: '攻擊力', stripDuration: [75, 90, 105, 120, 135],
+    internalCooldown: [5, 5, 5, 5, 5],
+    desc: '被動技能。普通攻擊有 10%~30% 機率使目標的攻擊力 −25%，持續 75~135 秒（內部冷卻 5 秒）。'
+  },
+  rg_compulsion: {
+    id: 'rg_compulsion', name: '強制減價 Compulsion Discount', maxLv: 5,
+    type: 'passive', passiveStat: 'shopDiscount',
+    spCost: [0], cooldown: [0],
+    mult: [9, 13, 17, 21, 25],
+    desc: '被動技能。在 NPC 商店購買物品的價格 −9%~25%。'
+  },
+  rg_closeconfine: {
+    id: 'rg_closeconfine', name: '緊密的約束 Close Confine', maxLv: 1,
+    type: 'passive', passiveStat: 'closeConfineProc', autoGrant: true,
+    spCost: [0], cooldown: [0], mult: [0],
+    procChance: [5], enemyFleeCut: [20], selfFlee: [10],
+    duration: [10], internalCooldown: [10],
+    desc: '被動技能，轉職時自動獲得。普通攻擊有 5% 機率纏住目標：'
+        + '目標迴避 −20、自身迴避 +10，持續 10 秒（內部冷卻 10 秒）。'
+  },
+
+  /* ================= 武僧 MO_（#70）=================
+
+     官方 17 個技能**全部做出來**，一個都沒刪——連官方標 maxLv 0 的發勁與振氣注入都在。
+     使用者 2026-08-10 指定的大方向跟流氓同一路：**主動技幾乎全部改成被動**，
+     由氣球體與連段串起來，玩家只要站著普攻，整套會自己跑完。
+
+     ---- 新機制一：氣球體 ----
+     `state.spirits`（現有顆數）與 `state.spiritsMax`（＝蓄氣等級，1~5）。
+     蓄氣從主動改成被動：每 5 秒自動補 1 顆到上限。消耗它的有五個技能：
+       真劍百破道 1 顆、猛龍誇強 1 顆、爆氣 5 顆、金剛不壞 5 顆、阿修羅霸凰拳 5 顆
+     每顆常駐 ATK +3（官方數字），但這 15 點不是重點——氣球體的定位是**技能燃料**。
+
+     ---- 新機制二：連段 ----
+     官方要在延遲窗內手動接三次，放置遊戲沒有這個操作空間，所以做成**自動串接**：
+
+       普攻 ──30%──> 六合拳 ──50%──> 連環全身掌 ──30%──> 猛龍誇強 ──20%──> 阿修羅霸凰拳
+                                                                      （需爆氣狀態）
+
+     點越多級串越長，不需要任何新 UI。整條鏈寫在 engine.js 的 tryMonkCombo()。
+
+     **猛龍誇強接上阿修羅時，兩者共用同一份氣球體消耗**（合計 5 顆）。
+     不這樣寫的話會死鎖：上限就是 5 顆，猛龍先扣掉 1 顆之後永遠湊不滿阿修羅要的 5 顆。
+
+     ---- 官方對照 ----
+       MO_IRONHAND        鐵沙掌          → mo_ironhand（空手／拳套限定的 ATK）
+       MO_CALLSPIRITS     蓄氣            → mo_callspirits（被動化：自動補球）
+       MO_ABSORBSPIRITS   吸氣            → mo_absorbspirits（被動化：普攻回 SP）
+       MO_EXPLOSIONSPIRITS 爆氣           → mo_explosionspirits（被動化：滿球自動啟動）
+       MO_DODGE           移花接木        → mo_dodge
+       MO_BLADESTOP       真劍百破道      → mo_bladestop（定身做不了 → 改成開一個增傷視窗）
+       MO_SPIRITSRECOVERY 運氣調息        → mo_spiritsrecovery（本作沒有坐下 → 常駐回復）
+       MO_TRIPLEATTACK    六合拳          → mo_tripleattack（連段起點）
+       MO_CHAINCOMBO      連環全身掌      → mo_chaincombo（被動化：接在六合拳後）
+       MO_COMBOFINISH     猛龍誇強        → mo_combofinish（被動化：接在連環後）
+       MO_STEELBODY       金剛不壞        → mo_steelbody（被動化：爆氣中滿球自動啟動）
+       MO_INVESTIGATE     浸透勁          → mo_investigate（被動化：真劍視窗內普攻觸發）
+       MO_FINGEROFFENSIVE 彈指神通        → mo_fingeroffensive（同上）
+       MO_EXTREMITYFIST   阿修羅霸凰拳    → mo_extremityfist（被動化：連段終點）
+       MO_BODYRELOCATION  弓身彈影        → mo_bodyrelocation（位移做不了 → 比照騎乘術的生怪加速）
+       MO_BALKYOUNG       發勁            → mo_balkyoung（官方 maxLv 0；轉職自動獲得）
+       MO_KITRANSLATION   振氣注入        → mo_kitranslation（官方 maxLv 0；**要有隊友才有作用**） */
+
+  mo_ironhand: {
+    id: 'mo_ironhand', name: '鐵沙掌 Iron Hand', maxLv: 10,
+    type: 'passive', passiveStat: 'atkFlat', requiresWeapon: 'barefist',
+    spCost: [0], cooldown: [0],
+    mult: [3, 6, 9, 12, 15, 18, 21, 24, 27, 30],
+    desc: '被動技能。以空手或拳套攻擊時 ATK +3~30。'
+  },
+  /* 蓄氣：官方是主動技，一次召一顆、每顆 ATK +3、持續 10 分鐘。
+     使用者 2026-08-10 指定改成被動自動補球——放置遊戲不該要人一直點。
+     技能等級 = 氣球體上限，這是整個武僧最重要的一格：五顆才開得了爆氣。 */
+  mo_callspirits: {
+    id: 'mo_callspirits', name: '蓄氣 Call Spirits', maxLv: 5,
+    type: 'passive', passiveStat: 'callSpirits',
+    spCost: [0], cooldown: [0],
+    requires: { skillId: 'mo_ironhand', level: 2 },
+    mult: [1, 2, 3, 4, 5],
+    atkPerSphere: 3, refillSec: 5,
+    desc: '被動技能。氣球體上限 1~5 顆，每 5 秒自動補 1 顆，每顆 ATK +3。'
+        + '（官方是主動召喚，本作改成自動補充；氣球體是爆氣、金剛不壞、阿修羅霸凰拳等技能的燃料）'
+  },
+  /* 吸氣：官方吸的是「目標身上的氣球體」，只有對玩家才有東西可吸；
+     對怪那半官方本來就是 20% 機率依等級回 SP，所以只留得下這一半。 */
+  mo_absorbspirits: {
+    id: 'mo_absorbspirits', name: '吸氣 Absorb Spirits', maxLv: 1,
+    type: 'passive', passiveStat: 'absorbSpirits',
+    spCost: [0], cooldown: [0],
+    requires: { skillId: 'mo_callspirits', level: 5 },
+    mult: [20], spGain: [5], internalCooldown: [3],
+    desc: '被動技能。普通攻擊有 20% 機率回復 5 SP（內部冷卻 3 秒）。'
+  },
+  /* 爆氣：官方要手動引爆 5 顆氣球體。改成**滿球自動啟動**，
+     所以它同時也是阿修羅霸凰拳的開關——想放阿修羅就得先讓球滿一次。 */
+  mo_explosionspirits: {
+    id: 'mo_explosionspirits', name: '爆氣 Explosion Spirits', maxLv: 5,
+    type: 'passive', passiveStat: 'explosionSpirits',
+    spCost: [0], cooldown: [0],
+    requires: { skillId: 'mo_absorbspirits', level: 1 },
+    mult: [10, 12.5, 15, 17.5, 20],
+    spiritCost: 5, duration: [180, 180, 180, 180, 180], spRegenPct: -50,
+    desc: '被動技能。氣球體滿 5 顆時自動消耗全部 5 顆進入爆氣狀態：'
+        + '暴擊率 +10~20，持續 180 秒，期間 SP 自然回復 −50%。'
+        + '（阿修羅霸凰拳與金剛不壞都必須在爆氣狀態下才會發動）'
+  },
+  mo_dodge: {
+    id: 'mo_dodge', name: '移花接木 Dodge', maxLv: 10,
+    type: 'passive', passiveStat: 'fleeFlat',
+    spCost: [0], cooldown: [0],
+    requires: { skillId: 'mo_ironhand', level: 5 },
+    mult: [1, 3, 4, 6, 7, 9, 10, 12, 13, 15],
+    desc: '被動技能。迴避 +1~15。'
+  },
+  /* 真劍百破道：官方是「抓住對方，雙方都動不了 10 秒，期間彈指神通／浸透勁 +50%」。
+     本作沒有「停止攻擊」這個狀態，把它做成**一個 10 秒的視窗**：
+     消耗 1 顆氣球體開啟，期間浸透勁與彈指神通才會發動、而且傷害 ×1.5。
+     等級拉的是內部冷卻（20→12 秒），也就是視窗的覆蓋率。 */
+  mo_bladestop: {
+    id: 'mo_bladestop', name: '真劍百破道 Blade Stop', maxLv: 5,
+    type: 'passive', passiveStat: 'bladeStop',
+    spCost: [0], cooldown: [0],
+    requires: { skillId: 'mo_dodge', level: 5 },
+    mult: [50, 50, 50, 50, 50],
+    spiritCost: 1, duration: [10, 10, 10, 10, 10],
+    internalCooldown: [20, 18, 16, 14, 12],
+    desc: '被動技能。普通攻擊時消耗 1 顆氣球體進入「真劍」狀態，持續 10 秒'
+        + '（內部冷卻 20→12 秒）。期間浸透勁與彈指神通才會發動，且傷害 +50%。'
+  },
+  /* 運氣調息：官方是「坐著時每 10 秒回復」，本作沒有坐下的動作，改成常駐加成。
+     數字併進自然回復的每 tick 量（跟禪心同一個位置），所以不會另開一條回血心跳。 */
+  mo_spiritsrecovery: {
+    id: 'mo_spiritsrecovery', name: '運氣調息 Spiritual Cadence', maxLv: 5,
+    type: 'passive', passiveStat: 'spiritsRecovery',
+    spCost: [0], cooldown: [0],
+    requires: { skillId: 'mo_bladestop', level: 2 },
+    mult: [0],
+    hpFlat: [4, 8, 12, 16, 20], hpPct: [0.2, 0.4, 0.6, 0.8, 1.0],
+    spFlat: [2, 4, 6, 8, 10], spPct: [0.2, 0.4, 0.6, 0.8, 1.0],
+    desc: '被動技能。自然回復量增加：HP +4~20 與最大HP 0.2%~1.0%、'
+        + 'SP +2~10 與最大SP 0.2%~1.0%。（官方限定坐著時，本作沒有坐下 → 改成常駐）'
+  },
+  mo_tripleattack: {
+    id: 'mo_tripleattack', name: '六合拳 Triple Attack', maxLv: 10,
+    type: 'passive', passiveStat: 'tripleAttack', element: 'neutral',
+    spCost: [0], cooldown: [0],
+    requires: { skillId: 'mo_dodge', level: 5 },
+    mult: [1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4, 2.6, 2.8, 3.0],
+    procChance: [30, 30, 30, 30, 30, 30, 30, 30, 30, 30], hits: 3,
+    desc: '被動技能。近戰普通攻擊有 30% 機率追加 3 連擊，合計 ATK 120%~300%。'
+        + '（連段的起點：觸發後有機會接上連環全身掌）'
+  },
+  mo_chaincombo: {
+    id: 'mo_chaincombo', name: '連環全身掌 Chain Combo', maxLv: 5,
+    type: 'passive', passiveStat: 'chainCombo', element: 'neutral',
+    spCost: [0], cooldown: [0],
+    requires: { skillId: 'mo_tripleattack', level: 5 },
+    mult: [3, 3.5, 4, 4.5, 5],
+    procChance: [50, 50, 50, 50, 50], hits: 4, knuckleHits: 6, knuckleMult: 2,
+    desc: '被動技能。六合拳觸發後有 50% 機率接上 4 連擊，合計 ATK 300%~500%。'
+        + '裝備拳套時變成 6 連擊且傷害加倍（官方規則）。'
+  },
+  mo_combofinish: {
+    id: 'mo_combofinish', name: '猛龍誇強 Combo Finish', maxLv: 5,
+    type: 'passive', passiveStat: 'comboFinish', element: 'neutral',
+    spCost: [0], cooldown: [0],
+    requires: { skillId: 'mo_chaincombo', level: 3 },
+    mult: [6, 7.5, 9, 10.5, 12],
+    procChance: [30, 30, 30, 30, 30], spiritCost: 1, strScale: 200,
+    desc: '被動技能。連環全身掌觸發後有 30% 機率接上，消耗 1 顆氣球體，'
+        + 'ATK 600%~1200% 並隨 STR 再上升（STR 99 時約 +50%）。'
+        + '（連段的倒數第二段：爆氣狀態下有機會再接上阿修羅霸凰拳）'
+  },
+  /* 金剛不壞：官方是消 5 球換「受傷 −90%，但期間不能用主動技、移速攻速 −25%」。
+     使用者 2026-08-10 指定改成被動、減傷砍到 10~20%、持續 10~30 秒，缺點不留。
+     內部冷卻 60 秒是本作自訂的：不設的話它會把每一輪補滿的 5 顆球都吃掉，
+     阿修羅霸凰拳永遠等不到球。 */
+  mo_steelbody: {
+    id: 'mo_steelbody', name: '金剛不壞 Steel Body', maxLv: 5,
+    type: 'passive', passiveStat: 'steelBody',
+    spCost: [0], cooldown: [0],
+    requires: { skillId: 'mo_combofinish', level: 3 },
+    mult: [10, 12.5, 15, 17.5, 20],
+    spiritCost: 5, duration: [10, 15, 20, 25, 30],
+    internalCooldown: [60, 60, 60, 60, 60],
+    desc: '被動技能。爆氣狀態下氣球體滿 5 顆時自動消耗全部 5 顆：'
+        + '受到的傷害 −10%~20%，持續 10~30 秒（內部冷卻 60 秒）。'
+  },
+  /* 浸透勁：官方無視迴避、傷害隨目標的裝備防禦上升。兩件事都照做——
+     所以它是專門用來拆高防怪的那一招，對零防的怪反而是全隊最弱的倍率。 */
+  mo_investigate: {
+    id: 'mo_investigate', name: '浸透勁 Investigate', maxLv: 5,
+    type: 'passive', passiveStat: 'investigate', element: 'neutral',
+    spCost: [0], cooldown: [0],
+    requires: { skillId: 'mo_callspirits', level: 5 },
+    mult: [1, 2, 3, 4, 5],
+    procChance: [20, 20, 20, 20, 20], internalCooldown: [5, 5, 5, 5, 5],
+    defScale: 100,
+    desc: '被動技能。真劍狀態中，普通攻擊有 20% 機率發動（內部冷卻 5 秒）：'
+        + 'ATK 100%~500%，無視防禦，且傷害隨目標防禦上升。'
+  },
+  mo_fingeroffensive: {
+    id: 'mo_fingeroffensive', name: '彈指神通 Finger Offensive', maxLv: 5,
+    type: 'passive', passiveStat: 'fingerOffensive', element: 'neutral',
+    spCost: [0], cooldown: [0],
+    requires: { skillId: 'mo_investigate', level: 3 },
+    mult: [8, 10, 12, 14, 16],
+    procChance: [20, 20, 20, 20, 20], internalCooldown: [5, 5, 5, 5, 5],
+    desc: '被動技能。真劍狀態中，普通攻擊有 20% 機率發動（內部冷卻 5 秒）：'
+        + '射出氣球體造成 ATK 800%~1600% 的遠距離物理傷害。'
+  },
+  /* 阿修羅霸凰拳：連段的終點，也是全遊戲最大的一發。
+     官方是「消 5 球＋全部 SP，傷害隨消耗的 SP 大幅上升，無視迴避與大部分防禦，放完解除爆氣」。
+     本作照做，倍率寫成 `8 + 消耗SP/100`——SP 500 就是 1300%，再加官方那欄固定傷害 400~1000。 */
+  mo_extremityfist: {
+    id: 'mo_extremityfist', name: '阿修羅霸凰拳 Asura Strike', maxLv: 5,
+    type: 'passive', passiveStat: 'extremityFist', element: 'neutral',
+    spCost: [0], cooldown: [0],
+    requires: { skillId: 'mo_fingeroffensive', level: 3 },
+    mult: [8, 8, 8, 8, 8],
+    procChance: [20, 20, 20, 20, 20], spiritCost: 5,
+    spScale: 100, flatBonus: [400, 550, 700, 850, 1000],
+    desc: '被動技能。必須在爆氣狀態，猛龍誇強觸發後有 20% 機率接上：'
+        + '消耗 5 顆氣球體與**全部 SP**，造成無視迴避與防禦的巨大傷害'
+        + '（ATK 倍率 800% ＋ 消耗SP÷100，另加 400~1000 點固定傷害），放完解除爆氣狀態。'
+  },
+  mo_bodyrelocation: {
+    id: 'mo_bodyrelocation', name: '弓身彈影 Body Relocation', maxLv: 1,
+    type: 'passive', passiveStat: 'bodyRelocation',
+    spCost: [0], cooldown: [0],
+    requires: { skillId: 'mo_extremityfist', level: 3 },
+    mult: [25],
+    desc: '被動技能。生怪速度 +25%。（官方是瞬間移動，本作沒有座標，'
+        + '比照騎士的騎乘術改成生怪加速）'
+  },
+  /* 發勁：官方 maxLv 0（未開放）。使用者指定轉職自動獲得、做成普攻觸發。
+     自傷 200 HP **永遠留 1 HP**，跟聖十字審判同一套保險。 */
+  mo_balkyoung: {
+    id: 'mo_balkyoung', name: '發勁 Ki Explosion', maxLv: 1,
+    type: 'passive', passiveStat: 'balkyoung', element: 'neutral', autoGrant: true,
+    spCost: [0], cooldown: [0],
+    mult: [4], procChance: [20], hpCost: [200],
+    stunChance: [50], stunSec: [1], internalCooldown: [10],
+    desc: '被動技能，轉職時自動獲得。普通攻擊有 20% 機率發動（內部冷卻 10 秒）：消耗 200 HP，'
+        + '對目標造成 ATK 400% 傷害，並對全體有 50% 機率暈眩 1 秒。'
+        + 'HP 低於 25% 時自動不放，而且自傷永遠留 1 HP。'
+  },
+  /* 振氣注入：官方 maxLv 0，效果是把自己的 1 顆氣球體給隊友。
+     本作**還沒有隊伍系統**，所以判定寫得出來、但永遠找不到接收者——
+     跟十字軍的犧牲、流氓的流氓天國是同一批，等隊友模式才會亮。 */
+  mo_kitranslation: {
+    id: 'mo_kitranslation', name: '振氣注入 Ki Translation', maxLv: 1,
+    type: 'passive', passiveStat: 'kiTranslation',
+    spCost: [0], cooldown: [0], mult: [1],
+    internalCooldown: [5],
+    desc: '被動技能。氣球體滿 5 顆時，隨機分 1 顆給隊友（內部冷卻 5 秒）。'
+        + '**本作目前沒有隊伍系統，所以這個技能不會有任何作用**，等隊友模式開放才會生效。'
+  },
+
+  /* ================= 賢者 SA_（#71）=================
+
+     官方 22 個技能**全部做出來**，連五個 maxLv 0 的都在。
+
+     最大的一件事：**本作完全沒有「詠唱」這個概念**（#55 已經把施法時間整批魔改成冷卻秒數），
+     而官方賢者有四個技能建立在詠唱上——取消施法、自由施法、魔法懲罰、念咒拆除。
+     使用者 2026-08-10 指定的重新定位寫在各技能的註解裡。
+
+     ---- 資源 ----
+     四種靈礦石（火 boody_red／水 crystal_blue／風 wind_of_verdure／地 yellow_live）
+     各有 7~13 種怪會掉；藍／黃魔力礦石也各有 11~12 種。
+     **四種靈碎片（scarlet_pts 等）本作沒有任何怪會掉、商店也沒賣**，
+     所以屬性附加做成「碎片優先、沒有就吃礦石」——不然那四招永遠放不出來。
+
+     ---- 官方對照 ----
+       SA_ADVANCEDBOOK   進化之書       → sa_advancedbook
+       SA_DRAGONOLOGY    龍知識         → sa_dragonology
+       SA_FLAMELAUNCHER  火屬性附加     → sa_flamelauncher（水／風／地各一）
+       SA_VOLCANO        火元素領域     → sa_volcano（水／風／地各一，互斥）
+       SA_CASTCANCEL     取消施法       → sa_castcancel（無詠唱 → 技能 SP 消耗）
+       SA_FREECAST       自由施法       → sa_freecast（無詠唱 → 自動念咒機率＋攻速）
+       SA_AUTOSPELL      自動念咒       → sa_autospell（自選一個魔法，獨立冷卻）
+       SA_MAGICROD       魔法懲罰       → sa_magicrod（無詠唱時機 → 受怪物技能攻擊時免傷）
+       SA_SPELLBREAKER   念咒拆除       → sa_spellbreaker（無詠唱 → 普攻觸發的固定比例傷害）
+       SA_DISPELL        魔法效果解除   → sa_dispell（`mon.mbuff` 就是現成的對象）
+       SA_ABRACADABRA    隨機技能       → sa_abracadabra
+       SA_CREATECON      肯貝特製作     → sa_createcon（官方 maxLv 0；轉職獲得，開啟武器附魔面板）
+       SA_ELEMENT*       四個元素更換   → sa_element*（官方 maxLv 0；轉職獲得，面板選一種屬性） */
+
+  sa_advancedbook: {
+    id: 'sa_advancedbook', name: '進化之書 Advanced Book', maxLv: 10,
+    type: 'passive', passiveStat: 'advancedBook', requiresWeapon: 'book',
+    spCost: [0], cooldown: [0],
+    mult: [3, 6, 9, 12, 15, 18, 21, 24, 27, 30],
+    aspdPct: [0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5],
+    desc: '被動技能。以書本攻擊時 ATK +3~30、攻速 +0.5%~5%。'
+  },
+  sa_dragonology: {
+    id: 'sa_dragonology', name: '龍知識 Dragonology', maxLv: 5,
+    type: 'passive', passiveStat: 'dragonology',
+    spCost: [0], cooldown: [0],
+    requires: { skillId: 'sa_advancedbook', level: 9 },
+    mult: [4, 8, 12, 16, 20],
+    matkPct: [2, 4, 6, 8, 10], intBonus: [1, 1, 2, 2, 3],
+    desc: '被動技能。對龍族的物理傷害 +4%~20%、魔法傷害 +2%~10%，'
+        + '受到龍族的傷害 −4%~20%，INT +1~3。'
+  },
+
+  /* 屬性附加 ×4。官方消耗對應的靈碎片×1，武器變該屬性並增加該屬性魔法傷害，10~30 分鐘。
+     使用者 2026-08-10 指定：**照官方消耗，但礦石也能用，持續時間更長**（20~60 分鐘）。
+     碎片本作打不到，所以實務上吃的是礦石——那四種礦石各有 7~13 種怪會掉。 */
+  sa_flamelauncher: {
+    id: 'sa_flamelauncher', name: '火屬性附加 Flame Launcher', maxLv: 5,
+    type: 'buff_elementweapon', element: 'fire',
+    spCost: [40, 40, 40, 40, 40], cooldown: [3, 3, 3, 3, 3],
+    requires: { skillId: 'sa_advancedbook', level: 5 },
+    mult: [1, 2, 3, 4, 5],
+    duration: [1200, 1800, 2400, 3000, 3600],
+    costItems: ['scarlet_pts', 'boody_red'],
+    desc: '消耗火靈碎片或火靈礦石×1，武器變成火屬性並使火屬性傷害 +1%~5%，持續 20~60 分鐘。'
+  },
+  sa_frostweapon: {
+    id: 'sa_frostweapon', name: '水屬性附加 Frost Weapon', maxLv: 5,
+    type: 'buff_elementweapon', element: 'water',
+    spCost: [40, 40, 40, 40, 40], cooldown: [3, 3, 3, 3, 3],
+    requires: { skillId: 'sa_advancedbook', level: 5 },
+    mult: [1, 2, 3, 4, 5],
+    duration: [1200, 1800, 2400, 3000, 3600],
+    costItems: ['indigo_pts', 'crystal_blue'],
+    desc: '消耗水靈碎片或水靈礦石×1，武器變成水屬性並使水屬性傷害 +1%~5%，持續 20~60 分鐘。'
+  },
+  sa_lightningloader: {
+    id: 'sa_lightningloader', name: '風屬性附加 Lightning Loader', maxLv: 5,
+    type: 'buff_elementweapon', element: 'wind',
+    spCost: [40, 40, 40, 40, 40], cooldown: [3, 3, 3, 3, 3],
+    requires: { skillId: 'sa_advancedbook', level: 5 },
+    mult: [1, 2, 3, 4, 5],
+    duration: [1200, 1800, 2400, 3000, 3600],
+    costItems: ['yellow_wish_pts', 'wind_of_verdure'],
+    desc: '消耗風靈碎片或風靈礦石×1，武器變成風屬性並使風屬性傷害 +1%~5%，持續 20~60 分鐘。'
+  },
+  sa_seismicweapon: {
+    id: 'sa_seismicweapon', name: '地屬性附加 Seismic Weapon', maxLv: 5,
+    type: 'buff_elementweapon', element: 'earth',
+    spCost: [40, 40, 40, 40, 40], cooldown: [3, 3, 3, 3, 3],
+    requires: { skillId: 'sa_advancedbook', level: 5 },
+    mult: [1, 2, 3, 4, 5],
+    duration: [1200, 1800, 2400, 3000, 3600],
+    costItems: ['lime_green_pts', 'yellow_live'],
+    desc: '消耗地靈碎片或地靈礦石×1，武器變成地屬性並使地屬性傷害 +1%~5%，持續 20~60 分鐘。'
+  },
+
+  /* 元素領域 ×4。官方是設在地上的 7×7 領域，本作沒有座標 → **做成自身領域 buff**
+     （消耗藍色魔力礦石×1，比照咖般塔音的礦石慣例）。
+
+     **同時只能開一個**（`exclusiveGroup: 'elefield'`），但官方本來就有「開著一個時
+     再開另一個不用礦石」這條，所以切換是免費的——這正好讓它變成一個「看怪物屬性換場」的技能。
+     地元素領域官方是「消除地面效果」，本作沒有地面效果可消，使用者指定改成第四個屬性領域。
+
+     **之後開放隊友模式時，這四個要改成全隊加成**（官方就是範圍內所有角色都吃）。 */
+  sa_volcano: {
+    id: 'sa_volcano', name: '火元素領域 Volcano', maxLv: 5,
+    type: 'buff_elementfield', element: 'fire', exclusiveGroup: 'elefield',
+    spCost: [48, 46, 44, 42, 40], cooldown: [5, 5, 5, 5, 5],
+    requires: { skillId: 'sa_flamelauncher', level: 2 },
+    mult: [10, 14, 17, 19, 20],
+    atkFlat: [10, 15, 20, 25, 30],
+    duration: [60, 120, 180, 240, 300],
+    costItems: ['blue_gemstone'],
+    desc: '消耗藍色魔力礦石×1，開啟火元素領域 1~5 分鐘：火屬性傷害 +10%~20%、ATK 與 MATK +10~30。'
+        + '（同時只能開一個元素領域，但從別的領域切換過來不用再花礦石）'
+  },
+  sa_deluge: {
+    id: 'sa_deluge', name: '水元素領域 Deluge', maxLv: 5,
+    type: 'buff_elementfield', element: 'water', exclusiveGroup: 'elefield',
+    spCost: [48, 46, 44, 42, 40], cooldown: [5, 5, 5, 5, 5],
+    requires: { skillId: 'sa_frostweapon', level: 2 },
+    mult: [10, 14, 17, 19, 20],
+    maxHpPct: [5, 9, 12, 14, 15],
+    duration: [60, 120, 180, 240, 300],
+    costItems: ['blue_gemstone'],
+    desc: '消耗藍色魔力礦石×1，開啟水元素領域 1~5 分鐘：水屬性傷害 +10%~20%、最大HP +5%~15%。'
+        + '（同時只能開一個元素領域，但從別的領域切換過來不用再花礦石）'
+  },
+  sa_violentgale: {
+    id: 'sa_violentgale', name: '風元素領域 Violent Gale', maxLv: 5,
+    type: 'buff_elementfield', element: 'wind', exclusiveGroup: 'elefield',
+    spCost: [48, 46, 44, 42, 40], cooldown: [5, 5, 5, 5, 5],
+    requires: { skillId: 'sa_lightningloader', level: 2 },
+    mult: [10, 14, 17, 19, 20],
+    fleeFlat: [3, 6, 9, 12, 15],
+    duration: [60, 120, 180, 240, 300],
+    costItems: ['blue_gemstone'],
+    desc: '消耗藍色魔力礦石×1，開啟風元素領域 1~5 分鐘：風屬性傷害 +10%~20%、迴避 +3~15。'
+        + '（同時只能開一個元素領域，但從別的領域切換過來不用再花礦石）'
+  },
+  sa_landprotector: {
+    id: 'sa_landprotector', name: '地元素領域 Land Protector', maxLv: 5,
+    type: 'buff_elementfield', element: 'earth', exclusiveGroup: 'elefield',
+    spCost: [66, 62, 58, 54, 50], cooldown: [5, 5, 5, 5, 5],
+    requires: { skillId: 'sa_seismicweapon', level: 2 },
+    mult: [10, 14, 17, 19, 20],
+    defFlat: [10, 15, 20, 25, 30],
+    duration: [120, 165, 210, 255, 300],
+    costItems: ['blue_gemstone'],
+    desc: '消耗藍色魔力礦石×1，開啟地元素領域 2~5 分鐘：地屬性傷害 +10%~20%、DEF +10~30。'
+        + '（官方是「消除地面效果」，本作沒有地面效果可消，改成第四個屬性領域）'
+  },
+
+  /* 取消施法：官方是「取消詠唱中的技能並退還 10~90% SP」。無詠唱 →
+     使用者指定改成被動的技能 SP 消耗折扣，併進高階祭司「魔力減免」那個既有的桶。
+     數字沒有照官方的 −10~90%——那會讓賢者的技能幾乎免費。 */
+  sa_castcancel: {
+    id: 'sa_castcancel', name: '取消施法 Cast Cancel', maxLv: 5,
+    type: 'passive', passiveStat: 'skillSpCostReduce',
+    spCost: [0], cooldown: [0],
+    requires: { skillId: 'sa_advancedbook', level: 2 },
+    mult: [5, 10, 15, 20, 25],
+    desc: '被動技能。技能 SP 消耗 −5%~25%。（官方是取消詠唱並退還 SP，本作沒有詠唱）'
+  },
+  sa_freecast: {
+    id: 'sa_freecast', name: '自由施法 Free Cast', maxLv: 10,
+    type: 'passive', passiveStat: 'freeCast',
+    spCost: [0], cooldown: [0],
+    requires: { skillId: 'sa_castcancel', level: 1 },
+    mult: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    aspdPct: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    desc: '被動技能。自動念咒的觸發機率 +1%~10%、普攻攻速 +1%~10%。'
+        + '（官方是「詠唱中仍可移動與攻擊」，本作沒有詠唱）'
+  },
+  /* 自動念咒：官方是主動 buff，選一個已學魔法，普攻機率自動施放，
+     **發動等級上限是此技能等級的一半**（官方規則，照做）。
+     使用者指定改成被動＋**獨立冷卻 3 秒，不吃技能本身的冷卻**——
+     不然一個 20 秒冷卻的魔法會讓這個被動幾乎不動。
+     挑哪一個魔法存在 `state.sageAutoSpellId`，UI 照抄襲那個下拉選單再做一個。 */
+  sa_autospell: {
+    id: 'sa_autospell', name: '自動念咒 Auto Spell', maxLv: 10,
+    type: 'passive', passiveStat: 'sageAutoSpell',
+    spCost: [0], cooldown: [0],
+    requires: { skillId: 'sa_freecast', level: 4 },
+    mult: [2, 4, 6, 8, 10, 12, 14, 16, 18, 20],
+    spCostPct: 67, internalCooldown: [3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
+    desc: '被動技能。自選一個已學會的魔法，普通攻擊有 2%~20% 機率自動施放'
+        + '（獨立冷卻 3 秒，不受該魔法本身的冷卻影響）。SP 只花原本的 2/3，'
+        + '發動等級上限是本技能等級的一半。'
+  },
+  /* 魔法懲罰：官方是「在被單體魔法擊中前一刻施展，擋下傷害並吸 SP」。
+     本作沒有詠唱、也沒有「擊中前一刻」這個時機，但**怪物真的會放技能**（#45），
+     所以使用者指定改成：受怪物技能攻擊時機率完全免傷並回 SP。 */
+  sa_magicrod: {
+    id: 'sa_magicrod', name: '魔法懲罰 Magic Rod', maxLv: 5,
+    type: 'passive', passiveStat: 'magicRod',
+    spCost: [0], cooldown: [0],
+    requires: { skillId: 'sa_advancedbook', level: 4 },
+    mult: [5, 8, 12, 16, 20],
+    spGain: [30, 30, 30, 30, 30], internalCooldown: [10, 9, 8, 6, 5],
+    desc: '被動技能。受到怪物技能攻擊時有 5%~20% 機率完全免除該次傷害並回復 30 SP'
+        + '（內部冷卻 10→5 秒）。'
+  },
+  /* 念咒拆除：官方是打斷詠唱、吸 SP、造成目標最大 HP 2% 的傷害。
+     無詠唱可打斷 → 只留「最大 HP 2%」那半，改成普攻觸發，再照使用者指定補上暈眩。
+     **對首領階級無效**是官方就有的限制，照抄。 */
+  sa_spellbreaker: {
+    id: 'sa_spellbreaker', name: '念咒拆除 Spell Breaker', maxLv: 5,
+    type: 'passive', passiveStat: 'spellBreaker',
+    spCost: [0], cooldown: [0],
+    requires: { skillId: 'sa_magicrod', level: 1 },
+    mult: [5, 8, 12, 16, 20],
+    hpPct: 2, spGain: [10, 20, 30, 40, 50], stunSec: [1, 1, 1, 1, 1],
+    internalCooldown: [10, 9, 8, 6, 5],
+    desc: '被動技能。普通攻擊有 5%~20% 機率造成目標最大 HP 2% 的傷害、暈眩 1 秒並回復 10~50 SP'
+        + '（內部冷卻 10→5 秒）。對首領階級的目標**不造成傷害**（官方規則），暈眩照常判定。'
+  },
+  /* 魔法效果解除：官方是主動技，消耗黃色魔力礦石×1，機率解除目標身上的強化效果。
+     本作 #36 之後怪物真的會給自己上 buff（`mon.mbuff`），所以這一招有實際對象。
+     使用者指定改成輔助型被動：普攻 20% 觸發，**怪身上沒有 buff 就不觸發也不消耗礦石**。 */
+  sa_dispell: {
+    id: 'sa_dispell', name: '魔法效果解除 Dispell', maxLv: 5,
+    type: 'passive', passiveStat: 'dispellProc',
+    spCost: [0], cooldown: [0],
+    requires: { skillId: 'sa_spellbreaker', level: 3 },
+    mult: [60, 70, 80, 90, 100],
+    procChance: [20, 20, 20, 20, 20], internalCooldown: [10, 10, 10, 10, 10],
+    costItems: ['yellow_gemstone'], costQty: 1,
+    desc: '被動技能。普通攻擊有 20% 機率發動（內部冷卻 10 秒）：消耗黃色魔力礦石×1，'
+        + '以 60%~100% 機率解除目標身上的所有強化效果。目標身上沒有強化效果時不會發動，也不會消耗礦石。'
+  },
+  /* 隨機技能：官方是消耗黃色魔力礦石×2 隨機發動一個技能。
+     使用者指定池子限定**攻擊技能**、等級依本技能等級但不超過該技能自己的上限。
+     技能池的查詢跟流氓的抄襲共用 `PLAGIARISM_ATTACK_TYPES`。 */
+  sa_abracadabra: {
+    id: 'sa_abracadabra', name: '隨機技能 Abracadabra', maxLv: 10,
+    type: 'passive', passiveStat: 'abracadabra',
+    spCost: [0], cooldown: [0],
+    requires: { skillId: 'sa_autospell', level: 5 },
+    mult: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    procChance: [20, 20, 20, 20, 20, 20, 20, 20, 20, 20],
+    internalCooldown: [10, 10, 10, 10, 10, 10, 10, 10, 10, 10],
+    costItems: ['yellow_gemstone'], costQty: 2,
+    desc: '被動技能。普通攻擊有 20% 機率發動（內部冷卻 10 秒）：消耗黃色魔力礦石×2，'
+        + '隨機施放一個攻擊技能，等級＝本技能等級（不超過該技能自己的上限）。'
+  },
+  /* 肯貝特製作：官方 maxLv 0，做出可改變武器屬性 20 分鐘的道具。
+     使用者指定改成**轉職直接獲得**，並在自動戰鬥面板開一個「肯貝特武器附魔」——
+     選一種屬性就自動維持，消耗對應的靈礦石（背包 → 倉庫 → 付 1000z），每次 20 分鐘。 */
+  sa_createcon: {
+    id: 'sa_createcon', name: '肯貝特製作 Create Converter', maxLv: 1,
+    type: 'passive', passiveStat: 'elementConverter', autoGrant: true,
+    spCost: [0], cooldown: [0], mult: [1],
+    duration: [1200], goldFallback: 1000,
+    desc: '被動技能，轉職時自動獲得。自動戰鬥分頁多出「🔮 肯貝特武器附魔」，'
+        + '選一種屬性就會自動維持 20 分鐘的武器屬性。'
+        + '每次消耗對應的靈礦石×1（先找背包、再找倉庫，都沒有就付 1000 鋅幣）。'
+  },
+  /* 四個元素更換：官方 maxLv 0，消耗對應的肯貝特把目標變成該屬性。
+     使用者指定轉職直接獲得、面板上四選一（下拉選單），普攻 20% 觸發，
+     消耗所選屬性的靈礦石（背包 → 倉庫 → 付 1000z），敵人轉成該屬性 10 秒，**MVP 也吃**。
+     四個技能共用同一組設定，只有 element 不同；實際會觸發的是面板選的那一個。 */
+  sa_elementfire: {
+    id: 'sa_elementfire', name: '火屬性元素更換 Elemental Change Fire', maxLv: 1,
+    type: 'passive', passiveStat: 'elementChange', element: 'fire', autoGrant: true,
+    spCost: [0], cooldown: [0], mult: [20],
+    duration: [10], costItems: ['boody_red'], goldFallback: 1000,
+    internalCooldown: [10],
+    desc: '被動技能，轉職時自動獲得。在自動戰鬥分頁選定屬性後，普通攻擊有 20% 機率'
+        + '把目標變成火屬性 10 秒（內部冷卻 10 秒，首領階級也有效）。'
+        + '每次消耗火靈礦石×1（先找背包、再找倉庫，都沒有就付 1000 鋅幣）。'
+  },
+  sa_elementwater: {
+    id: 'sa_elementwater', name: '水屬性元素更換 Elemental Change Water', maxLv: 1,
+    type: 'passive', passiveStat: 'elementChange', element: 'water', autoGrant: true,
+    spCost: [0], cooldown: [0], mult: [20],
+    duration: [10], costItems: ['crystal_blue'], goldFallback: 1000,
+    internalCooldown: [10],
+    desc: '被動技能，轉職時自動獲得。在自動戰鬥分頁選定屬性後，普通攻擊有 20% 機率'
+        + '把目標變成水屬性 10 秒（內部冷卻 10 秒，首領階級也有效）。'
+        + '每次消耗水靈礦石×1（先找背包、再找倉庫，都沒有就付 1000 鋅幣）。'
+  },
+  sa_elementwind: {
+    id: 'sa_elementwind', name: '風屬性元素更換 Elemental Change Wind', maxLv: 1,
+    type: 'passive', passiveStat: 'elementChange', element: 'wind', autoGrant: true,
+    spCost: [0], cooldown: [0], mult: [20],
+    duration: [10], costItems: ['wind_of_verdure'], goldFallback: 1000,
+    internalCooldown: [10],
+    desc: '被動技能，轉職時自動獲得。在自動戰鬥分頁選定屬性後，普通攻擊有 20% 機率'
+        + '把目標變成風屬性 10 秒（內部冷卻 10 秒，首領階級也有效）。'
+        + '每次消耗風靈礦石×1（先找背包、再找倉庫，都沒有就付 1000 鋅幣）。'
+  },
+  sa_elementearth: {
+    id: 'sa_elementearth', name: '地屬性元素更換 Elemental Change Earth', maxLv: 1,
+    type: 'passive', passiveStat: 'elementChange', element: 'earth', autoGrant: true,
+    spCost: [0], cooldown: [0], mult: [20],
+    duration: [10], costItems: ['yellow_live'], goldFallback: 1000,
+    internalCooldown: [10],
+    desc: '被動技能，轉職時自動獲得。在自動戰鬥分頁選定屬性後，普通攻擊有 20% 機率'
+        + '把目標變成地屬性 10 秒（內部冷卻 10 秒，首領階級也有效）。'
+        + '每次消耗地靈礦石×1（先找背包、再找倉庫，都沒有就付 1000 鋅幣）。'
+  },
+
+  /* ================= 鍊金術士 AM_（#72）=================
+
+     官方 26 個技能，本作做 16 個。使用者 2026-08-10 指定刪掉 10 個：
+       菠色克投擲、寬廣配藥 1/2/3 —— 官方是「要跟其他職業組隊才拿得到」的特殊技
+       生命工學研究、生命體、培養、治癒生命體、火焰控制、攻擊力訓練
+         —— 六個都是餵養生命體實體的參數，本作的生命體不做成實體（見下）
+
+     ---- 最大的一個決定：召喚不做實體 ----
+     官方這職業有 12 條綁在「生命體」與「召喚物」上，而本作**玩家側召喚是 0 行**。
+     使用者指定改成**定時自動攻擊的場域效果**——形狀跟既有的火柱攻擊／十字驅魔一樣
+     （`state.activeFieldEffects`），不新增實體、不佔怪物欄位、不進命中判定：
+       生物調撥    5000z    每 3 秒 ATK 100~300% ＋自補 500 HP，持續 1 分鐘
+       生命體召喚  100000z  每 3 秒 ATK 1000~3000%，持續 30 分鐘
+     「養寵物」那一層換成**鋅幣**：生命體召喚一次 10 萬，而整條技能樹在做的事
+     就是把這個數字壓下來（見下面的折扣鏈）。
+
+     ---- 折扣鏈 ----
+       知識藥水 Lv1~10   所有鍊金術技能的鋅幣 −1~10%
+       配藥 Lv9          所有鍊金術技能的鋅幣 −30%
+       安息              生命體召喚 −20%
+       復活生命體        生命體召喚 −20%
+     四者相乘：生命體召喚從 100,000 壓到 40,320。
+
+     ---- 配藥是整個職業的鑰匙 ----
+     使用者指定的等級門檻，前四級同時也是其他技能的前置：
+       Lv1 火煙瓶 → 火煙瓶投擲　Lv2 鹽酸瓶 → 強酸攻擊
+       Lv3 植物瓶 → 氣泡蟲召喚／生物調撥　Lv4 護貝藥 → 化學保護 ×4
+       Lv5~8 依序解鎖火／水／地／風四種屬性抵抗藥水（本作原本是沒有任何效果的雜物）
+       Lv9 鋅幣消耗 −30%　Lv10 隊友也能用抵抗藥水（**等隊伍系統**）
+
+     ---- 官方對照 ----
+       AM_LEARNINGPOTION 知識藥水      → am_learningpotion
+       AM_PHARMACY       配藥          → am_pharmacy（被動化：等級＝解鎖表）
+       AM_AXEMASTERY     斧劍熟練度    → am_axemastery
+       AM_POTIONPITCHER  藥水投擲      → am_potionpitcher（被動化：吃消耗品時回復更多）
+       AM_DEMONSTRATION  火煙瓶投擲    → am_demonstration
+       AM_ACIDTERROR     強酸攻擊      → am_acidterror（唯一保留成主動的攻擊技）
+       AM_SPHEREMINE     氣泡蟲召喚    → am_spheremine（隨機 1~3 隻的固定傷害）
+       AM_CANNIBALIZE    生物調撥      → am_cannibalize
+       AM_CP_*           化學保護 ×4   → am_cp_helm / shield / armor / weapon
+       AM_BIOETHICS      生命倫理      → am_bioethics（官方 maxLv 0；轉職獲得）
+       AM_CALLHOMUN      生命體召喚    → am_callhomun
+       AM_REST           安息          → am_rest（被動化：折扣）
+       AM_RESURRECTHOMUN 復活生命體    → am_resurrecthomun（被動化：折扣） */
+
+  am_learningpotion: {
+    id: 'am_learningpotion', name: '知識藥水 Learning Potion', maxLv: 10,
+    type: 'passive', passiveStat: 'learningPotion',
+    spCost: [0], cooldown: [0],
+    mult: [5, 10, 15, 20, 25, 30, 35, 40, 45, 50],
+    zenyCut: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    desc: '被動技能。藥水的 HP 回復效果 +5%~50%，鍊金術技能的鋅幣消耗 −1%~10%。'
+        + '（官方第二欄是製藥成功率，本作沒有製藥失敗，改成費用折扣）'
+  },
+  /* 配藥：官方是主動的製作技能。本作沒有「拿著說明書做藥」這條線，
+     使用者指定改成被動，**等級本身就是一張解鎖表**——
+     前四級是其他技能的前置，5~8 級解鎖四種屬性抵抗藥水，9 級給折扣。 */
+  am_pharmacy: {
+    id: 'am_pharmacy', name: '配藥 Pharmacy', maxLv: 10,
+    type: 'passive', passiveStat: 'pharmacy',
+    spCost: [0], cooldown: [0],
+    mult: [0, 0, 0, 0, 0, 0, 0, 0, 30, 30],
+    resistPotionLv: { 5: 'resist_fire', 6: 'resist_water', 7: 'resist_earth', 8: 'resist_wind' },
+    desc: '被動技能。等級決定你能用什麼：\n'
+        + 'Lv1 火煙瓶（火煙瓶投擲）／Lv2 鹽酸瓶（強酸攻擊）／Lv3 植物瓶（氣泡蟲召喚・生物調撥）／Lv4 護貝藥（化學保護）\n'
+        + 'Lv5 烈火抵抗藥水／Lv6 寒冰抵抗藥水／Lv7 大地抵抗藥水／Lv8 暴風抵抗藥水（各 −20% 該屬性傷害 30 分鐘）\n'
+        + 'Lv9 鍊金術技能的鋅幣消耗 −30%／Lv10 隊友也能使用四屬抵抗藥水（本作尚無隊伍系統）'
+  },
+  am_axemastery: {
+    id: 'am_axemastery', name: '斧頭和單手劍使用熟練度 Axe Mastery', maxLv: 10,
+    type: 'passive', passiveStat: 'atkFlat', requiresWeapon: 'axesword',
+    spCost: [0], cooldown: [0],
+    mult: [3, 6, 9, 12, 15, 18, 21, 24, 27, 30],
+    desc: '被動技能。以斧頭或單手劍攻擊時 ATK +3~30。'
+  },
+  /* 藥水投擲：官方是「對目標投擲藥水」的主動技，本作沒有投擲對象（也沒有隊友），
+     所以改成「自己吃消耗品時回復更多」。之後開放隊友系統時，
+     使用消耗品要讓隊友也獲得 30% 的回復量（使用者 2026-08-10 備註）。 */
+  am_potionpitcher: {
+    id: 'am_potionpitcher', name: '藥水投擲 Potion Pitcher', maxLv: 5,
+    type: 'passive', passiveStat: 'potionPitcher',
+    spCost: [0], cooldown: [0],
+    requires: { skillId: 'am_pharmacy', level: 3 },
+    mult: [10, 20, 30, 40, 50],
+    desc: '被動技能。使用消耗品時的回復量變成 110%~150%。'
+        + '（開放隊伍系統後，使用消耗品時隊友也會獲得 30% 的回復量）'
+  },
+  am_demonstration: {
+    id: 'am_demonstration', name: '火煙瓶投擲 Demonstration', maxLv: 5,
+    type: 'field_phys_aoe', element: 'fire',
+    spCost: [10, 10, 10, 10, 10], cooldown: [5, 5, 5, 5, 5],
+    requires: { skillId: 'am_pharmacy', level: 1 },
+    zenyCost: [10000, 10000, 10000, 10000, 10000], alchemyCost: true,
+    mult: [0.6, 1.2, 1.8, 2.4, 3.0],
+    tickSec: 0.5, duration: [40, 45, 50, 55, 60],
+    desc: '消耗 10,000 鋅幣布下火場：對場上全體每 0.5 秒造成 ATK 60%~300% 的火屬性傷害，'
+        + '持續 40~60 秒。（官方是消耗火煙瓶×1，本作改成鋅幣）'
+  },
+  am_acidterror: {
+    id: 'am_acidterror', name: '強酸攻擊 Acid Terror', maxLv: 5,
+    type: 'damage', element: 'neutral',
+    spCost: [15, 15, 15, 15, 15], cooldown: [5, 5, 5, 5, 5],
+    requires: { skillId: 'am_pharmacy', level: 2 },
+    zenyCost: [10000, 10000, 10000, 10000, 10000], alchemyCost: true,
+    mult: [2, 4, 6, 8, 10],
+    inflict: { type: 'bleed', chance: [3, 6, 9, 12, 15] },
+    desc: '消耗 10,000 鋅幣，對目標造成 ATK 200%~1000% 的傷害，並有 3%~15% 機率使其出血。'
+        + '（官方是消耗鹽酸瓶×1，本作改成鋅幣；破壞鎧甲那半本作沒有裝備損壞，不做）'
+  },
+  am_spheremine: {
+    id: 'am_spheremine', name: '氣泡蟲召喚 Sphere Mine', maxLv: 5,
+    type: 'bomb_random', element: 'neutral',
+    spCost: [10, 10, 10, 10, 10], cooldown: [5, 5, 5, 5, 5],
+    requires: { skillId: 'am_pharmacy', level: 3 },
+    zenyCost: [5000, 5000, 5000, 5000, 5000], alchemyCost: true,
+    mult: [2400, 2800, 3200, 3600, 4000],
+    desc: '消耗 5,000 鋅幣，隨機挑場上 1~3 隻敵人引爆：每隻承受 2400~4000 點**無視防禦**的固定傷害。'
+        + '（官方是召喚會自爆的地雷，本作沒有召喚實體，只留自爆那一下）'
+  },
+  am_cannibalize: {
+    id: 'am_cannibalize', name: '生物調撥 Cannibalize', maxLv: 5,
+    type: 'alchemy_summon', element: 'neutral',
+    spCost: [20, 20, 20, 20, 20], cooldown: [5, 5, 5, 5, 5],
+    requires: { skillId: 'am_pharmacy', level: 3 },
+    zenyCost: [5000, 5000, 5000, 5000, 5000], alchemyCost: true,
+    mult: [1, 1.5, 2, 2.5, 3],
+    healFlat: 500, tickSec: 3, duration: [60, 60, 60, 60, 60],
+    desc: '消耗 5,000 鋅幣召出植物：每 3 秒對敵人造成 ATK 100%~300% 的傷害並為自己回復 500 HP，'
+        + '持續 1 分鐘。（官方是召喚會攻擊的植物怪，本作改成定時自動攻擊）'
+  },
+
+  /* 化學保護 ×4。官方是「使裝備不會被卸除或損壞」——
+     **本作裝備不會損壞，也沒有任何一隻怪的技能會卸除玩家裝備**，所以那個效果沒有對象。
+     使用者 2026-08-10 指定四個各換一種實際的防護效果，全部消耗 5,000 鋅幣。 */
+  am_cp_helm: {
+    id: 'am_cp_helm', name: '化學頭盔保護 Chemical Protection Helm', maxLv: 5,
+    type: 'buff_chemical',
+    spCost: [20, 20, 20, 20, 20], cooldown: [5, 5, 5, 5, 5],
+    requires: { skillId: 'am_pharmacy', level: 4 },
+    zenyCost: [5000, 5000, 5000, 5000, 5000], alchemyCost: true,
+    mult: [100, 100, 100, 100, 100], chemKind: 'def',
+    duration: [120, 240, 360, 480, 600],
+    desc: '消耗 5,000 鋅幣，DEF +100，持續 2~10 分鐘。'
+  },
+  am_cp_shield: {
+    id: 'am_cp_shield', name: '化學盾牌保護 Chemical Protection Shield', maxLv: 5,
+    type: 'buff_chemical', requiresEquip: 'shield',
+    spCost: [25, 25, 25, 25, 25], cooldown: [5, 5, 5, 5, 5],
+    requires: { skillId: 'am_cp_helm', level: 3 },
+    zenyCost: [5000, 5000, 5000, 5000, 5000], alchemyCost: true,
+    mult: [20, 20, 20, 20, 20], chemKind: 'block', internalCooldown: [10, 10, 10, 10, 10],
+    duration: [120, 240, 360, 480, 600],
+    desc: '消耗 5,000 鋅幣，被攻擊時 20% 機率完全免除傷害（內部冷卻 10 秒），持續 2~10 分鐘。需裝備盾牌。'
+  },
+  am_cp_armor: {
+    id: 'am_cp_armor', name: '化學鎧甲保護 Chemical Protection Armor', maxLv: 5,
+    type: 'buff_chemical',
+    spCost: [25, 25, 25, 25, 25], cooldown: [5, 5, 5, 5, 5],
+    requires: { skillId: 'am_cp_shield', level: 3 },
+    zenyCost: [5000, 5000, 5000, 5000, 5000], alchemyCost: true,
+    mult: [10, 10, 10, 10, 10], chemKind: 'maxhp',
+    duration: [120, 240, 360, 480, 600],
+    desc: '消耗 5,000 鋅幣，最大HP +10%，持續 2~10 分鐘。'
+  },
+  am_cp_weapon: {
+    id: 'am_cp_weapon', name: '化學武器保護 Chemical Protection Weapon', maxLv: 5,
+    type: 'buff_chemical',
+    spCost: [30, 30, 30, 30, 30], cooldown: [5, 5, 5, 5, 5],
+    requires: { skillId: 'am_cp_armor', level: 3 },
+    zenyCost: [5000, 5000, 5000, 5000, 5000], alchemyCost: true,
+    mult: [20, 20, 20, 20, 20], chemKind: 'weaponatk',
+    duration: [120, 240, 360, 480, 600],
+    desc: '消耗 5,000 鋅幣，武器 ATK +20%，持續 2~10 分鐘。'
+  },
+
+  /* 生命倫理：官方 maxLv 0，敘述直說「沒有任何效能，只是技能樹的起頭」。
+     使用者指定轉職自動獲得——它的作用就是當生命體召喚的前置，本身照官方不給任何效果。 */
+  am_bioethics: {
+    id: 'am_bioethics', name: '生命倫理 Bioethics', maxLv: 1,
+    type: 'passive', passiveStat: 'bioethics', autoGrant: true,
+    spCost: [0], cooldown: [0], mult: [0],
+    desc: '被動技能，轉職時自動獲得。本身沒有任何效果，是生命體召喚的前置。'
+        + '（官方原文：「對於處理珍貴生命的人來說，再怎麼強調生命倫理也不為過。」）'
+  },
+  am_callhomun: {
+    id: 'am_callhomun', name: '生命體召喚 Call Homunculus', maxLv: 5,
+    type: 'alchemy_summon', element: 'neutral',
+    spCost: [10, 10, 10, 10, 10], cooldown: [10, 10, 10, 10, 10],
+    requires: { skillId: 'am_bioethics', level: 1 },
+    zenyCost: [100000, 100000, 100000, 100000, 100000], alchemyCost: true, homunCost: true,
+    mult: [10, 15, 20, 25, 30],
+    tickSec: 3, duration: [1800, 1800, 1800, 1800, 1800],
+    desc: '消耗 100,000 鋅幣召喚生命體：每 3 秒對敵人造成 ATK 1000%~3000% 的傷害，持續 30 分鐘。'
+        + '費用吃得到知識藥水、配藥、安息與復活生命體的折扣（全滿時 40,320 鋅幣）。'
+  },
+  am_rest: {
+    id: 'am_rest', name: '安息 Rest', maxLv: 1,
+    type: 'passive', passiveStat: 'homunDiscount',
+    spCost: [0], cooldown: [0],
+    requires: { skillId: 'am_bioethics', level: 1 },
+    mult: [20],
+    desc: '被動技能。生命體召喚的鋅幣消耗 −20%。（官方是把生命體收回休息，本作的生命體不是實體）'
+  },
+  am_resurrecthomun: {
+    id: 'am_resurrecthomun', name: '復活生命體 Resurrect Homunculus', maxLv: 1,
+    type: 'passive', passiveStat: 'homunDiscount',
+    spCost: [0], cooldown: [0],
+    requires: { skillId: 'am_rest', level: 1 },
+    mult: [20],
+    desc: '被動技能。生命體召喚的鋅幣消耗 −20%。（官方是復活戰死的生命體，本作的生命體不是實體）'
   },
 };

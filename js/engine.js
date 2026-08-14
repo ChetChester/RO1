@@ -180,6 +180,10 @@ function createCharacter(name, statAlloc, gender) {
     hp: 1, sp: 1, maxHp: 1, maxSp: 1,
     cooldowns: {},         // {skillId: msRemaining}
     buffs: [],             // [{type,mult,msRemaining}]
+    spirits: 0,            // 武僧的氣球體（#70）：跨 tick 的資源，不歸 recomputeDerived 管
+    sageAutoSpellId: null, // 賢者自動念咒挑的魔法（#71）
+    converterElement: null,// 肯貝特武器附魔選的屬性
+    elementChangePick: null,// 元素更換選的屬性
     autoSkill: true,
     autoSkillConfig: { skillId: null, mode: 'once', spThreshold: 30, skillId2: null, spThreshold2: 50, monsterCount2: 2 }, // skillId2=第二招, spThreshold2=SP%門檻, monsterCount2=怪物數門檻
     autoPotion: { enabled: true, primary: '', fallback: 'red_potion', hpThreshold: 50 },
@@ -481,14 +485,27 @@ function cardGrantedSkills() {
 function skillLv(skillId) {
   return Math.max(
     (state.learnedSkills && state.learnedSkills[skillId]) || 0,
-    (state.cardSkills && state.cardSkills[skillId]) || 0
+    (state.cardSkills && state.cardSkills[skillId]) || 0,
+    // 抄襲（#69）：抄來的那個技能能用到「抄襲的等級」與「該技能本身上限」的較小值
+    plagiarizedLv(skillId)
   );
+}
+/* 抄襲抄到的技能等級。分開一支是因為 skillLv() 被叫得非常兇，
+   而這裡要夾兩層上限（抄襲等級、技能本身的 maxLv），寫在原地會很難讀。 */
+function plagiarizedLv(skillId) {
+  if (!state || !state.plagiarismSkillId || state.plagiarismSkillId !== skillId) return 0;
+  const lv = state.plagiarismLv || 0;
+  if (!lv) return 0;
+  const sk = SKILLS[skillId];
+  return Math.min(lv, (sk && sk.maxLv) || lv);
 }
 /* 要施放時查技能定義：先找已學職業的技能表，找不到才看是不是卡片給的。
    （不能直接用 findSkillAnywhere，那會讓沒學過也沒卡片的技能一樣查得到。） */
 function findSkillForUse(skillId) {
   return findSkillById(skillId)
-    || ((state.cardSkills && state.cardSkills[skillId]) ? findSkillAnywhere(skillId) : null);
+    || ((state.cardSkills && state.cardSkills[skillId]) ? findSkillAnywhere(skillId) : null)
+    // 抄襲來的技能不在任何已學職業的技能表裡，要另外放行（#69）
+    || (plagiarizedLv(skillId) ? findSkillAnywhere(skillId) : null);
 }
 /* 現在真的能用的技能清單（已學職業的 + 卡片賦予的），同一個技能只出現一次。
    技能列、自動施放、自動輔助都走這裡，卡片給的技能才不會只有手動能用。 */
@@ -512,7 +529,42 @@ function usableSkillEntries() {
     seen.add(id);
     out.push({ sk, lv: state.cardSkills[id], fromCard: true });
   });
+  // 抄襲來的技能（#69）：不是本職也不是卡片給的，但技能列與自動施放都該看得到
+  const plagLv = plagiarizedLv(state.plagiarismSkillId);
+  if (plagLv && !seen.has(state.plagiarismSkillId)) {
+    const sk = findSkillAnywhere(state.plagiarismSkillId);
+    if (sk) out.push({ sk, lv: plagLv, fromCard: true, fromPlagiarism: true });
+  }
   return out;
+}
+
+/* ---------------- 抄襲：挑一個技能（#69）----------------
+   官方是「記住最後一個打到你的技能」，使用者 2026-08-10 改成自己挑。
+   可挑的範圍是**全技能庫裡的攻擊技能**，等級上限＝抄襲的等級。 */
+const PLAGIARISM_ATTACK_TYPES = ['damage', 'magic', 'damage_aoe', 'magic_aoe',
+  'damage_multi', 'damage_multihit', 'dot', 'poison_proc', 'stun_field', 'multi_dot_stun',
+  'field_aoe_magic', 'special_charge'];
+function plagiarismChoices() {
+  if (!state.plagiarismLv) return [];
+  return Object.keys(SKILLS)
+    .filter(id => PLAGIARISM_ATTACK_TYPES.includes(SKILLS[id].type))
+    // 已經是自己職業的技能就沒有抄的必要，抄了也只是佔一個名額
+    .filter(id => !findSkillById(id))
+    .map(id => SKILLS[id]);
+}
+function setPlagiarismSkill(skillId) {
+  if (!state.plagiarismLv) { logMsg('⚠️ 還沒學會抄襲。'); return false; }
+  if (!skillId) { state.plagiarismSkillId = null; saveGame(); return true; }
+  const sk = SKILLS[skillId];
+  if (!sk || !PLAGIARISM_ATTACK_TYPES.includes(sk.type)) {
+    logMsg('⚠️ 抄襲只能記住攻擊類技能。');
+    return false;
+  }
+  state.plagiarismSkillId = skillId;
+  recomputeDerived(false);
+  logMsg(`📖 抄襲記住了「${sk.name}」（可用到 Lv${plagiarizedLv(skillId)}）。`);
+  saveGame();
+  return true;
 }
 /* 被動技能的掃描來源：已學職業的技能表（含重複，維持原本的行為）
    ＋ 卡片賦予、但任何已學職業都沒有的技能。 */
@@ -897,6 +949,68 @@ function recomputeDerived(fullHeal) {
   state.cartBoostDurSec = 60;
   state.cartBoostCdSec = 10;
   // 野蠻凶砍是主動 buff（型別 'meltdown'），機率掛在 buff 上，這裡不需要常駐欄位
+  // 十字軍被動（#66）
+  state.defenderProcPct = 0;    // 光之盾：受擊觸發時免除的傷害 %
+  state.defenderProcCdSec = 5;  // 光之盾：內部冷卻（秒）
+  state.defenderAspdPct = 0;    // 光之盾：攻速 −N%（常駐，跟免傷是同一個技能的兩半）
+  state.shrinkStunChance = 0;   // 退縮：自動防禦擋下時的暈眩機率
+  state.shrinkStunSec = 1;
+  // 詩人／舞孃被動（#68）
+  state.aoeAilmentProcs = [];   // 冷笑話／驚聲尖叫／醜陋之舞：普攻觸發的全體異常
+  state.aoeMagicProcs = [];     // 不諧和音：普攻觸發的全體魔法
+  state.dualAilmentProcs = [];  // 陣痛之聲／眨眼之誘：普攻觸發的雙異常
+  state.songMaxSpPct = 0;       // 操控樂器／練習舞蹈：最大SP +N%
+  state.songAspdPct = 0;
+  state.songSpawnSpeedPct = 0;
+  // 流氓被動（#69）
+  state.stealCoinChance = 0;    // 偷錢：基礎機率
+  state.stealCoinDexMax = 0;    // DEX 99 時的額外機率
+  state.stealCoinLukMax = 0;    // LUK 99 時的額外機率
+  state.stealCoinPct = 10;      // 偷到的金額佔擊殺獎勵的比例
+  state.stealCoinCdSec = 5;
+  state.stripProcs = [];        // 卸除頭盔／盾牌／鎧甲／武器
+  state.raidProc = null;        // 潛擊
+  state.intimidateProc = null;  // 脅持
+  state.closeConfineProc = null;// 緊密的約束
+  state.plagiarismLv = 0;       // 抄襲：可使用的最高技能等級（0＝沒學）
+  /* 武僧被動（#70）。氣球體本身（state.spirits）**不在這裡歸零**——
+     那是跨 tick 的資源，跟冷卻時間戳同性質；這裡歸零的只有「技能給的設定值」。 */
+  state.spiritsMax = 0;         // 蓄氣：氣球體上限（＝技能等級）
+  state.spiritRefillSec = 5;    // 蓄氣：幾秒補 1 顆
+  state.absorbSpirits = null;   // 吸氣：普攻回 SP
+  state.explosionSpirits = null;// 爆氣：滿球自動啟動
+  state.bladeStop = null;       // 真劍百破道：開增傷視窗
+  state.tripleAttack = null;    // 六合拳：連段起點
+  state.chainCombo = null;      // 連環全身掌
+  state.comboFinish = null;     // 猛龍誇強
+  state.steelBody = null;       // 金剛不壞
+  state.investigate = null;     // 浸透勁
+  state.fingerOffensive = null; // 彈指神通
+  state.extremityFist = null;   // 阿修羅霸凰拳
+  state.balkyoung = null;       // 發勁
+  state.kiTranslation = null;   // 振氣注入（等隊伍系統）
+  state.monkRegen = null;       // 運氣調息：自然回復加成
+  // 賢者被動（#71）
+  state.dragonMatkPct = 0;      // 龍知識：對龍族的魔法傷害 +N%
+  state.freeCastAutoSpellPct = 0; // 自由施法：自動念咒機率 +N%
+  state.sageAutoSpell = null;   // 自動念咒
+  state.magicRod = null;        // 魔法懲罰
+  state.spellBreaker = null;    // 念咒拆除
+  state.dispellProc = null;     // 魔法效果解除
+  state.abracadabra = null;     // 隨機技能
+  state.elementConverter = null;// 肯貝特武器附魔（面板功能）
+  state.elementChanges = {};    // 元素更換：{ fire: {...}, water: {...}, … }
+  // 鍊金術士被動（#72）
+  state.pharmacyLv = 0;         // 配藥等級＝解鎖表（1 火煙瓶／2 鹽酸瓶／3 植物瓶／4 護貝藥／5~8 四屬抵抗藥水）
+  state._alchemyZenyMult = 1;   // 知識藥水＋配藥 Lv9：鍊金術技能的鋅幣倍率（相乘）
+  state._homunZenyMult = 1;     // 安息＋復活生命體：生命體召喚再乘一次
+  state.skillMaxHpFlat = 0;     // 信任：最大HP 固定值
+  /* 信任的聖屬性耐性、神祐之光的惡魔種族減傷：**不要另開消費點**。
+     卡片那兩桶（cardEleDmgReduce / cardRaceDmgReduce）已經有八個消費者了，
+     這裡先收進來，等卡片那邊建好表再合併進去（見下面的「技能來源的減傷併桶」）。 */
+  state._skillEleReduce = {};
+  state._skillRaceReduce = {};
+  state._skillRaceBonus = {};   // 龍知識的對龍族增傷（#71），併進 cardRaceDmgBonus
   // 雙持右手/左手傷害修正：未修練時的預設值（低於Lv1）
   state.rightHandPct = 50;
   state.leftHandPct = 30;
@@ -968,7 +1082,8 @@ function recomputeDerived(fullHeal) {
         case 'hpRegenMult': {
           state.hpRegenMult = (state.hpRegenMult || 1) * val;
           // 快速恢復：附加HP恢復道具效果加成
-          if (sk.itemEffectBonus) state.hpItemEffectBonusPct = Array.isArray(sk.itemEffectBonus) ? sk.itemEffectBonus[lv - 1] : sk.itemEffectBonus;
+          // 累加而不是覆蓋：#72 的知識藥水與藥水投擲寫的是同一個欄位
+          if (sk.itemEffectBonus) state.hpItemEffectBonusPct += Array.isArray(sk.itemEffectBonus) ? sk.itemEffectBonus[lv - 1] : sk.itemEffectBonus;
           break;
         }
         case 'hpMoveRegen': state.hpMoveRegen = true; break;
@@ -980,7 +1095,10 @@ function recomputeDerived(fullHeal) {
           break;
         }
         /* 騎乘術：技能敘述寫的是「生怪速度+25%」，那條在 spawnMonster() 裡看 hasRiding
-           判斷（補怪間隔 3000→2250ms、清場後 500→375ms），本來就有在作用。
+           判斷（補怪間隔 3000→2250ms、清場後 500→375ms）。
+           **這句以前是錯的**：spawnMonster() 實際上是直接查 `learnedSkills['riding']`，
+           hasRiding 寫了兩處、讀 0 處。#70 加武僧的弓身彈影時發現，
+           兩個消費點都改成讀這個旗標了。
            原本這裡還有一行 state.maxMonsters = Math.max(state.maxMonsters || 1, 1)，
            取大值跟 1 比永遠等於原值，是個從來沒生效過的空動作，已移除。
            沒有改成拉高同屏怪物數是刻意的：場上每一隻怪都會攻擊玩家（gameTick 的
@@ -1015,6 +1133,403 @@ function recomputeDerived(fullHeal) {
         // 雙劍挌擋：只有真的拿著雙手劍才算，所以武器條件在這裡就先判掉
         case 'parryingProc': {
           state.parryingChance = weaponReqMet(sk.requiresWeapon) ? val : 0;
+          break;
+        }
+        /* 詩人／舞孃的普攻觸發被動（#68）。
+
+           官方這幾個都是主動技（冷笑話、驚聲尖叫、不諧和音、醜陋之舞是範圍弱化／演奏技，
+           陣痛之聲與眨眼之誘是 maxLv 0 的未開放技能）。使用者 2026-08-09 指定
+           全部改成**普通攻擊觸發的被動**，各自帶內部冷卻。
+           結構照十字刺客的 onAttackPhysAoeProc：一個技能一筆，各擲各的。 */
+        case 'onAttackAoeAilment': {
+          state.aoeAilmentProcs.push({
+            id: sk.id, name: sk.name,
+            chance: Array.isArray(sk.procChance) ? sk.procChance[lv - 1] : sk.procChance,
+            ailment: sk.ailment,
+            sec: Array.isArray(sk.ailSec) ? sk.ailSec[lv - 1] : (sk.ailSec || 1),
+            cdSec: Array.isArray(sk.internalCooldown) ? sk.internalCooldown[lv - 1] : (sk.internalCooldown || 5),
+          });
+          break;
+        }
+        case 'onAttackAoeMagic': {
+          state.aoeMagicProcs.push({
+            id: sk.id, name: sk.name,
+            chance: Array.isArray(sk.procChance) ? sk.procChance[lv - 1] : sk.procChance,
+            mult: val,
+            element: sk.element || 'neutral',
+            cdSec: Array.isArray(sk.internalCooldown) ? sk.internalCooldown[lv - 1] : (sk.internalCooldown || 5),
+          });
+          break;
+        }
+        // 陣痛之聲／眨眼之誘：打單體，兩種異常各擲一次（可能同時中）
+        case 'onAttackDualAilment': {
+          state.dualAilmentProcs.push({
+            id: sk.id, name: sk.name,
+            chance: Array.isArray(sk.procChance) ? sk.procChance[lv - 1] : sk.procChance,
+            ailments: sk.ailments || [],
+            cdSec: Array.isArray(sk.internalCooldown) ? sk.internalCooldown[lv - 1] : (sk.internalCooldown || 0),
+          });
+          break;
+        }
+        /* 操控樂器／練習舞蹈：官方是「最大SP +N%、該武器 ATK +N、攻速 +N%」，
+           舞孃那個第三欄是暴擊而不是攻速。移速照既定慣例改成生怪加速。 */
+        case 'songMastery': {
+          state.songMaxSpPct += val;
+          if (weaponReqMet(sk.requiresWeapon)) {
+            const a = Array.isArray(sk.atkFlat) ? sk.atkFlat[lv - 1] : (sk.atkFlat || 0);
+            if (a) { state.atk += Math.round(a); state._atkMastery += Math.round(a); }
+            const asp = Array.isArray(sk.aspdPct) ? sk.aspdPct[lv - 1] : (sk.aspdPct || 0);
+            if (asp) state.songAspdPct += asp;
+            const cr = Array.isArray(sk.critFlat) ? sk.critFlat[lv - 1] : (sk.critFlat || 0);
+            if (cr) state.critRate = Math.min(100, state.critRate + cr);
+          }
+          const sp = Array.isArray(sk.spawnSpeedPct) ? sk.spawnSpeedPct[lv - 1] : (sk.spawnSpeedPct || 0);
+          if (sp) state.songSpawnSpeedPct += sp;
+          break;
+        }
+        /* 流氓的被動（#69）。九個官方主動技全部改成普攻觸發，判定寫在 tryRogueProcs()，
+           這裡只負責把數字放上去。 */
+        case 'snatcher': {          // 強奪：併進既有的偷竊機率，不另開欄位
+          state.stealChance += val;
+          break;
+        }
+        case 'stealCoin': {
+          state.stealCoinChance += val;
+          state.stealCoinDexMax = Array.isArray(sk.dexMaxBonus) ? sk.dexMaxBonus[lv - 1] : (sk.dexMaxBonus || 0);
+          state.stealCoinLukMax = Array.isArray(sk.lukMaxBonus) ? sk.lukMaxBonus[lv - 1] : (sk.lukMaxBonus || 0);
+          state.stealCoinPct = sk.stealPct || 10;
+          state.stealCoinCdSec = Array.isArray(sk.internalCooldown) ? sk.internalCooldown[lv - 1] : (sk.internalCooldown || 5);
+          break;
+        }
+        case 'stripProc': {
+          state.stripProcs.push({
+            id: sk.id, name: sk.name, label: sk.stripLabel || '能力',
+            chance: val,
+            kind: sk.stripKind, mult: Array.isArray(sk.stripMult) ? sk.stripMult[lv - 1] : sk.stripMult,
+            fallbackMult: sk.stripFallbackMult,
+            durSec: Array.isArray(sk.stripDuration) ? sk.stripDuration[lv - 1] : sk.stripDuration,
+            cdSec: Array.isArray(sk.internalCooldown) ? sk.internalCooldown[lv - 1] : (sk.internalCooldown || 5),
+          });
+          break;
+        }
+        case 'critPct': {           // 潛遁：官方是隱匿中的移速，本作改成暴擊率
+          state.critRate = Math.min(100, state.critRate + val);
+          break;
+        }
+        case 'raidProc': {
+          state.raidProc = {
+            name: sk.name, mult: val,
+            chance: Array.isArray(sk.procChance) ? sk.procChance[lv - 1] : sk.procChance,
+            ailChance: Array.isArray(sk.ailChance) ? sk.ailChance[lv - 1] : sk.ailChance,
+            dmgTakenPct: sk.dmgTakenPct || 30,
+            boostSec: sk.boostSec || 10,
+            cdSec: Array.isArray(sk.internalCooldown) ? sk.internalCooldown[lv - 1] : (sk.internalCooldown || 10),
+          };
+          break;
+        }
+        case 'intimidateProc': {
+          state.intimidateProc = {
+            name: sk.name, mult: val,
+            chance: Array.isArray(sk.procChance) ? sk.procChance[lv - 1] : sk.procChance,
+            cdSec: Array.isArray(sk.internalCooldown) ? sk.internalCooldown[lv - 1] : (sk.internalCooldown || 5),
+          };
+          break;
+        }
+        case 'closeConfineProc': {
+          state.closeConfineProc = {
+            name: sk.name,
+            chance: Array.isArray(sk.procChance) ? sk.procChance[lv - 1] : sk.procChance,
+            enemyFleeCut: Array.isArray(sk.enemyFleeCut) ? sk.enemyFleeCut[lv - 1] : sk.enemyFleeCut,
+            selfFlee: Array.isArray(sk.selfFlee) ? sk.selfFlee[lv - 1] : sk.selfFlee,
+            durSec: Array.isArray(sk.duration) ? sk.duration[lv - 1] : sk.duration,
+            cdSec: Array.isArray(sk.internalCooldown) ? sk.internalCooldown[lv - 1] : (sk.internalCooldown || 10),
+          };
+          break;
+        }
+        /* 抄襲：官方是「記住最後一個打到你的技能」。使用者 2026-08-10 改成
+           **自己挑一個攻擊技能**，等級上限就是抄襲的等級。
+           挑哪一個存在 `state.plagiarismSkillId`，這裡只記上限與攻速。 */
+        case 'plagiarism': {
+          state.plagiarismLv = lv;
+          const asp = Array.isArray(sk.aspdPct) ? sk.aspdPct[lv - 1] : (sk.aspdPct || 0);
+          if (asp) state.songAspdPct += asp;
+          break;
+        }
+        case 'shopDiscount': {      // 強制減價：併進既有的商人折扣
+          state.shopDiscountMult *= Math.max(0, 1 - val / 100);
+          break;
+        }
+        /* ---------------- 武僧的被動（#70）----------------
+           官方 17 個技能全做。使用者 2026-08-10 指定除了少數例外全部被動化，
+           判定分成三處：tickSpirits()（補球、爆氣、金剛不壞）、
+           tryMonkProcs()（普攻觸發）、tryMonkCombo()（連段串接）。
+           這裡一律只負責把數字放上去。 */
+        case 'callSpirits': {
+          state.spiritsMax = Math.max(state.spiritsMax, Math.round(val));
+          state.spiritRefillSec = sk.refillSec || 5;
+          /* 每顆氣球體 ATK +3。氣球體數量每 5 秒會變，而 recomputeDerived 每個 tick
+             都會重跑，所以這裡直接讀當下的顆數就會自動跟著加減。 */
+          const per = sk.atkPerSphere || 0;
+          const bonus = Math.round(per * Math.min(state.spirits || 0, state.spiritsMax));
+          if (bonus) { state.atk += bonus; state._atkMastery += bonus; }
+          break;
+        }
+        case 'absorbSpirits': {
+          state.absorbSpirits = {
+            name: sk.name, chance: val,
+            spGain: Array.isArray(sk.spGain) ? sk.spGain[lv - 1] : sk.spGain,
+            cdSec: Array.isArray(sk.internalCooldown) ? sk.internalCooldown[lv - 1] : (sk.internalCooldown || 3),
+          };
+          break;
+        }
+        case 'explosionSpirits': {
+          state.explosionSpirits = {
+            name: sk.name, critFlat: val, cost: sk.spiritCost || 5,
+            durSec: Array.isArray(sk.duration) ? sk.duration[lv - 1] : sk.duration,
+            spRegenPct: sk.spRegenPct || 0,
+          };
+          break;
+        }
+        case 'bladeStop': {
+          state.bladeStop = {
+            name: sk.name, dmgBonusPct: val, cost: sk.spiritCost || 1,
+            durSec: Array.isArray(sk.duration) ? sk.duration[lv - 1] : sk.duration,
+            cdSec: Array.isArray(sk.internalCooldown) ? sk.internalCooldown[lv - 1] : sk.internalCooldown,
+          };
+          break;
+        }
+        /* 運氣調息：官方是坐著時的額外回復。併進自然回復的每 tick 量
+           （跟禪心同一個位置），所以不會另開一條回血心跳。 */
+        case 'spiritsRecovery': {
+          state.monkRegen = {
+            hpFlat: Array.isArray(sk.hpFlat) ? sk.hpFlat[lv - 1] : sk.hpFlat,
+            hpPct: Array.isArray(sk.hpPct) ? sk.hpPct[lv - 1] : sk.hpPct,
+            spFlat: Array.isArray(sk.spFlat) ? sk.spFlat[lv - 1] : sk.spFlat,
+            spPct: Array.isArray(sk.spPct) ? sk.spPct[lv - 1] : sk.spPct,
+          };
+          break;
+        }
+        case 'tripleAttack': {
+          state.tripleAttack = {
+            name: sk.name, mult: val, hits: sk.hits || 3,
+            chance: Array.isArray(sk.procChance) ? sk.procChance[lv - 1] : sk.procChance,
+          };
+          break;
+        }
+        case 'chainCombo': {
+          state.chainCombo = {
+            name: sk.name, mult: val, hits: sk.hits || 4,
+            knuckleHits: sk.knuckleHits || 6, knuckleMult: sk.knuckleMult || 2,
+            chance: Array.isArray(sk.procChance) ? sk.procChance[lv - 1] : sk.procChance,
+          };
+          break;
+        }
+        case 'comboFinish': {
+          state.comboFinish = {
+            name: sk.name, mult: val, cost: sk.spiritCost || 1,
+            strScale: sk.strScale || 200,
+            chance: Array.isArray(sk.procChance) ? sk.procChance[lv - 1] : sk.procChance,
+          };
+          break;
+        }
+        case 'steelBody': {
+          state.steelBody = {
+            name: sk.name, cutPct: val, cost: sk.spiritCost || 5,
+            durSec: Array.isArray(sk.duration) ? sk.duration[lv - 1] : sk.duration,
+            cdSec: Array.isArray(sk.internalCooldown) ? sk.internalCooldown[lv - 1] : sk.internalCooldown,
+          };
+          break;
+        }
+        case 'investigate': {
+          state.investigate = {
+            name: sk.name, mult: val, defScale: sk.defScale || 100,
+            chance: Array.isArray(sk.procChance) ? sk.procChance[lv - 1] : sk.procChance,
+            cdSec: Array.isArray(sk.internalCooldown) ? sk.internalCooldown[lv - 1] : sk.internalCooldown,
+          };
+          break;
+        }
+        case 'fingerOffensive': {
+          state.fingerOffensive = {
+            name: sk.name, mult: val,
+            chance: Array.isArray(sk.procChance) ? sk.procChance[lv - 1] : sk.procChance,
+            cdSec: Array.isArray(sk.internalCooldown) ? sk.internalCooldown[lv - 1] : sk.internalCooldown,
+          };
+          break;
+        }
+        case 'extremityFist': {
+          state.extremityFist = {
+            name: sk.name, mult: val, cost: sk.spiritCost || 5,
+            spScale: sk.spScale || 100,
+            flat: Array.isArray(sk.flatBonus) ? sk.flatBonus[lv - 1] : sk.flatBonus,
+            chance: Array.isArray(sk.procChance) ? sk.procChance[lv - 1] : sk.procChance,
+          };
+          break;
+        }
+        /* 弓身彈影：官方是瞬移。位移做不了，使用者指定「比照騎乘術」——
+           所以直接點亮騎乘術那個旗標，生怪加速那段在 spawnMonster() 裡本來就在跑，
+           不必再開一條平行的加速管線。 */
+        case 'bodyRelocation': state.hasRiding = true; break;
+        case 'balkyoung': {
+          state.balkyoung = {
+            name: sk.name, mult: val,
+            chance: Array.isArray(sk.procChance) ? sk.procChance[lv - 1] : sk.procChance,
+            hpCost: Array.isArray(sk.hpCost) ? sk.hpCost[lv - 1] : sk.hpCost,
+            stunChance: Array.isArray(sk.stunChance) ? sk.stunChance[lv - 1] : sk.stunChance,
+            stunSec: Array.isArray(sk.stunSec) ? sk.stunSec[lv - 1] : sk.stunSec,
+            cdSec: Array.isArray(sk.internalCooldown) ? sk.internalCooldown[lv - 1] : (sk.internalCooldown || 10),
+          };
+          break;
+        }
+        case 'kiTranslation': {
+          state.kiTranslation = {
+            name: sk.name,
+            cdSec: Array.isArray(sk.internalCooldown) ? sk.internalCooldown[lv - 1] : sk.internalCooldown,
+          };
+          break;
+        }
+        /* ---------------- 賢者的被動（#71）----------------
+           判定分成三處：trySageProcs()（普攻觸發）、tickConverter()（肯貝特自動維持）、
+           tryMagicRod()（受怪物技能攻擊時）。這裡一律只負責把數字放上去。 */
+        // 進化之書：書本 ATK 與攻速。攻速併進 songAspdPct 那條技能層，不另開一層
+        case 'advancedBook': {
+          if (!weaponReqMet(sk.requiresWeapon)) break;
+          state.atk += Math.round(val);
+          state._atkMastery += Math.round(val);
+          const asp = Array.isArray(sk.aspdPct) ? sk.aspdPct[lv - 1] : (sk.aspdPct || 0);
+          if (asp) state.songAspdPct += asp;
+          break;
+        }
+        /* 龍知識：官方四欄。物理與耐性併進卡片那兩桶（消費者一堆，不必新開），
+           MATK 那欄在 skillBaseDamage() 接，INT 直接加。 */
+        case 'dragonology': {
+          /* **不可以直接寫 state.cardRaceDmgBonus** ——那個物件在這個迴圈之後才被
+             `= {}` 重建（卡片那一段），寫進去會被整個蓋掉。用暫存桶，
+             跟 `_skillRaceReduce` 同一個手法，在卡片那段之後才併進去。
+             INT 那欄用既有的 `sk.intBonus` 掛鉤（recomputeDerived 開頭那個素質迴圈），
+             那裡才記得到帳，角色分頁才看得到「這 +3 是龍知識給的」。 */
+          state._skillRaceBonus.dragon = (state._skillRaceBonus.dragon || 0) + val / 100;
+          state._skillRaceReduce.dragon = (state._skillRaceReduce.dragon || 0) + val / 100;
+          state.dragonMatkPct += Array.isArray(sk.matkPct) ? sk.matkPct[lv - 1] : (sk.matkPct || 0);
+          break;
+        }
+        case 'freeCast': {
+          state.freeCastAutoSpellPct += val;
+          const asp = Array.isArray(sk.aspdPct) ? sk.aspdPct[lv - 1] : (sk.aspdPct || 0);
+          if (asp) state.songAspdPct += asp;
+          break;
+        }
+        case 'sageAutoSpell': {
+          state.sageAutoSpell = {
+            name: sk.name, chance: val, lv,
+            spCostPct: sk.spCostPct || 67,
+            cdSec: Array.isArray(sk.internalCooldown) ? sk.internalCooldown[lv - 1] : (sk.internalCooldown || 3),
+          };
+          break;
+        }
+        case 'magicRod': {
+          state.magicRod = {
+            name: sk.name, chance: val,
+            spGain: Array.isArray(sk.spGain) ? sk.spGain[lv - 1] : sk.spGain,
+            cdSec: Array.isArray(sk.internalCooldown) ? sk.internalCooldown[lv - 1] : sk.internalCooldown,
+          };
+          break;
+        }
+        case 'spellBreaker': {
+          state.spellBreaker = {
+            name: sk.name, chance: val, hpPct: sk.hpPct || 2,
+            spGain: Array.isArray(sk.spGain) ? sk.spGain[lv - 1] : sk.spGain,
+            stunSec: Array.isArray(sk.stunSec) ? sk.stunSec[lv - 1] : (sk.stunSec || 1),
+            cdSec: Array.isArray(sk.internalCooldown) ? sk.internalCooldown[lv - 1] : sk.internalCooldown,
+          };
+          break;
+        }
+        case 'dispellProc': {
+          state.dispellProc = {
+            name: sk.name, successPct: val,
+            chance: Array.isArray(sk.procChance) ? sk.procChance[lv - 1] : sk.procChance,
+            cdSec: Array.isArray(sk.internalCooldown) ? sk.internalCooldown[lv - 1] : sk.internalCooldown,
+            costItems: sk.costItems || [], costQty: sk.costQty || 1,
+          };
+          break;
+        }
+        case 'abracadabra': {
+          state.abracadabra = {
+            name: sk.name, castLv: Math.round(val),
+            chance: Array.isArray(sk.procChance) ? sk.procChance[lv - 1] : sk.procChance,
+            cdSec: Array.isArray(sk.internalCooldown) ? sk.internalCooldown[lv - 1] : sk.internalCooldown,
+            costItems: sk.costItems || [], costQty: sk.costQty || 2,
+          };
+          break;
+        }
+        case 'elementConverter': {
+          state.elementConverter = {
+            name: sk.name,
+            durSec: Array.isArray(sk.duration) ? sk.duration[lv - 1] : sk.duration,
+            goldFallback: sk.goldFallback || 0,
+          };
+          break;
+        }
+        /* 四個元素更換共用這個 case，只有 element 不同。
+           實際會觸發的是玩家在自動戰鬥面板選的那一個（`state.elementChangePick`）。 */
+        /* ---------------- 鍊金術士的被動（#72）----------------
+           這個職業的技能幾乎全部要花鋅幣，所以三個被動都在做同一件事：把價錢壓下來。
+           折扣本身**不在這裡寫進 zenyCostReductionPct**——那張表在這個迴圈之前就被
+           `= {}` 重建了，而且 castSkill 是按技能 id 查的，要等所有被動都掃完才算得出來。
+           先累加到暫存欄位，迴圈之後再一次寫進去。 */
+        case 'learningPotion': {
+          // 藥效那半併進既有的 hpItemEffectBonusPct（快速恢復在用同一個欄位）
+          state.hpItemEffectBonusPct = (state.hpItemEffectBonusPct || 0) + val;
+          state._alchemyZenyMult *= 1 - (Array.isArray(sk.zenyCut) ? sk.zenyCut[lv - 1] : (sk.zenyCut || 0)) / 100;
+          break;
+        }
+        case 'pharmacy': {
+          state.pharmacyLv = Math.max(state.pharmacyLv, lv);
+          state._alchemyZenyMult *= 1 - val / 100;   // Lv9 起 −30%
+          break;
+        }
+        case 'potionPitcher': {
+          state.hpItemEffectBonusPct = (state.hpItemEffectBonusPct || 0) + val;
+          break;
+        }
+        case 'homunDiscount': {
+          state._homunZenyMult *= 1 - val / 100;
+          break;
+        }
+        case 'bioethics': break;   // 官方就寫「沒有任何效能」，只是技能樹的起頭
+        case 'elementChange': {
+          state.elementChanges[sk.element] = {
+            id: sk.id, name: sk.name, element: sk.element, chance: val,
+            durSec: Array.isArray(sk.duration) ? sk.duration[lv - 1] : sk.duration,
+            cdSec: Array.isArray(sk.internalCooldown) ? sk.internalCooldown[lv - 1] : sk.internalCooldown,
+            costItems: sk.costItems || [], goldFallback: sk.goldFallback || 0,
+          };
+          break;
+        }
+        /* 十字軍兩個被動（#66）。 */
+        /* 光之盾：官方是主動 buff、只擋遠距離物理（−20%~−80%）＋攻速懲罰。
+           本作怪物沒有遠近之分，照抄就是全域減傷 80%；使用者指定改成被動、免傷砍半到 10%~40%、
+           攻速懲罰照官方保留。盾牌條件在這裡就判掉——跟雙劍挌擋同一個寫法，
+           沒拿盾時兩個欄位都留 0，攻速與減傷自動回到沒點技能的狀態。 */
+        case 'defenderPassive': {
+          if (!equipReqMet(sk.requiresEquip)) break;
+          state.defenderProcPct += val;
+          state.defenderProcCdSec = Array.isArray(sk.internalCooldown) ? sk.internalCooldown[lv - 1] : (sk.internalCooldown || 5);
+          state.defenderAspdPct += Array.isArray(sk.aspdPenalty) ? sk.aspdPenalty[lv - 1] : (sk.aspdPenalty || 0);
+          break;
+        }
+        /* 信任：最大HP 固定值 +200~2000、聖屬性耐性 +5%~50%。
+           HP 加在這裡（卡片的 %HP 加成在後面才乘），耐性收進暫存桶等下併進卡片那桶。 */
+        /* 退縮：官方是「自動防禦成功時 50% 機率暈眩對方」的開關技能。
+           判定寫在 tryShrinkStun()，這裡只負責把數字放上去。 */
+        case 'shrinkStun': {
+          state.shrinkStunChance = val;
+          state.shrinkStunSec = Array.isArray(sk.stunSec) ? sk.stunSec[lv - 1] : (sk.stunSec || 1);
+          break;
+        }
+        case 'trustPassive': {
+          state.skillMaxHpFlat += Math.round(val);
+          const hr = Array.isArray(sk.holyResist) ? sk.holyResist[lv - 1] : (sk.holyResist || 0);
+          if (hr) state._skillEleReduce.holy = (state._skillEleReduce.holy || 0) + hr / 100;
           break;
         }
         /* 傷害增壓與巧打（#58 二版）：普攻命中後機率追加一段傷害＋異常狀態。
@@ -1351,6 +1866,13 @@ function recomputeDerived(fullHeal) {
   state.matkMax += getCardBonus('matk') + equippedStatBonus('matk');
   // 卡片的 DEF+N 是裝備類加成，歸到硬防
   state.defHard += getCardBonus('def');
+  /* 戰鼓震天（#68）：ATK 與 DEF 的固定值。ATK 進**熟練度那一桶**——
+     官方寫的是固定值加成，跟武器 ATK 不同，不該吃體型/屬性/武器浮動（#12 的分桶規則）。 */
+  {
+    const atkB = buffMult('atkflat').flatBonus, defB = buffMult('defflat').flatBonus;
+    if (atkB) { state.atk += Math.round(atkB); state._atkMastery = (state._atkMastery || 0) + Math.round(atkB); }
+    if (defB) state.defHard += Math.round(defB);
+  }
   state.def = state.defHard + state.defSoft;
   // MDEF 同理歸到硬魔防。可以是負的（迪塔勒泰晤勒斯：免疫冰凍的代價是 MDEF−20）
   state.mdefHard += getCardBonus('mdef') + equippedStatBonus('mdef');
@@ -1358,9 +1880,21 @@ function recomputeDerived(fullHeal) {
   state.hit += getCardBonus('hit') + equippedStatBonus('hit');
   state.flee += getCardBonus('flee') + equippedStatBonus('flee');
   state.critRate = Math.min(100, state.critRate + getCardBonus('critRate') + equippedStatBonus('critRate'));
-  state.perfectDodge += getCardBonus('perfectDodge') + equippedStatBonus('perfectDodge');
-  state.maxHp += getCardBonus('hp') + equippedStatBonus('hp');
+  // 吹口哨（#68）的完全迴避走 buff，tickBuffs 每次都會重算，過期自動還原
+  state.perfectDodge += getCardBonus('perfectDodge') + equippedStatBonus('perfectDodge')
+    + buffMult('perfectdodge').flatBonus;
+  // 信任（#66）跟卡片的固定值 HP 走同一行——後面那道 %HP 加成兩者一起吃，官方也是這個順序
+  state.maxHp += getCardBonus('hp') + equippedStatBonus('hp') + (state.skillMaxHpFlat || 0);
   state.maxSp += getCardBonus('sp') + equippedStatBonus('sp');
+  // 操控樂器／練習舞蹈（#68）的最大SP +N%（被動，跟下面的 buff 版分開算）
+  if (state.songMaxSpPct) state.maxSp = Math.round(state.maxSp * (1 + state.songMaxSpPct / 100));
+  /* 伊登的蘋果／為您服務（#68）的最大HP・最大SP 百分比。
+     放在固定值之後、卡片的 %HP 之前；tickBuffs 每次都會重算，所以 buff 過期會自己還原。 */
+  {
+    const hpB = buffMult('maxhppct').flatBonus, spB = buffMult('maxsppct').flatBonus;
+    if (hpB) state.maxHp = Math.max(1, Math.round(state.maxHp * (1 + hpB / 100)));
+    if (spB) state.maxSp = Math.max(0, Math.round(state.maxSp * (1 + spB / 100)));
+  }
 
   /* perJobLv10_<目標>（#17）：官方「增加與自身 JOB 等級十位數相同的數值」
      （伊夫利特卡片的 ATK／CRI／HIT）。轉職會把 jobLevel 打回 1，所以這個加成
@@ -1411,7 +1945,8 @@ function recomputeDerived(fullHeal) {
 
   /* 戰鬥迴圈每次揮擊都會用到的卡片數值，先在這裡收斂成純量，
      免得每一擊都去掃一遍所有插槽的卡片 */
-  state.cardCritDmgPct = getCardBonus('critDmgPct');
+  // 女神之吻（#68）的暴擊傷害併進這一格：三個消費點（普攻、單體技、範圍技）一次接滿
+  state.cardCritDmgPct = getCardBonus('critDmgPct') + buffMult('critdmg').flatBonus;
   state.cardBossDmgPct = getCardBonus('bossDmgPct');
   state.cardAllTargetDmgPct = getCardBonus('allTargetDmgPct');
   state.cardRangedDmgPct = getCardBonus('rangedDmgPct');
@@ -1558,6 +2093,71 @@ function recomputeDerived(fullHeal) {
     }
   }
 
+  /* 技能來源的減傷併桶（#66）。
+
+     信任的聖屬性耐性與神祐之光的惡魔種族減傷，官方跟卡片給的是同一種東西，
+     合進卡片那兩桶而不是另開 state 欄位——那兩桶已經有八個消費者
+     （普攻、技能傷害、怪物技能…），另開一個等於要把那八處全部再改一遍，
+     而這個 repo 已經因為「推了沒人讀」踩過四次。
+     `buffMult` 那類有時效的走 buff 陣列，這裡兩個都是常駐被動，所以放這。 */
+  Object.entries(state._skillEleReduce || {}).forEach(([k, v]) => {
+    state.cardEleDmgReduce[k] = (state.cardEleDmgReduce[k] || 0) + v;
+  });
+  Object.entries(state._skillRaceReduce || {}).forEach(([k, v]) => {
+    state.cardRaceDmgReduce[k] = (state.cardRaceDmgReduce[k] || 0) + v;
+  });
+  // 龍知識的增傷那半（#71），同樣併進卡片那桶，cardTargetDmgMult 本來就在讀
+  Object.entries(state._skillRaceBonus || {}).forEach(([k, v]) => {
+    state.cardRaceDmgBonus[k] = (state.cardRaceDmgBonus[k] || 0) + v;
+  });
+  /* 鍊金術士的鋅幣折扣（#72）：併進 `zenyCostReductionPct`——castSkill 本來就在讀那張表
+     （商人的詭計的商術用同一個地方），所以不必動 castSkill 一行。
+     兩段折扣相乘而不是相加：知識藥水 −10% 與配藥 −30% 疊起來是 ×0.9×0.7 = −37%，
+     相加會變成 −40%，四段全滿時差距更大。 */
+  {
+    const base = state._alchemyZenyMult == null ? 1 : state._alchemyZenyMult;
+    const homun = state._homunZenyMult == null ? 1 : state._homunZenyMult;
+    Object.values(SKILLS).forEach(sk => {
+      if (!sk.alchemyCost) return;
+      const mult = Math.max(0, base) * (sk.homunCost ? Math.max(0, homun) : 1);
+      // **不要先四捨五入成一位小數**：四段折扣相乘後 0.4032 會被壓成 59.7%，
+      // 10 萬的生命體召喚就變成 40,300 而不是 40,320
+      const cut = (1 - mult) * 100;
+      if (cut > 0) state.zenyCostReductionPct[sk.id] = cut;
+    });
+  }
+  // 屬性抵抗藥水（#72）：跟上面兩行一樣併進卡片那桶，消費端不必知道來源是藥水
+  if (state.buffs && state.buffs.length) {
+    state.buffs.forEach(b => {
+      if (b.type !== 'eleresist' || !b.element) return;
+      state.cardEleDmgReduce[b.element] = (state.cardEleDmgReduce[b.element] || 0) + (b.reducePct || 0) / 100;
+    });
+  }
+  /* 神祐之光是**有時效的 buff**，所以在這裡讀 buff 陣列而不是被動掃描。
+     跟上面兩行併進同一桶，消費端完全不必知道來源是卡片、被動還是 buff。 */
+  if (state.buffs && state.buffs.length) {
+    state.buffs.forEach(b => {
+      if (b.type === 'providence') {
+        const r = (b.reducePct || 0) / 100;
+        state.cardEleDmgReduce.holy = (state.cardEleDmgReduce.holy || 0) + r;
+        state.cardRaceDmgReduce.demon = (state.cardRaceDmgReduce.demon || 0) + r;
+      }
+      /* 不死神齊格弗里德（#68）：地水火風耐性 + 全異常狀態抗性，
+         同樣併進既有的兩張表，消費端一個都不用改。 */
+      if (b.type === 'songelereduce') {
+        const r = (b.flatBonus || 0) / 100;
+        ['earth', 'water', 'fire', 'wind'].forEach(e => {
+          state.cardEleDmgReduce[e] = (state.cardEleDmgReduce[e] || 0) + r;
+        });
+      }
+      if (b.type === 'songailresist') {
+        Object.keys(PLAYER_AILMENTS).forEach(t => {
+          state.ailResist[t] = (state.ailResist[t] || 0) + (b.flatBonus || 0);
+        });
+      }
+    });
+  }
+
   // HP/SP 夾住動作統一放在這裡執行，此時state.maxHp/maxSp已經是套用完所有被動技能與卡片加成後的最終值
   // 防止HP/SP因過去任何一次NaN污染而永久卡死（NaN < 任何數都是false，一旦中毒就無法自然回滿/回復）
   if (Number.isNaN(state.hp)) state.hp = state.maxHp;
@@ -1648,6 +2248,20 @@ function cardTargetDmgMult(monDef) {
    卡片的「無視魔法防禦力 N%」（#17）也套在這裡。全專案的魔法傷害都經過 defOf，
    放在這個唯一的出入口就不必去追那 8 個呼叫點。**這跟「魔法傷害 +N%」不是同一件事**：
    官方寫的是無視防禦，所以魔防越高的怪收益越大，對零魔防的怪完全沒有差別。 */
+/* 掛在怪物身上的物防減益（野蠻凶砍的 debuffDef、流氓的卸除盾牌／鎧甲）。
+   拆成一支是因為**技能與普攻是兩條各自算防禦的路**：
+   普攻在 playerAttack() 裡自己算，技能走 defOf()。
+   以前只有普攻那條讀 debuffDef，等於 #60 的野蠻凶砍削防對技能完全沒作用；
+   #69 加卸除的時候一併補齊，兩條路現在看到同一個防禦值。 */
+function monDebuffDef(inst) {
+  if (!inst) return 1;
+  let m = stripMult(inst, 'def');
+  if (inst.debuffDef) {
+    if (Date.now() < (inst.debuffDefEnd || 0)) m *= inst.debuffDef;
+    else { delete inst.debuffDef; delete inst.debuffDefEnd; }
+  }
+  return m;
+}
 function defOf(mon, scale, magic, inst) {
   const s = (scale === undefined ? 1 : scale) * (inst ? ailDefMult(inst) : 1);
   if (magic) {
@@ -1655,7 +2269,8 @@ function defOf(mon, scale, magic, inst) {
     const ms = s * Math.max(0, 1 - ig / 100);
     return [(mon.mdef || 0) * ms, (mon.mdefSoft || 0) * ms];
   }
-  return [(mon.def || 0) * s, (mon.defSoft || 0) * s];
+  const d = s * monDebuffDef(inst);
+  return [(mon.def || 0) * d, (mon.defSoft || 0) * d];
 }
 
 /* 卡片的「從某個魔物家族受到的傷害 +N%」（妖道：從殭屍受到的傷害 +100%）。
@@ -1718,12 +2333,73 @@ function monsterBaseAtk(monDef, roll, mon) {
    跟 `mon.debuffDef`（破壞防禦在用的物防減益）是對稱的一組，
    放在 `monsterBaseAtk()` 這個**怪物傷害的唯一入口**，所以普攻與怪物技能一起吃到。 */
 function monDebuffAtk(mon) {
-  if (!mon || !mon.debuffAtk) return 1;
+  // 卸除武器／卸除頭盔（#69）跟野蠻凶砍相乘：不同技能各佔一格，同一個技能重觸發只是刷新
+  const strip = stripMult(mon, 'atk');
+  if (!mon || !mon.debuffAtk) return strip;
   if (Date.now() >= (mon.debuffAtkEnd || 0)) {
     delete mon.debuffAtk; delete mon.debuffAtkEnd;
+    return strip;
+  }
+  return mon.debuffAtk * strip;
+}
+/* 勿忘我（#68）：怪物攻速下降。跟 debuffAtk／debuffDef／debuffHit 同一組寫法
+   （值掛在怪物實體上、附一個到期時間戳、過期時自己清掉），
+   所以同一種怪的不同隻各自獨立。回傳的是**攻速倍率**（0.7 ＝ 攻速剩七成＝間隔變長）。 */
+/* ---------------- 流氓的卸除系列（#69）----------------
+   官方四個卸除技對**玩家**是剝除裝備（本作永久 N/A），對**怪物**寫的是素質下降：
+     卸除頭盔 INT −40% / 卸除盾牌 DEF −15% / 卸除鎧甲 VIT −40% / 卸除武器 ATK −25%
+   使用者 2026-08-09 改成：頭盔 MATK −25%（怪沒有 MATK 就 ATK −10%）、
+   盾牌 DEF −15%、鎧甲 DEF −10%、武器 ATK −25%，四個都是普攻觸發的被動。
+
+   **為什麼要一個獨立的袋子**：盾牌與鎧甲都削 DEF、頭盔與武器都可能削 ATK，
+   而 `mon.debuffDef` / `mon.debuffAtk` 各只有一格（野蠻凶砍在用）。
+   四個技能各自佔一個 key，取用時把還沒過期的相乘——
+   這樣「不同技能疊加、同一個技能重複觸發只是刷新」兩件事同時成立。 */
+function stripMult(mon, kind) {
+  if (!mon || !mon.strip) return 1;
+  const now = Date.now();
+  let m = 1;
+  Object.keys(mon.strip).forEach(k => {
+    const e = mon.strip[k];
+    if (!e || now >= e.end) { delete mon.strip[k]; return; }
+    if (e.kind === kind) m *= e.mult;
+  });
+  return m;
+}
+function applyStrip(mon, key, kind, mult, sec) {
+  if (!mon) return;
+  mon.strip = mon.strip || {};
+  mon.strip[key] = { kind, mult, end: Date.now() + sec * 1000 };
+}
+/* 潛擊：被打中的目標在一段時間內受到的傷害增加。
+   跟卸除是同一種「掛在怪物實體上的暫時減益」，但因為是加傷不是減益，另外一格。 */
+function monDmgTakenBoost(mon) {
+  if (!mon || !mon.dmgTakenBoost) return 1;
+  if (Date.now() >= (mon.dmgTakenBoostEnd || 0)) {
+    delete mon.dmgTakenBoost; delete mon.dmgTakenBoostEnd;
     return 1;
   }
-  return mon.debuffAtk;
+  return mon.dmgTakenBoost;
+}
+
+/* 勿忘我還開著的時候**新生出來的怪也要吃到**。
+   不補這一段的話，技能只在施放的那一瞬間有用——放置遊戲的怪是一直換的，
+   等於三秒後就完全沒效果了。 */
+function applyDontForgetMe(mon) {
+  if (!mon || !state.buffs || !state.buffs.length) return;
+  const b = state.buffs.find(x => x.type === 'dontforgetme');
+  if (!b) return;
+  mon.debuffAspd = Math.max(0.1, 1 - (b.flatBonus || 0) / 100);
+  mon.debuffAspdEnd = Date.now() + Math.max(0, b.msRemaining || 0);
+}
+
+function monDebuffAspd(mon) {
+  if (!mon || !mon.debuffAspd) return 1;
+  if (Date.now() >= (mon.debuffAspdEnd || 0)) {
+    delete mon.debuffAspd; delete mon.debuffAspdEnd;
+    return 1;
+  }
+  return mon.debuffAspd;
 }
 
 /* ---------------- 玩家挨打的減傷（硬防／軟防拆開）----------------
@@ -1822,7 +2498,8 @@ function estimateMapYield(mapObj) {
      每隻的實際週期是 T + 0.5 秒，而不是 T。
 
      先前這裡寫成「上限 = 1/3 隻每秒」，等於假設緩衝永遠是空的，把擊殺數低估了一半以上。 */
-  const ridePassive = state.learnedSkills && state.learnedSkills['riding'];
+  // 跟 spawnMonster() 讀同一個旗標，不然這裡的估算會跟實際生怪速度對不上
+  const ridePassive = state.hasRiding;
   const refillSec = (ridePassive ? 2250 : 3000) / 1000;
   const emptyGapSec = (ridePassive ? 375 : 500) / 1000;
   const secPerKill = hp > 0 && dps > 0 ? hp / dps : Infinity;
@@ -1879,6 +2556,9 @@ function hitChancePctVsMonster(playerHit, monDef, inst) {
     threshold = Math.max(1, (threshold - REQ_HIT_OFFSET) * ailFleeMult(inst) + REQ_HIT_OFFSET);
     // 怪物自己的迴避增益（NPC_AGIUP）：加的是點數，1 點就是 1% 命中率
     threshold += monBuff(inst, 'fleeFlat');
+    // 緊密的約束（#69）：怪物的迴避下降，一樣是點數
+    if (inst.debuffFlee && Date.now() < (inst.debuffFleeEnd || 0)) threshold -= inst.debuffFlee;
+    else if (inst.debuffFlee) { delete inst.debuffFlee; delete inst.debuffFleeEnd; }
   }
   return Math.min(100, Math.max(5, Math.round(100 - (threshold - playerHit))));
 }
@@ -1891,7 +2571,7 @@ function dodgeChancePctFromMonster(playerFlee, monDef, hitDebuff) {
 /* ---------------- 中毒（施毒/塗毒共用）----------------
    固定持續3秒、不疊加（同一隻怪再次中毒直接覆蓋刷新）、毒屬性怪物免疫 */
 function applyPoisonDot(mon, monDef, rawDmgPerTick) {
-  const elemMult = getElementMultiplierVsMonster('poison', monDef);
+  const elemMult = getElementMultiplierVsMonster('poison', monDef, mon);
   if (elemMult === 0) {
     logMsg(`🚫 ${monDef.name} 對毒免疫！`);
     return;
@@ -1999,7 +2679,10 @@ function ailFold(mon, key, init) {
 }
 const ailAtkMult = mon => ailFold(mon, 'atkMult', 1);          // 詛咒
 const ailDefMult = mon => ailFold(mon, 'defMult', 1);          // 石化↑／中毒↓
-const ailDmgTakenMult = mon => ailFold(mon, 'dmgTakenMult', 1); // 睡眠
+/* 睡眠 ×1.5，以及潛擊（#69）掛上去的「受到的傷害 +30%」。
+   併在同一支而不是另開消費點：這條被八個傷害路徑呼叫，另開等於要改八個地方，
+   而這個 repo 已經因為「推了沒人讀」踩過四次。 */
+const ailDmgTakenMult = mon => ailFold(mon, 'dmgTakenMult', 1) * monDmgTakenBoost(mon);
 const ailAlwaysHit = mon => ailList(mon).some(t => MON_AILMENTS[t].alwaysHit);   // 冰凍／睡眠
 // 黑暗：怪物的命中與迴避各降一截，回傳「要打幾折」
 function ailHitMult(mon) {
@@ -2413,9 +3096,31 @@ function debuffedDef(hardDef, softDef) {
   if (m === 1 && !flat) return [hardDef, softDef];
   return [Math.round(hardDef * m) + flat, Math.round(softDef * m)];
 }
-// 受到的傷害倍率：異常狀態（睡眠 ×1.5）與臨時減益（永恆之光）合在一起
+/* 受到的傷害倍率：異常狀態（睡眠 ×1.5）、臨時減益（永恆之光）與
+   減傷型 buff（武僧的金剛不壞 −10~20%）合在一起。 */
 function playerDmgTakenMult() {
-  return playerAilDmgTakenMult() * (1 + pDebuff('dmgTakenPct') / 100);
+  return playerAilDmgTakenMult() * (1 + pDebuff('dmgTakenPct') / 100) * buffMult('dmgtaken').mult;
+}
+
+/* 光之盾（#66）：被攻擊時 10%~40% 機率**完全免除**這一次傷害，內部冷卻 5 秒。
+
+   使用者 2026-08-09 兩次修正後的定版：一開始做成常駐減傷，但常駐對場上五隻怪的
+   每一下都生效，等於憑空多一倍有效血量；改成觸發式之後又確認**是免傷一次不是減傷**——
+   所以這支回傳的是「這一擊有沒有被整個吃掉」，不是傷害倍率。
+
+   冷卻**只在成功免傷時**才進——擲骰失敗還在冷卻中的話，
+   Lv1（10%）等於每 5 秒只有一次 10% 的機會，實際免傷率會掉到 2% 上下，
+   那不是技能說明上寫的數字。
+
+   **有副作用**（寫冷卻時間戳），所以只能在真的結算傷害時呼叫一次，
+   不要拿去做預覽或估算。 */
+function defenderNegates() {
+  const pct = state.defenderProcPct || 0;
+  if (!pct) return false;
+  if (Date.now() < (state.defenderReadyAt || 0)) return false;
+  if (Math.random() * 100 >= pct) return false;
+  state.defenderReadyAt = Date.now() + (state.defenderProcCdSec || 5) * 1000;
+  return true;
 }
 
 /* ---------------- 怪物技能 ----------------
@@ -2486,7 +3191,8 @@ function takeReflectDamage(monDef, amount) {
 const ARMOR_ELEMENT_PRIORITY = ['shadow', 'holy', 'ghost'];
 
 function applyPlayerReflect(mon, monDef, dmgTaken) {
-  const pct = state.cardReflectPct || 0;
+  // 反射盾（#66）跟卡片的反射相加：官方兩者本來就是各自獨立的一份比率
+  const pct = (state.cardReflectPct || 0) + buffMult('reflect').flatBonus;
   if (!pct || !mon || dmgTaken <= 0) return;
   const back = Math.max(1, Math.round(dmgTaken * pct / 100));
   mon.hp -= back;
@@ -2645,7 +3351,7 @@ function tryTrapProcs(target, monDef) {
       logMsg(`💥 「${sk.name}」觸發！${monDef.name} 的命中下降了！`);
     } else if (sk.trapEffect === 'damage') {
       const mult = Array.isArray(sk.mult) ? sk.mult[lv - 1] : sk.mult;
-      const elemMult = getElementMultiplierVsMonster(sk.element || 'none', monDef);
+      const elemMult = getElementMultiplierVsMonster(sk.element || 'none', monDef, target);
       const dmg = mitigateDamage(skillBaseDamage(false, monDef, elemMult) * mult, ...defOf(monDef));
       target.hp -= dmg;
       logMsg(`💥 「${sk.name}」觸發！對 ${monDef.name} 造成 ${dmg} 點傷害！`);
@@ -2656,7 +3362,7 @@ function tryTrapProcs(target, monDef) {
       for (let i = state.monsters.length - 1; i >= 0; i--) {
         const mon = state.monsters[i];
         const mDef = MONSTERS[mon.defId];
-        const elemMult = getElementMultiplierVsMonster(sk.element || 'none', mDef);
+        const elemMult = getElementMultiplierVsMonster(sk.element || 'none', mDef, mon);
         const dmg = mitigateDamage(skillBaseDamage(false, mDef, elemMult) * mult, ...defOf(mDef));
         mon.hp -= dmg;
         logMsg(`  → 對 ${mDef.name} 造成 ${dmg} 點傷害！`);
@@ -2688,7 +3394,7 @@ function tryMagicStunProcs(mon, monDef) {
     applyStun(mon, stunSec, true);
     mon.frozenByProc = true;
     const dmgMult = Array.isArray(sk.mult) ? sk.mult[lv - 1] : sk.mult;
-    const elemMult = getElementMultiplierVsMonster(sk.element || 'none', monDef);
+    const elemMult = getElementMultiplierVsMonster(sk.element || 'none', monDef, mon);
     const dmg = mitigateDamage(state.matk * dmgMult * elemMult, ...defOf(monDef, 1, true));
     mon.hp -= dmg;
     if (typeof showDamageFloatAt === 'function') showDamageFloatAt(mon.id, '-' + dmg, 'normal', sk.element || null);
@@ -2714,7 +3420,7 @@ function tryOnAttackStrikes(target, monDef) {
     if (Math.random() * 100 >= e.chance) continue;
     state.onAttackStrikeReadyAt[e.id] = now + e.cdSec * 1000;
 
-    const elemMult = getElementMultiplierVsMonster('neutral', monDef);
+    const elemMult = getElementMultiplierVsMonster('neutral', monDef, target);
     const dmg = mitigateDamage(
       skillBaseDamage(false, monDef, elemMult) * e.mult * cardTargetDmgMult(monDef) * ailDmgTakenMult(target),
       ...defOf(monDef, 1, false, target)) + raceFlatBonus(monDef);
@@ -2827,7 +3533,7 @@ function tryPhysAoeStrikes(monDef) {
       const mon = state.monsters[i];
       const md = MONSTERS[mon.defId];
       if (!md) continue;
-      const elemMult = getElementMultiplierVsMonster(e.element, md) * elementDmgMult(e.element);
+      const elemMult = getElementMultiplierVsMonster(e.element, md, mon) * elementDmgMult(e.element);
       const dmg = mitigateDamage(
         skillBaseDamage(false, md, elemMult) * e.mult * cardTargetDmgMult(md) * ailDmgTakenMult(mon),
         ...defOf(md, 1, false, mon)) + raceFlatBonus(md);
@@ -2862,13 +3568,608 @@ function tryPhysAoeStrikes(monDef) {
    **先扣礦石再擲骰**：官方是施放就消耗，命不命中是另一回事；
    而且若改成「擲中才扣」，冷卻已經先寫下去了，等於有機率白嫖一次冷卻。 */
 const GANBANTEIN_STONES = ['blue_gemstone', 'yellow_gemstone'];
+// 四種屬性抵抗藥水各自要的配藥等級（#72）
+const ELE_RESIST_PHARMACY_LV = { fire: 5, water: 6, earth: 7, wind: 8 };
+/* 詩人／舞孃的普攻觸發被動（#68）。三組各自獨立擲骰、各自獨立冷卻：
+
+     aoeAilmentProcs  冷笑話（全體冰凍）／驚聲尖叫（全體暈眩 0.5 秒）／醜陋之舞（全體暈眩 1 秒）
+     aoeMagicProcs    不諧和音（全體無屬性魔法 MATK 110~150%）
+     dualAilmentProcs 陣痛之聲／眨眼之誘（單體，混亂與出血各擲一次）
+
+   冷卻時間戳存在 `state.songProcReadyAt[技能id]`，跟其他 proc 一樣不進 recomputeDerived，
+   所以重算不會把冷卻洗掉。 */
+function trySongProcs(target, monDef) {
+  if (!state.songProcReadyAt) state.songProcReadyAt = {};
+  const now = Date.now();
+  const ready = (p) => now >= (state.songProcReadyAt[p.id] || 0);
+  const arm = (p) => { state.songProcReadyAt[p.id] = now + (p.cdSec || 0) * 1000; };
+
+  (state.aoeAilmentProcs || []).forEach(p => {
+    if (!state.monsters || !state.monsters.length) return;
+    if (!ready(p) || Math.random() * 100 >= p.chance) return;
+    arm(p);
+    let hit = 0;
+    state.monsters.forEach(mon => {
+      const md = MONSTERS[mon.defId];
+      if (!md) return;
+      if (applyAilment(mon, md, p.ailment, { sec: p.sec })) hit++;
+    });
+    if (hit) logMsg(`🎵 「${p.name}」發動！${hit} 隻敵人中招。`);
+  });
+
+  (state.aoeMagicProcs || []).forEach(p => {
+    if (!state.monsters || !state.monsters.length) return;
+    if (!ready(p) || Math.random() * 100 >= p.chance) return;
+    arm(p);
+    logMsg(`🎵 「${p.name}」發動！`);
+    for (let i = state.monsters.length - 1; i >= 0; i--) {
+      const mon = state.monsters[i];
+      const md = MONSTERS[mon.defId];
+      if (!md) continue;
+      const em = getElementMultiplierVsMonster(p.element, md, mon);
+      const dmg = mitigateDamage(skillBaseDamage(true, md, em) * p.mult * (cardTargetDmgMult(md)) * ailDmgTakenMult(mon),
+        ...defOf(md, 1, true, mon));
+      mon.hp -= dmg;
+      ailBreakOnDamage(mon, md);
+      if (typeof showDamageFloatAt === 'function') showDamageFloatAt(mon.id, '-' + dmg, 'normal', p.element);
+      if (mon.hp <= 0) killMonster(md, mon);
+    }
+  });
+
+  (state.dualAilmentProcs || []).forEach(p => {
+    if (!target || target.hp <= 0 || !monDef) return;
+    if (!ready(p) || Math.random() * 100 >= p.chance) return;
+    arm(p);
+    const got = [];
+    p.ailments.forEach(a => {
+      if (Math.random() * 100 >= (a.chance || 0)) return;
+      if (applyAilment(target, monDef, a.type)) got.push(MON_AILMENTS[a.type].name);
+    });
+    if (got.length) logMsg(`🎵 「${p.name}」發動！${monDef.name} 陷入${got.join('與')}。`);
+  });
+}
+
+/* ---------------- 流氓的普攻觸發被動（#69）----------------
+   官方 17 個技能裡有 9 個是主動技，使用者 2026-08-10 指定全部改成普攻觸發的被動
+   （偷錢、卸除×4、潛擊、脅持、緊密的約束），各自帶內部冷卻。
+   冷卻時間戳跟詩人那批共用 `state.songProcReadyAt`——那本來就是一張以技能 id 為 key 的表。 */
+function tryRogueProcs(target, monDef) {
+  if (!state.songProcReadyAt) state.songProcReadyAt = {};
+  const now = Date.now();
+  const ready = (id, cd) => {
+    if (now < (state.songProcReadyAt[id] || 0)) return false;
+    state.songProcReadyAt[id] = now + (cd || 0) * 1000;
+    return true;
+  };
+
+  /* 偷錢：官方是主動技、成功率 1~10%，本作改成普攻觸發。
+     使用者指定 DEX 99 時 +20%、LUK 99 時 +10%（線性換算），
+     偷到的錢是「打死這隻怪會拿到的金額」的 10%。 */
+  if (state.stealCoinChance && target && monDef) {
+    const dexB = (state.stats.dex / 99) * state.stealCoinDexMax;
+    const lukB = (state.stats.luk / 99) * state.stealCoinLukMax;
+    const chance = state.stealCoinChance + dexB + lukB;
+    if (Math.random() * 100 < chance && ready('rg_stealcoin', state.stealCoinCdSec)) {
+      const full = Math.round((3 + (monDef.level || 1) * 1.4) * buffMult('gold').mult);
+      const got = Math.max(1, Math.round(full * state.stealCoinPct / 100));
+      state.gold += got;
+      if (state.dpsTracker) state.dpsTracker.gold += got;
+      logMsg(`💰 偷錢成功！從 ${monDef.name} 身上摸走了 ${got}z。`);
+    }
+  }
+
+  // 卸除四連：各自擲骰、各自冷卻、各佔一格，所以會疊在一起
+  (state.stripProcs || []).forEach(p => {
+    if (!target || target.hp <= 0 || !monDef) return;
+    if (Math.random() * 100 >= p.chance) return;
+    if (!ready(p.id, p.cdSec)) return;
+    /* 卸除頭盔官方削的是 INT。使用者指定改成 MATK −25%，怪沒有 MATK 就 ATK −10%。
+       **本作目前沒有任何一隻怪帶 matk 欄位**（2,538 隻全部沒有），所以實務上一律走 ATK 那條，
+       MATK 分支是留給日後真的給怪物加 MATK 時用的。 */
+    let kind = p.kind, mult = p.mult;
+    if (p.kind === 'matk' && !(monDef.matk > 0)) { kind = 'atk'; mult = p.fallbackMult; }
+    applyStrip(target, p.id, kind, mult, p.durSec);
+    logMsg(`🗡️ 「${p.name}」得手！${monDef.name} 的${p.label}下降了。`);
+  });
+
+  // 潛擊：範圍物理 + 異常 + 讓被打中的目標受到的傷害上升
+  if (state.raidProc && state.monsters && state.monsters.length) {
+    const p = state.raidProc;
+    if (Math.random() * 100 < p.chance && ready('rg_raid', p.cdSec)) {
+      logMsg(`🌑 「${p.name}」發動！`);
+      for (let i = state.monsters.length - 1; i >= 0; i--) {
+        const mon = state.monsters[i];
+        const md = MONSTERS[mon.defId];
+        if (!md) continue;
+        const em = getElementMultiplierVsMonster('neutral', md, mon);
+        const dmg = mitigateDamage(
+          weaponChainDamage(md, em, false) * p.mult * cardTargetDmgMult(md) * ailDmgTakenMult(mon),
+          ...defOf(md, 1, false, mon)) + raceFlatBonus(md);
+        mon.hp -= dmg;
+        ailBreakOnDamage(mon, md);
+        if (typeof showDamageFloatAt === 'function') showDamageFloatAt(mon.id, '-' + dmg, 'normal');
+        if (mon.hp > 0) {
+          if (Math.random() * 100 < p.ailChance) {
+            applyAilment(mon, md, Math.random() < 0.5 ? 'stun' : 'blind');
+          }
+          mon.dmgTakenBoost = 1 + p.dmgTakenPct / 100;
+          mon.dmgTakenBoostEnd = Date.now() + p.boostSec * 1000;
+        }
+        if (mon.hp <= 0) killMonster(md, mon);
+      }
+    }
+  }
+
+  // 脅持：官方的位移做不了（本作沒有座標），只留傷害那半
+  if (state.intimidateProc && target && target.hp > 0 && monDef) {
+    const p = state.intimidateProc;
+    if (Math.random() * 100 < p.chance && ready('rg_intimidate', p.cdSec)) {
+      const em = getElementMultiplierVsMonster('neutral', monDef, target);
+      const dmg = mitigateDamage(
+        weaponChainDamage(monDef, em, false) * p.mult * cardTargetDmgMult(monDef) * ailDmgTakenMult(target),
+        ...defOf(monDef, 1, false, target)) + raceFlatBonus(monDef);
+      target.hp -= dmg;
+      logMsg(`🤝 「${p.name}」！對 ${monDef.name} 造成 ${dmg} 點傷害。`);
+      if (typeof showDamageFloatAt === 'function') showDamageFloatAt(target.id, '-' + dmg, 'normal');
+      if (target.hp <= 0) killMonster(monDef, target);
+    }
+  }
+
+  // 緊密的約束：官方是雙方定身，本作改成互相拉開迴避差距
+  if (state.closeConfineProc && target && target.hp > 0 && monDef) {
+    const p = state.closeConfineProc;
+    if (Math.random() * 100 < p.chance && ready('rg_closeconfine', p.cdSec)) {
+      target.debuffFlee = p.enemyFleeCut;
+      target.debuffFleeEnd = Date.now() + p.durSec * 1000;
+      state.buffs = state.buffs.filter(b => b.skillId !== 'rg_closeconfine');
+      state.buffs.push({ type: 'flee', mult: 1, flatBonus: p.selfFlee, msRemaining: p.durSec * 1000, skillId: 'rg_closeconfine' });
+      logMsg(`🪢 「${p.name}」！${monDef.name} 的迴避 −${p.enemyFleeCut}，自身迴避 +${p.selfFlee}，持續 ${p.durSec} 秒。`);
+    }
+  }
+}
+
+/* ---------------- 武僧：氣球體、連段與普攻觸發（#70）----------------
+
+   三個進入點：
+     tickSpirits()   每秒跑一次：補球、滿球時自動開爆氣、爆氣中滿球時自動開金剛不壞
+     tryMonkProcs()  普攻命中後：吸氣、真劍百破道、浸透勁、彈指神通、發勁
+     tryMonkCombo()  普攻命中後：六合拳 →（50%）連環全身掌 →（30%）猛龍誇強 →（20%）阿修羅霸凰拳
+
+   氣球體 `state.spirits` **不歸 recomputeDerived 管**——它是跨 tick 的資源，
+   跟冷卻時間戳同性質。上限 `state.spiritsMax` 才是技能給的設定值，每次重算會刷新，
+   所以把蓄氣點數退掉時要順手把多出來的球夾回去（在 tickSpirits 開頭）。 */
+// 發勁的自傷下限：HP 低於這個比例就不放（跟聖十字審判的 25% 同一組平衡參數）
+const MONK_BALKYOUNG_HP_FLOOR = 0.25;
+function monkExplosionActive() {
+  return state.buffs.some(b => b.skillId === 'mo_explosionspirits');
+}
+// 這一擊有沒有落在真劍百破道開的視窗裡（浸透勁與彈指神通的發動條件）
+function monkBladeStopActive() {
+  return Date.now() < (state.bladeStopEnd || 0);
+}
+/* 武僧各種追擊共用的一發傷害。
+     ignoreDef  true＝完全不走減傷（浸透勁與阿修羅霸凰拳，官方就是無視防禦）
+     defScale   >0 時傷害再隨目標的裝備防禦上升（浸透勁專用）
+   回傳目標是否還活著，連段靠這個決定要不要往下接。 */
+function monkStrike(target, monDef, mult, opts) {
+  const o = opts || {};
+  const em = getElementMultiplierVsMonster('neutral', monDef, target);
+  let raw = weaponChainDamage(monDef, em, false) * mult
+    * cardTargetDmgMult(monDef) * ailDmgTakenMult(target);
+  if (o.defScale) raw *= 1 + (monDef.def || 0) / o.defScale;
+  // 真劍百破道視窗：官方寫的就是「對被抓住的目標，彈指神通與浸透勁傷害 +50%」
+  if (o.bladeStopBonus && monkBladeStopActive() && state.bladeStop) {
+    raw *= 1 + state.bladeStop.dmgBonusPct / 100;
+  }
+  const dmg = (o.ignoreDef
+    ? Math.max(1, Math.round(raw))
+    : mitigateDamage(raw, ...defOf(monDef, 1, false, target))) + raceFlatBonus(monDef) + (o.flat || 0);
+  target.hp -= dmg;
+  ailBreakOnDamage(target, monDef);
+  if (typeof showDamageFloatAt === 'function') showDamageFloatAt(target.id, '-' + dmg, 'normal');
+  logMsg(`${o.icon || '👊'} 「${o.name}」造成 ${dmg} 點傷害！${o.suffix || ''}`);
+  if (target.hp <= 0) { killMonster(monDef, target); return false; }
+  return true;
+}
+function tickSpirits() {
+  // 蓄氣沒點（或被退點）時，手上的球一律歸零／夾回上限
+  if (!state.spiritsMax) { state.spirits = 0; state.spiritRefillAt = 0; return; }
+  if ((state.spirits || 0) > state.spiritsMax) state.spirits = state.spiritsMax;
+  const now = Date.now();
+
+  if ((state.spirits || 0) < state.spiritsMax) {
+    if (!state.spiritRefillAt) state.spiritRefillAt = now + state.spiritRefillSec * 1000;
+    if (now >= state.spiritRefillAt) {
+      state.spirits = (state.spirits || 0) + 1;
+      state.spiritRefillAt = now + state.spiritRefillSec * 1000;
+    }
+  } else {
+    state.spiritRefillAt = 0;
+  }
+
+  /* 爆氣：滿球自動引爆。暴擊走 crit buff 的 flatBonus（playerAttack 本來就在讀），
+     SP 回復 −50% 走 sprate（passiveRegen 本來就在讀）——兩個都是既有的消費點。 */
+  const e = state.explosionSpirits;
+  if (e && (state.spirits || 0) >= e.cost && !monkExplosionActive()) {
+    state.spirits -= e.cost;
+    state.buffs.push({ type: 'crit', mult: 1, flatBonus: e.critFlat, msRemaining: e.durSec * 1000, skillId: 'mo_explosionspirits' });
+    if (e.spRegenPct) {
+      state.buffs.push({ type: 'sprate', mult: Math.max(0, 1 + e.spRegenPct / 100), msRemaining: e.durSec * 1000, skillId: 'mo_explosionspirits' });
+    }
+    logMsg(`🔥 「${e.name}」發動！暴擊率 +${e.critFlat}，持續 ${e.durSec} 秒（SP 自然回復減半）。`);
+  }
+
+  /* 金剛不壞：爆氣中再湊滿 5 顆就自動開。
+     內部冷卻 60 秒是本作自訂的——不設的話它會把每一輪的球全吃掉，
+     阿修羅霸凰拳永遠等不到 5 顆。 */
+  const s = state.steelBody;
+  if (s && monkExplosionActive() && (state.spirits || 0) >= s.cost
+      && now >= (state.steelBodyReadyAt || 0)
+      && !state.buffs.some(b => b.skillId === 'mo_steelbody')) {
+    state.spirits -= s.cost;
+    state.steelBodyReadyAt = now + s.cdSec * 1000;
+    state.buffs.push({ type: 'dmgtaken', mult: Math.max(0, 1 - s.cutPct / 100), msRemaining: s.durSec * 1000, skillId: 'mo_steelbody' });
+    logMsg(`🪨 「${s.name}」發動！受到的傷害 −${s.cutPct}%，持續 ${s.durSec} 秒。`);
+  }
+
+  /* 振氣注入：官方是把 1 顆氣球體給隊友。**本作沒有隊伍系統**，
+     所以 monkPartyMembers() 永遠是空陣列，這段永遠不會成立。
+     留著是為了等隊友模式開放時只要補那一支函式就會亮。 */
+  const k = state.kiTranslation;
+  if (k && (state.spirits || 0) >= 5 && now >= (state.kiTranslationReadyAt || 0)) {
+    const mates = (typeof monkPartyMembers === 'function') ? monkPartyMembers() : [];
+    if (mates.length) {
+      state.spirits -= 1;
+      state.kiTranslationReadyAt = now + k.cdSec * 1000;
+      const who = mates[Math.floor(Math.random() * mates.length)];
+      if (typeof who.giveSpirit === 'function') who.giveSpirit(1);
+      logMsg(`🌀 「${k.name}」：分了 1 顆氣球體給隊友。`);
+    }
+  }
+}
+function tryMonkProcs(target, monDef) {
+  if (!state.songProcReadyAt) state.songProcReadyAt = {};
+  const now = Date.now();
+  const ready = (id, cd) => {
+    if (now < (state.songProcReadyAt[id] || 0)) return false;
+    state.songProcReadyAt[id] = now + (cd || 0) * 1000;
+    return true;
+  };
+
+  // 吸氣：官方吸的是目標身上的氣球體，只有對怪那半（機率回 SP）留得下來
+  const ab = state.absorbSpirits;
+  if (ab && state.sp < state.maxSp
+      && Math.random() * 100 < ab.chance && ready('mo_absorbspirits', ab.cdSec)) {
+    state.sp = Math.min(state.maxSp, state.sp + ab.spGain);
+    logMsg(`🌀 「${ab.name}」回復了 ${ab.spGain} SP。`);
+  }
+
+  // 真劍百破道：開一個 10 秒的視窗，浸透勁與彈指神通只在視窗裡才會發動
+  const bs = state.bladeStop;
+  if (bs && !monkBladeStopActive() && (state.spirits || 0) >= bs.cost
+      && ready('mo_bladestop', bs.cdSec)) {
+    state.spirits -= bs.cost;
+    state.bladeStopEnd = now + bs.durSec * 1000;
+    logMsg(`🤲 「${bs.name}」！接下來 ${bs.durSec} 秒內浸透勁與彈指神通會發動（傷害 +${bs.dmgBonusPct}%）。`);
+  }
+
+  if (target && target.hp > 0 && monDef && monkBladeStopActive()) {
+    // 浸透勁：無視防禦，而且傷害隨目標的防禦上升——專打高防怪的那一招
+    const iv = state.investigate;
+    if (iv && Math.random() * 100 < iv.chance && ready('mo_investigate', iv.cdSec)) {
+      monkStrike(target, monDef, iv.mult,
+        { name: iv.name, icon: '🫳', ignoreDef: true, defScale: iv.defScale, bladeStopBonus: true, suffix: '（無視防禦）' });
+    }
+  }
+  if (target && target.hp > 0 && monDef && monkBladeStopActive()) {
+    const fo = state.fingerOffensive;
+    if (fo && Math.random() * 100 < fo.chance && ready('mo_fingeroffensive', fo.cdSec)) {
+      monkStrike(target, monDef, fo.mult, { name: fo.name, icon: '☝️', bladeStopBonus: true });
+    }
+  }
+
+  /* 發勁：官方 maxLv 0 的未開放技能，使用者指定轉職自動獲得。
+
+     內部冷卻 10 秒，外加兩道保險（跟聖十字審判同一套，#66）：
+     **HP 低於 25% 就不放**、自傷永遠留 1 HP。
+     三個都有必要——沒有冷卻時實測 ASPD 173 每秒觸發 0.37 次、等於每秒燒 74 HP，
+     角色會被自己的被動技一路釘在血量下限，然後被任何一隻怪一下打死。 */
+  const bk = state.balkyoung;
+  if (bk && target && target.hp > 0 && monDef
+      && state.hp > state.maxHp * MONK_BALKYOUNG_HP_FLOOR
+      && Math.random() * 100 < bk.chance && ready('mo_balkyoung', bk.cdSec)) {
+    const cost = Math.min(bk.hpCost, Math.max(0, state.hp - 1));
+    state.hp -= cost;
+    logMsg(`💥 「${bk.name}」！消耗 ${cost} HP。`);
+    const alive = monkStrike(target, monDef, bk.mult, { name: bk.name, icon: '💥' });
+    let stunned = 0;
+    (state.monsters || []).forEach(mon => {
+      const md = MONSTERS[mon.defId];
+      if (!md || mon.hp <= 0) return;
+      if (Math.random() * 100 >= bk.stunChance) return;
+      if (applyAilment(mon, md, 'stun', { sec: bk.stunSec })) stunned++;
+    });
+    if (stunned) logMsg(`💫 發勁的衝擊讓 ${stunned} 隻敵人暈眩了 ${bk.stunSec} 秒。`);
+    if (!alive) return;
+  }
+}
+/* 連段：六合拳 →（50%）連環全身掌 →（30%）猛龍誇強 →（20%）阿修羅霸凰拳。
+   官方要在延遲窗內手動接三次，放置遊戲沒有這個操作空間，所以做成自動串接。
+
+   **猛龍誇強接上阿修羅時兩者共用同一份氣球體消耗**（合計 5 顆）：
+   上限就是 5 顆，猛龍先扣掉 1 顆的話永遠湊不滿阿修羅要的 5 顆，這條鏈會死鎖。 */
+function tryMonkCombo(target, monDef) {
+  const t = state.tripleAttack;
+  if (!t || !target || target.hp <= 0 || !monDef) return;
+  // 官方寫的是「近距離普通攻擊」，所以拿弓的時候整條鏈都不跑
+  if (isBowWeapon(getEquipBaseItemId('weapon'))) return;
+  if (Math.random() * 100 >= t.chance) return;
+  if (!monkStrike(target, monDef, t.mult, { name: t.name, suffix: `（${t.hits} 連擊）` })) return;
+
+  const c = state.chainCombo;
+  if (!c || Math.random() * 100 >= c.chance) return;
+  // 拳套：官方是 4 連擊變 6 連擊、傷害加倍
+  const knuckle = weaponReqMet('knuckle');
+  const cMult = c.mult * (knuckle ? c.knuckleMult : 1);
+  const cHits = knuckle ? c.knuckleHits : c.hits;
+  if (!monkStrike(target, monDef, cMult, { name: c.name, suffix: `（${cHits} 連擊${knuckle ? '・拳套' : ''}）` })) return;
+
+  const f = state.comboFinish;
+  if (!f || Math.random() * 100 >= f.chance) return;
+  const x = state.extremityFist;
+  const asuraReady = !!x && monkExplosionActive()
+    && (state.spirits || 0) >= x.cost && Math.random() * 100 < x.chance;
+  if (!asuraReady) {
+    if ((state.spirits || 0) < f.cost) return;
+    state.spirits -= f.cost;
+  }
+  // 猛龍誇強：官方傷害隨 STR 上升（STR 99 時約 +50%）
+  const fMult = f.mult * (1 + state.stats.str / f.strScale);
+  if (!monkStrike(target, monDef, fMult, { name: f.name, icon: '🐲' })) return;
+  if (!asuraReady) return;
+
+  /* 阿修羅霸凰拳：消 5 顆氣球體與**全部 SP**，傷害隨消耗的 SP 上升，
+     無視迴避與防禦，放完解除爆氣狀態（官方規則）。 */
+  state.spirits -= x.cost;
+  const spSpent = state.sp;
+  state.sp = 0;
+  const mult = x.mult + spSpent / x.spScale;
+  logMsg(`💢 「${x.name}」！燃燒了 ${spSpent} SP。`);
+  monkStrike(target, monDef, mult,
+    { name: x.name, icon: '💢', ignoreDef: true, flat: x.flat, suffix: '（無視迴避與防禦）' });
+  state.buffs = state.buffs.filter(b => b.skillId !== 'mo_explosionspirits');
+  logMsg('🔥 爆氣狀態解除。');
+}
+
+/* ---------------- 賢者（#71）----------------
+
+   四個進入點：
+     sageCanPay/sagePay  資源取用：**背包 → 倉庫 → 付錢**（使用者 2026-08-10 指定）
+     trySageProcs()      普攻觸發：自動念咒、念咒拆除、魔法效果解除、隨機技能、元素更換
+     tryMagicRod()       受怪物技能攻擊時：機率完全免傷並回 SP
+     tickConverter()     肯貝特武器附魔：面板選定屬性後自動維持
+
+   倉庫是**跨角色**的（`loadWarehouse()`，存在 localStorage 不在存檔裡），
+   所以這裡動它要自己 saveWarehouse；但**不呼叫 saveGame**——
+   這些是每次普攻都可能跑到的路徑，每次都寫存檔會拖垮 tick。 */
+function sageWarehouseQty(id) {
+  const wh = loadWarehouse();
+  const row = wh.items.find(r => r.item === id && !r.instanceId);
+  return row ? row.qty : 0;
+}
+// 湊不湊得出來（只看，不扣）。ids 依序試，第一個湊得出來的就算數
+function sageCanPay(ids, qty, goldFallback) {
+  qty = qty || 1;
+  for (const id of ids || []) {
+    if (getItemQty(id) >= qty || sageWarehouseQty(id) >= qty) return true;
+  }
+  return !!(goldFallback && state.gold >= goldFallback);
+}
+/* 真的扣。回傳 { id, label } 讓訊息印得出「用掉了什麼」，湊不出來回 null。
+   `gemfree`（觸媒之所）在這裡一起認——那個 buff 講的就是「使用魔法時魔力礦石不消耗」。 */
+function sagePay(ids, qty, goldFallback) {
+  qty = qty || 1;
+  const gemFree = buffMult('gemfree').flatBonus;
+  if (gemFree > 0 && Math.random() * 100 < gemFree) return { id: null, label: '（觸媒之所免除）' };
+  for (const id of ids || []) {
+    if (getItemQty(id) >= qty) { removeItem(id, qty); return { id, label: `${getItemDisplayName(id)}×${qty}` }; }
+  }
+  const wh = loadWarehouse();
+  for (const id of ids || []) {
+    const row = wh.items.find(r => r.item === id && !r.instanceId);
+    if (!row || row.qty < qty) continue;
+    row.qty -= qty;
+    if (row.qty <= 0) wh.items = wh.items.filter(r => !(r.item === id && !r.instanceId));
+    saveWarehouse(wh);
+    return { id, label: `倉庫的 ${getItemDisplayName(id)}×${qty}` };
+  }
+  if (goldFallback && state.gold >= goldFallback) {
+    state.gold -= goldFallback;
+    return { id: null, label: `${goldFallback} 鋅幣` };
+  }
+  return null;
+}
+// 身上有沒有正在開著的元素領域（切換領域免礦石的判斷依據）
+function elementFieldActive() {
+  return state.buffs.some(b => b.eleFieldTag === 1);
+}
+/* 自動念咒可以挑哪些魔法：**已學會的魔法技能**（官方就是「選擇特定已學到的魔法」）。
+   發動等級上限是本技能等級的一半（官方規則），再被該魔法自己的上限與已學等級夾住。 */
+const SAGE_AUTOSPELL_TYPES = ['magic', 'magic_aoe', 'field_aoe_magic'];
+function sageAutoSpellChoices() {
+  const out = [];
+  const seen = new Set();
+  getAllLearnedJobs().forEach(jid => {
+    const jd = JOB_TREE[jid];
+    if (!jd) return;
+    jd.skills.forEach(sk => {
+      if (seen.has(sk.id) || !SAGE_AUTOSPELL_TYPES.includes(sk.type)) return;
+      if (!skillLv(sk.id)) return;
+      seen.add(sk.id);
+      out.push({ id: sk.id, name: sk.name, maxLv: sageAutoSpellLv(sk.id) });
+    });
+  });
+  return out;
+}
+function sageAutoSpellLv(skillId) {
+  const cfg = state.sageAutoSpell;
+  if (!cfg) return 0;
+  const cap = Math.max(1, Math.floor(cfg.lv / 2));
+  return Math.min(cap, skillLv(skillId) || 0);
+}
+function setSageAutoSpell(skillId) {
+  if (!skillId) { state.sageAutoSpellId = null; saveGame(); return true; }
+  if (!sageAutoSpellChoices().some(c => c.id === skillId)) return false;
+  state.sageAutoSpellId = skillId;
+  logMsg(`📘 自動念咒記住了「${SKILLS[skillId].name}」（可用到 Lv${sageAutoSpellLv(skillId)}）。`);
+  saveGame();
+  return true;
+}
+/* 魔法懲罰：官方是「在被單體魔法擊中前一刻施展，擋下傷害並吸 SP」。
+   本作沒有詠唱也沒有那個時機，但怪物真的會放技能（#45），
+   所以改成「受怪物技能攻擊時機率完全免傷」。回傳 true 代表這一發被吃掉了。 */
+function tryMagicRod() {
+  const p = state.magicRod;
+  if (!p) return false;
+  const now = Date.now();
+  if (now < (state.magicRodReadyAt || 0)) return false;
+  if (Math.random() * 100 >= p.chance) return false;
+  state.magicRodReadyAt = now + p.cdSec * 1000;
+  state.sp = Math.min(state.maxSp, state.sp + p.spGain);
+  logMsg(`🪄 「${p.name}」發動！完全擋下這次技能攻擊並吸收了 ${p.spGain} SP。`);
+  return true;
+}
+/* 肯貝特武器附魔：官方 maxLv 0 的「肯貝特製作」做出來的道具效果。
+   使用者指定改成自動戰鬥面板的一個開關——選定屬性就自動維持，
+   每次消耗對應的靈礦石（背包 → 倉庫 → 付 1000z），一次 20 分鐘。 */
+const SAGE_CONVERTER_ORE = { fire: 'boody_red', water: 'crystal_blue', wind: 'wind_of_verdure', earth: 'yellow_live' };
+function tickConverter() {
+  const c = state.elementConverter;
+  const pick = state.converterElement;
+  if (!c || !pick || !SAGE_CONVERTER_ORE[pick]) return;
+  // 屬性附加放著的時候不要搶——那是玩家自己放的技能，效果比附魔好
+  if (state.buffs.some(b => b.type === 'eleweapon')) return;
+  const paid = sagePay([SAGE_CONVERTER_ORE[pick]], 1, c.goldFallback);
+  if (!paid) {
+    if (!state._converterWarned) {
+      logMsg(`⚠️ 肯貝特武器附魔：${getItemDisplayName(SAGE_CONVERTER_ORE[pick])}與鋅幣都不足，暫停附魔。`);
+      state._converterWarned = true;
+    }
+    return;
+  }
+  state._converterWarned = false;
+  state.buffs.push({ type: 'eleweapon', element: pick, mult: 1, msRemaining: c.durSec * 1000, skillId: 'sa_createcon' });
+  logMsg(`🔮 肯貝特武器附魔：武器變成${ELEMENT_NAMES[pick]}屬性 ${Math.round(c.durSec / 60)} 分鐘（消耗${paid.label}）。`);
+}
+function trySageProcs(target, monDef) {
+  if (!state.songProcReadyAt) state.songProcReadyAt = {};
+  const now = Date.now();
+  const ready = (id, cd) => {
+    if (now < (state.songProcReadyAt[id] || 0)) return false;
+    state.songProcReadyAt[id] = now + (cd || 0) * 1000;
+    return true;
+  };
+
+  /* 自動念咒：官方是「普攻時機率自動施放選定的魔法，SP 只花 2/3」。
+     使用者指定**獨立冷卻 3 秒、不吃該魔法自己的冷卻**——
+     不然挑到隕石術（20 秒冷卻）就等於這個被動幾乎不會動。 */
+  const as = state.sageAutoSpell;
+  if (as && state.sageAutoSpellId && target && target.hp > 0) {
+    const chance = as.chance + (state.freeCastAutoSpellPct || 0);
+    const lv = sageAutoSpellLv(state.sageAutoSpellId);
+    const sk = lv ? findSkillAnywhere(state.sageAutoSpellId) : null;
+    if (sk && Math.random() * 100 < chance && ready('sa_autospell', as.cdSec)) {
+      const cost = Math.round(skillSpCost(sk, lv) * as.spCostPct / 100);
+      if (state.sp >= cost) {
+        state.sp -= cost;
+        if (castSkill(sk.id, { free: true, forceLv: lv })) {
+          logMsg(`📘 「${as.name}」發動！${sk.name} Lv${lv}（SP −${cost}）`);
+        }
+      }
+    }
+  }
+
+  /* 念咒拆除：官方是打斷詠唱 + 吸 SP + 造成目標最大 HP 2% 的傷害。
+     無詠唱可打斷，只留下傷害與吸 SP，再照使用者指定補上暈眩。
+     **對首領階級不造成傷害**是官方就有的限制，暈眩照常判定。 */
+  const sb = state.spellBreaker;
+  if (sb && target && target.hp > 0 && monDef
+      && Math.random() * 100 < sb.chance && ready('sa_spellbreaker', sb.cdSec)) {
+    state.sp = Math.min(state.maxSp, state.sp + sb.spGain);
+    applyAilment(target, monDef, 'stun', { sec: sb.stunSec });
+    if (monDef.isBoss) {
+      logMsg(`📕 「${sb.name}」！${monDef.name} 是首領階級，不受傷害（官方規則），但仍被震住了。回復 ${sb.spGain} SP。`);
+    } else {
+      const dmg = Math.max(1, Math.round((target.maxHp || monDef.hp || 1) * sb.hpPct / 100));
+      target.hp -= dmg;
+      if (typeof showDamageFloatAt === 'function') showDamageFloatAt(target.id, '-' + dmg, 'normal');
+      logMsg(`📕 「${sb.name}」！對 ${monDef.name} 造成 ${dmg} 點傷害（最大HP 的 ${sb.hpPct}%）並回復 ${sb.spGain} SP。`);
+      if (target.hp <= 0) { killMonster(monDef, target); return; }
+    }
+  }
+
+  /* 魔法效果解除：#36 之後怪物真的會給自己上 buff（`mon.mbuff`），所以有實際對象。
+     **怪身上沒有 buff 就不觸發、也不消耗礦石**（使用者指定）——
+     不然這一招會把黃色魔力礦石燒在空氣上。 */
+  const dp = state.dispellProc;
+  if (dp && target && target.hp > 0 && monDef && monBuffList(target).length
+      && Math.random() * 100 < dp.chance && ready('sa_dispell', dp.cdSec)) {
+    if (sageCanPay(dp.costItems, dp.costQty)) {
+      const paid = sagePay(dp.costItems, dp.costQty);
+      if (Math.random() * 100 < dp.successPct) {
+        target.mbuff = {};
+        logMsg(`📗 「${dp.name}」成功！${monDef.name} 身上的強化效果全部消失（消耗${paid ? paid.label : '—'}）。`);
+      } else {
+        logMsg(`📗 「${dp.name}」失敗…（消耗${paid ? paid.label : '—'}）`);
+      }
+    }
+  }
+
+  /* 隨機技能：官方是消耗黃色魔力礦石×2 隨機發動一個技能。
+     使用者指定池子限定**攻擊技能**、等級＝本技能等級但不超過該技能自己的上限。
+     池子的查詢跟流氓的抄襲共用 `PLAGIARISM_ATTACK_TYPES`。 */
+  const ab = state.abracadabra;
+  if (ab && target && target.hp > 0
+      && Math.random() * 100 < ab.chance && ready('sa_abracadabra', ab.cdSec)) {
+    const pool = Object.values(SKILLS).filter(sk => PLAGIARISM_ATTACK_TYPES.includes(sk.type));
+    if (pool.length && sageCanPay(ab.costItems, ab.costQty)) {
+      const paid = sagePay(ab.costItems, ab.costQty);
+      const sk = pool[Math.floor(Math.random() * pool.length)];
+      const lv = Math.max(1, Math.min(sk.maxLv || 1, ab.castLv));
+      if (castSkill(sk.id, { free: true, forceLv: lv })) {
+        logMsg(`🎲 「${ab.name}」抽到了「${sk.name}」Lv${lv}！（消耗${paid ? paid.label : '—'}）`);
+      }
+    }
+  }
+
+  /* 元素更換：官方 maxLv 0 的四個技能，使用者指定轉職獲得、面板四選一。
+     把**這一隻怪**暫時變成選定的屬性 10 秒（首領階級也吃，使用者指定）。
+     覆寫寫在怪物實體上，`getElementMultiplierVsMonster` 的第三個參數就是為它加的。 */
+  const pick = state.elementChangePick;
+  const ec = pick && state.elementChanges ? state.elementChanges[pick] : null;
+  if (ec && target && target.hp > 0 && monDef
+      && monElementOf(monDef, target) !== ec.element
+      && Math.random() * 100 < ec.chance && ready(ec.id, ec.cdSec)) {
+    if (sageCanPay(ec.costItems, 1, ec.goldFallback)) {
+      const paid = sagePay(ec.costItems, 1, ec.goldFallback);
+      target.eleOverride = ec.element;
+      target.eleOverrideEnd = now + ec.durSec * 1000;
+      logMsg(`🌀 「${ec.name}」！${monDef.name} 變成${ELEMENT_NAMES[ec.element]}屬性 ${ec.durSec} 秒（消耗${paid ? paid.label : '—'}）。`);
+    }
+  }
+}
+
 function tryGanbantein() {
   if (!state.hasGanbantein || !state.monsters || !state.monsters.length) return;
   if (Date.now() < (state.ganbanteinReadyAt || 0)) return;
   if (typeof getItemQty !== 'function') return;
   if (GANBANTEIN_STONES.some(id => getItemQty(id) <= 0)) return;
   state.ganbanteinReadyAt = Date.now() + state.ganbanteinCdSec * 1000;
-  GANBANTEIN_STONES.forEach(id => removeItem(id, 1));
+  /* 觸媒之所（#68）：官方是「使用魔法時魔力礦石消耗 −1」。本作單人合奏只有一半效果，
+     所以做成「N% 機率不消耗」——礦石本來就只吃 1 個，減半沒有整數可減。 */
+  const gemFree = buffMult('gemfree').flatBonus;
+  const freeThisTime = gemFree > 0 && Math.random() * 100 < gemFree;
+  if (!freeThisTime) GANBANTEIN_STONES.forEach(id => removeItem(id, 1));
   let hit = 0;
   state.monsters.forEach(mon => {
     if (Math.random() * 100 >= state.ganbanteinChance) return;
@@ -2877,7 +4178,7 @@ function tryGanbantein() {
     applyStun(mon, sec, true);
     hit++;
   });
-  logMsg(`🪨 咖般塔音發動（消耗魔力礦石各 1）！${hit} 隻敵人被震暈。`);
+  logMsg(`🪨 咖般塔音發動（${freeThisTime ? '觸媒之所讓這次不消耗礦石' : '消耗魔力礦石各 1'}）！${hit} 隻敵人被震暈。`);
   const left = Math.min(...GANBANTEIN_STONES.map(id => getItemQty(id)));
   if (left === 0) logMsg('🪨 魔力礦石用完了，咖般塔音暫時發動不了。');
 }
@@ -2892,7 +4193,7 @@ function tryMagicCrasher(target, monDef) {
   if (Date.now() < (state.magicCrasherReadyAt || 0)) return;
   if (Math.random() * 100 >= state.magicCrasherChance) return;
   state.magicCrasherReadyAt = Date.now() + state.magicCrasherCdSec * 1000;
-  const elemMult = getElementMultiplierVsMonster('neutral', monDef);
+  const elemMult = getElementMultiplierVsMonster('neutral', monDef, target);
   const dmg = mitigateDamage(
     state.matk * state.magicCrasherMult * elemMult * cardTargetDmgMult(monDef) * ailDmgTakenMult(target),
     ...defOf(monDef, 1, false, target));
@@ -2974,7 +4275,7 @@ function tryOnHitAoeProc() {
   for (let i = state.monsters.length - 1; i >= 0; i--) {
     const mon = state.monsters[i];
     const monDef = MONSTERS[mon.defId];
-    const elemMult = getElementMultiplierVsMonster(state.onHitAoeProcElement, monDef);
+    const elemMult = getElementMultiplierVsMonster(state.onHitAoeProcElement, monDef, mon);
     const dmg = mitigateDamage(state.matk * state.onHitAoeProcMult * elemMult, ...defOf(monDef, 1, true));
     mon.hp -= dmg;
     wakeIfFrozen(mon);
@@ -2995,7 +4296,7 @@ function tryOnAttackAoeProc() {
   for (let i = state.monsters.length - 1; i >= 0; i--) {
     const mon = state.monsters[i];
     const monDef = MONSTERS[mon.defId];
-    const elemMult = getElementMultiplierVsMonster(state.onAttackAoeElement, monDef);
+    const elemMult = getElementMultiplierVsMonster(state.onAttackAoeElement, monDef, mon);
     const dmg = mitigateDamage((state.onAttackAoeFlatDmg + state.matk * state.onAttackAoeMult) * elemMult, ...defOf(monDef, 1, true));
     mon.hp -= dmg;
     wakeIfFrozen(mon);
@@ -3027,7 +4328,7 @@ function tryOnHitAoeStunProc() {
   for (let i = state.monsters.length - 1; i >= 0; i--) {
     const mon = state.monsters[i];
     const monDef = MONSTERS[mon.defId];
-    const elemMult = getElementMultiplierVsMonster(state.onHitAoeStunElement, monDef);
+    const elemMult = getElementMultiplierVsMonster(state.onHitAoeStunElement, monDef, mon);
     const dmg = mitigateDamage(state.matk * state.onHitAoeStunMult * elemMult, ...defOf(monDef, 1, true));
     mon.hp -= dmg;
     wakeIfFrozen(mon);
@@ -3114,6 +4415,10 @@ function gameTick() {
     tryAutoShield();
     // 手推車加速被動（#60）：60 秒到期後隔 10 秒自己續上
     tickCartBoost();
+    // 武僧的氣球體（#70）：補球、滿球自動爆氣、爆氣中滿球自動金剛不壞
+    tickSpirits();
+    // 賢者的肯貝特武器附魔（#71）：面板選定屬性後自動維持
+    tickConverter();
     // 投擲長矛：敵人數≥2時定時隨機攻擊
     trySpearBoomerangProc();
     // 衝鋒攻擊：敵人數≥2時定時隨機攻擊
@@ -3137,7 +4442,16 @@ function gameTick() {
       state.activeFieldEffects = state.activeFieldEffects.filter(f => now < f.endsAt);
       state.activeFieldEffects.forEach(f => {
         if (now < f.nextTickAt) return;
+        /* **補跳**：這個迴圈住在每秒一次的慢心跳裡，但場域可以宣告比 1 秒更短的間隔
+           （#72 火煙瓶投擲官方就是 0.5 秒）。只推一次時間戳的話，0.5 秒的場域
+           實際上每秒只結算一次，傷害直接砍半。改成算出這一秒該跳幾次，一次補齊。
+           上限 20 跳是保險：分頁切回前景時 now 可能一口氣跳很遠。 */
+        let ticks = 1;
+        if (f.tickIntervalSec > 0) {
+          ticks = Math.min(20, Math.max(1, Math.floor((now - f.nextTickAt) / (f.tickIntervalSec * 1000)) + 1));
+        }
         f.nextTickAt = now + f.tickIntervalSec * 1000;
+        f.ticksThisRound = ticks;
         if (f.kind === 'selfheal') {
           const before = state.hp;
           state.hp = Math.min(state.maxHp, state.hp + f.amount);
@@ -3146,8 +4460,8 @@ function gameTick() {
           if (state.monsters && state.monsters.length > 0) {
             state.monsters.forEach(mon => {
               const monDef = MONSTERS[mon.defId];
-              const elemMult = getElementMultiplierVsMonster(f.element || 'holy', monDef);
-              const dmg = mitigateDamage(state.matk * f.mult * elemMult, ...defOf(monDef, 1, true));
+              const elemMult = getElementMultiplierVsMonster(f.element || 'holy', monDef, mon);
+              const dmg = mitigateDamage(state.matk * f.mult * elemMult, ...defOf(monDef, 1, true)) * (f.ticksThisRound || 1);
               mon.hp -= dmg;
               wakeIfFrozen(mon);
               if (f.stunChance && Math.random() * 100 < f.stunChance) applyStun(mon, f.stunSec || 1, true);
@@ -3161,13 +4475,45 @@ function gameTick() {
             }
             if (typeof renderLog === 'function') renderLog();
           }
+        /* 鍊金術士（#72）：火煙瓶投擲的物理火場，與生物調撥／生命體召喚的定時攻擊。
+           三者同一個形狀——每隔 N 秒對敵人打一次 ATK 倍率的物理傷害，
+           所以共用一個 kind，差別只在打全體還是單體、有沒有附帶回血。
+           **不是新增召喚實體**：本作玩家側召喚是 0 行，使用者 2026-08-10 指定
+           把「有隻寵物在打」換成「場域定時自動攻擊」。 */
+        } else if (f.kind === 'alchemy_strike') {
+          if (state.monsters && state.monsters.length > 0) {
+            const targets = f.aoe ? state.monsters.slice() : [state.monsters[0]];
+            targets.forEach(mon => {
+              const monDef = MONSTERS[mon.defId];
+              if (!monDef || mon.hp <= 0) return;
+              const em = getElementMultiplierVsMonster(f.element || 'neutral', monDef, mon);
+              const dmg = (mitigateDamage(
+                weaponChainDamage(monDef, em, false) * f.mult * cardTargetDmgMult(monDef) * ailDmgTakenMult(mon),
+                ...defOf(monDef, 1, false, mon)) + raceFlatBonus(monDef)) * (f.ticksThisRound || 1);
+              mon.hp -= dmg;
+              wakeIfFrozen(mon);
+              combatLogBuf.push(`  → 「${f.name}」對 ${monDef.name} 造成 ${dmg} 點傷害！`);
+              if (typeof showDamageFloatAt === 'function') showDamageFloatAt(mon.id, '-' + dmg, 'normal', f.element || null);
+            });
+            for (let i = state.monsters.length - 1; i >= 0; i--) {
+              const mon = state.monsters[i];
+              if (mon.hp <= 0) killMonster(MONSTERS[mon.defId], mon);
+            }
+            if (typeof renderLog === 'function') renderLog();
+          }
+          // 生物調撥的回血那半：官方沒有，是使用者 2026-08-10 指定的（打一下補 500）
+          if (f.healFlat) {
+            const before = state.hp;
+            state.hp = Math.min(state.maxHp, state.hp + f.healFlat * (f.ticksThisRound || 1));
+            if (state.hp > before) combatLogBuf.push(`  → 「${f.name}」回復了 ${state.hp - before} 點HP。`);
+          }
         } else if (f.kind === 'multi_dot') {
           if (state.monsters && state.monsters.length > 0 && f.targetIds && f.targetIds.length > 0) {
             const targets = state.monsters.filter(m => f.targetIds.includes(m.id));
             targets.forEach(mon => {
               const monDef = MONSTERS[mon.defId];
-              const elemMult = getElementMultiplierVsMonster(f.element || 'none', monDef);
-              const dmg = mitigateDamage(state.matk * f.mult * elemMult, ...defOf(monDef, 1, true));
+              const elemMult = getElementMultiplierVsMonster(f.element || 'none', monDef, mon);
+              const dmg = mitigateDamage(state.matk * f.mult * elemMult, ...defOf(monDef, 1, true)) * (f.ticksThisRound || 1);
               mon.hp -= dmg;
               wakeIfFrozen(mon);
               combatLogBuf.push(`  → 「${f.name}」對 ${monDef.name} 造成 ${dmg} 點持續傷害！`);
@@ -3229,7 +4575,8 @@ function gameTick() {
         const monDef = MONSTERS[mon.defId];
         // 怪物自己的加速增益（NPC_AGIUP / BS_ADRENALINE / KN_TWOHANDQUICKEN）縮短間隔
         const interval = ((monDef && monDef.atkInterval) ? monDef.atkInterval * 1000 : 1000)
-          / (1 + monBuff(mon, 'aspdPct') / 100);
+          / (1 + monBuff(mon, 'aspdPct') / 100)
+          / monDebuffAspd(mon);              // 勿忘我（#68）：攻速下降＝間隔拉長
         if (now - mon.lastAttackTime >= interval) {
           mon.lastAttackTime = now;
           monsterAttackSingle(mon);
@@ -3271,7 +4618,12 @@ function passiveRegen() {
   }
   // 卡片的「HP/SP恢復力+N%」加成
   const regenMult = (state.hpRegenMult || 1) * (1 + (state.cardHpRegenPct || 0) / 100);
-  const hpPerTick = state.maxHp / 200 + state.stats.vit / 5;
+  /* 運氣調息（#70）：官方是「坐著時每 10 秒回復 N + N% MaxHP」。本作沒有坐下的動作，
+     使用者指定改成常駐——併進每 tick 的量（跟禪心同一個位置），不另開回血心跳。 */
+  const mr = state.monkRegen;
+  const monkHp = mr ? mr.hpFlat + state.maxHp * (mr.hpPct / 100) : 0;
+  const monkSp = mr ? mr.spFlat + state.maxSp * (mr.spPct / 100) : 0;
+  const hpPerTick = state.maxHp / 200 + state.stats.vit / 5 + monkHp;
   /* 恢復力可以是負的（幽靈波利 −25%、七彩飛龍 −100%），所以不能無腦 Math.max(1,…)——
      那會讓「恢復力歸零」的卡片還是每秒回 1 點。降到 0 以下就是完全不回。 */
   const hpRegen = regenMult <= 0 ? 0 : Math.max(1, Math.ceil(hpPerTick / REGEN_HP_TICK_SEC * REGEN_IDLE_SCALE * regenMult));
@@ -3279,7 +4631,7 @@ function passiveRegen() {
      不然一個技能就蓋過整條自然回復。百分比那項同理。 */
   const zenFlat = state.zenSpFlatBonus || 0;
   const zenPct = state.maxSp * ((state.zenSpPctBonus || 0) / 100);
-  const spPerTick = state.maxSp / 100 + state.stats.int / 6 + zenFlat + zenPct;
+  const spPerTick = state.maxSp / 100 + state.stats.int / 6 + zenFlat + zenPct + monkSp;
   // 聖母之頌歌buff：SP恢復速度倍率
   const sprateMult = buffMult('sprate').mult;
   const spRegenMult = (state.spRegenMult || 1) * sprateMult
@@ -3535,6 +4887,12 @@ function computeAspd() {
     // 狂怒之槍那種「ASPD +N 點」的 buff（#58）。倍率那條走上面，兩者可以並存
     if (b.flatBonus) buffAspdFlat += b.flatBonus;
   });
+  /* 光之盾的攻速懲罰（#66）：跟技能攻速走同一層相加。
+     官方光之盾的減速就是跟長矛加速術那類同級的「技能攻速%」，
+     所以兩個一起掛時是 +30% 與 −20% 相抵，不是各乘一次。 */
+  if (state.defenderAspdPct) skillAspdPct -= state.defenderAspdPct / 100;
+  // 操控樂器（#68）：裝備樂器時攻速 +1~10%，跟技能攻速走同一層
+  if (state.songAspdPct) skillAspdPct += state.songAspdPct / 100;
   const afterSkill = 200 - (200 - core) * (1 - skillAspdPct);
 
   // Step 6: 裝備攻速百分比 + 固定值（含蒼鷹之眼等被動固定ASPD加成）
@@ -3584,11 +4942,43 @@ function playerAtkMult() {
      雙劍挌擋（#58）—— 領主騎士被動，常駐但要拿雙手劍
    分開擲而不是把機率相加，是因為官方本來就是兩個獨立的判定，
    相加會在兩者都高的時候直接爆到 100%。 */
+/* 回傳**是哪個來源擋下的**（'autoguard' / 'parrying'）或 null。
+   以前回 true/false 就夠用，但十字軍的退縮（#66）官方寫的是
+   「以**自動防禦**成功防禦時，有 50% 機率使對方暈眩」——雙劍挌擋擋下的那次不算，
+   所以呼叫端要分得出來。兩個呼叫點都只做真假判斷，字串一樣是 truthy，行為不變。 */
 function playerBlocked() {
-  const pct = buffMult('block').flatBonus;
-  if (pct > 0 && Math.random() * 100 < pct) return true;
+  /* 化學盾牌保護（#72）帶自己的內部冷卻，所以 block 型 buff 要分成兩批：
+     沒寫 `blockCdSec` 的（自動防禦）照舊每次都擲，
+     寫了的先看冷卻好了沒、而且**只在擲中時才重新計時**——
+     擲失敗也扣冷卻的話，20% 的實際發生率會被壓到 2% 左右（跟 #66 光之盾同一個坑）。 */
+  const now = Date.now();
+  let pct = 0;
+  const timed = [];
+  state.buffs.forEach(b => {
+    if (b.type !== 'block' || !b.flatBonus) return;
+    if (!b.blockCdSec) { pct += b.flatBonus; return; }
+    if (now >= (b.blockReadyAt || 0)) timed.push(b);
+  });
+  if (pct > 0 && Math.random() * 100 < pct) return 'autoguard';
+  for (const b of timed) {
+    if (Math.random() * 100 >= b.flatBonus) continue;
+    b.blockReadyAt = now + b.blockCdSec * 1000;
+    return 'autoguard';
+  }
   const parry = state.parryingChance || 0;
-  return parry > 0 && Math.random() * 100 < parry;
+  if (parry > 0 && Math.random() * 100 < parry) return 'parrying';
+  return null;
+}
+
+/* 退縮（#66）：自動防禦擋下時，機率把對方震暈。
+   官方是「再次使用時解除」的開關技能且 maxLv 0（未開放），
+   使用者 2026-08-09 指定改成**被動、轉職自動獲得**。 */
+function tryShrinkStun(mon, monDef, blockedBy) {
+  if (blockedBy !== 'autoguard') return;
+  if (!state.shrinkStunChance || !mon) return;
+  if (Math.random() * 100 >= state.shrinkStunChance) return;
+  applyStun(mon, state.shrinkStunSec || 1, true);
+  logMsg(`💫 退縮！${monDef.name} 被盾牌震得站不穩。`);
 }
 /* 迴避的 buff 版本。以前 buff_flee 類技能會 push 一個 type:'flee' 的 buff，
    但迴避判定直接讀 state.flee，那個 buff 從來沒有人去讀——等於推了個空的。
@@ -3613,7 +5003,11 @@ function spawnMonster() {
   if (!state.lastSpawnTime) state.lastSpawnTime = Date.now();
 
   const maxMonsters = state.maxMonsters || 5;
-  const ridePassive = state.learnedSkills && state.learnedSkills['riding'];
+  /* 生怪加速的旗標。以前這行是 `state.learnedSkills['riding']`——直接寫死技能 id，
+     而 recomputeDerived() 設的 `state.hasRiding` **從來沒有人讀**（寫了兩處、讀 0 處，
+     這個專案第五次的「推了卻沒人讀」）。#70 的弓身彈影也走同一個效果，
+     改成讀旗標之後兩個技能共用同一個消費點，之後再加第三個也不必動這裡。 */
+  const ridePassive = state.hasRiding;
 
   // 近戰模式：最多5隻，0隻時0.5秒一隻，1隻以上時3秒一隻
   if (state.encounterMode === 'melee') {
@@ -3629,6 +5023,8 @@ function spawnMonster() {
     // 手推車加速（#60）：同一個維度的第三個來源，一樣相乘、一樣吃 100ms 下限
     const cb = buffMult('spawnspeed').mult;
     if (cb !== 1) delay = Math.max(100, Math.round(delay / cb));
+    // 操控樂器／練習舞蹈（#68）：官方是合奏時移速上升，照慣例改成生怪加速
+    if (state.songSpawnSpeedPct) delay = Math.max(100, Math.round(delay / (1 + state.songSpawnSpeedPct / 100)));
     if (now - state.lastSpawnTime < delay) return;
     state.lastSpawnTime = now;
   }
@@ -3650,6 +5046,7 @@ function spawnMonster() {
   if (!def) return; // 怪物不存在，跳過
   state.monsterIdCounter = (state.monsterIdCounter || 0) + 1;
   state.monsters.push({ defId, hp: def.hp, maxHp: def.hp, id: state.monsterIdCounter });
+  applyDontForgetMe(state.monsters[state.monsters.length - 1]);
   state.monster = state.monsters[0];
   codexRecordSeen(defId);
   const isMvp = mvpList && mvpList.includes(defId);
@@ -3683,6 +5080,7 @@ function summonBossSlaves(bossDef) {
     if (!sdef) continue;
     state.monsterIdCounter = (state.monsterIdCounter || 0) + 1;
     state.monsters.push({ defId: sid, hp: sdef.hp, maxHp: sdef.hp, id: state.monsterIdCounter });
+    applyDontForgetMe(state.monsters[state.monsters.length - 1]);
     codexRecordSeen(sid);
     names.push(sdef.icon + sdef.name);
   }
@@ -3702,6 +5100,7 @@ function spawnExtraMonster() {
   if (!def) return;
   state.monsterIdCounter = (state.monsterIdCounter || 0) + 1;
   state.monsters.push({ defId, hp: def.hp, maxHp: def.hp, id: state.monsterIdCounter });
+  applyDontForgetMe(state.monsters[state.monsters.length - 1]);
   logMsg(`一隻 ${def.icon} ${def.name} 被衝鋒攻擊召喚了！`);
 }
 
@@ -3738,6 +5137,17 @@ function weaponChainDamage(monDef, elemMult, roll, sk) {
        官方螺旋擊刺的公式用的是**顯示值**，所以這裡要先除以 10，
        資料那邊才寫得下官方原本的係數 0.8。直接乘原始值會強 10 倍。 */
     wpn += ((w.weight || 0) / 10) * k;
+  }
+  /* 迴旋盾擊（#66）：官方「傷害會根據盾牌的精煉值和重量而增加」。
+     跟上面的武器重量走同一桶、同一個 /10 換算（ITEMS 的 weight 是顯示值的 10 倍）。
+     精煉是每階固定值，不吃 /10。 */
+  if (sk && (sk.shieldWeightMult || sk.shieldRefineMult)) {
+    const shId = getEquipBaseItemId('shield');
+    const sh = shId ? ITEMS[shId] : null;
+    if (sh) {
+      if (sk.shieldWeightMult) wpn += ((sh.weight || 0) / 10) * sk.shieldWeightMult;
+      if (sk.shieldRefineMult) wpn += getRefinementLevel('shield') * sk.shieldRefineMult;
+    }
   }
   /* 致命塗毒（#59）：官方寫的是「**裝備ATK** ×280~400%」，指的就是武器那一桶，
      不是總 ATK。本作 #12 之後 ATK 早就拆成三桶，所以這個倍率天生對得上 `wpn`。
@@ -3784,7 +5194,14 @@ function weaponChainDamage(monDef, elemMult, roll, sk) {
 
    呼叫端要注意：改用本函式之後就不可以再自己乘一次 elemMult 或 getSizeMultiplier()。 */
 function skillBaseDamage(useMag, monDef, elemMult, sk) {
-  if (useMag) return state.matk * elemMult;
+  /* 龍知識（#71）：官方把物理與魔法分成兩欄（ATK +4~20% / MATK +2~10%）。
+     物理那半走 `cardRaceDmgBonus.dragon`（cardTargetDmgMult 本來就在讀），
+     魔法那半沒有現成的桶，掛在這裡——這是全專案唯一一個「知道自己在算魔法、
+     手上又有 monDef」的地方，放別處都得再開一條平行的管線。 */
+  if (useMag) {
+    const dragon = (state.dragonMatkPct && monDef && monDef.race === 'dragon') ? state.dragonMatkPct : 0;
+    return state.matk * elemMult * (1 + dragon / 100);
+  }
   return weaponChainDamage(monDef, elemMult, state.buffs.some(b => b.type === 'maxroll'), sk);
 }
 
@@ -3851,7 +5268,11 @@ function playerAttack() {
     if (ammo && ammo.element) atkElement = ammo.element;
   }
   if (state.buffs.some(b => b.type === 'holyweapon')) atkElement = 'holy';
-  const elemMult = getElementMultiplierVsMonster(atkElement, monDef);
+  /* 賢者的屬性附加與肯貝特武器附魔（#71）：兩者推的是同一種 buff，
+     所以這裡一條就夠。放在聖屬武器之後——後上的屬性覆蓋先上的。 */
+  const eleWeapon = state.buffs.find(b => b.type === 'eleweapon' && b.element);
+  if (eleWeapon) atkElement = eleWeapon.element;
+  const elemMult = getElementMultiplierVsMonster(atkElement, monDef, target);
   if (elemMult !== 1) {
     const pctStr = Math.round(elemMult * 100);
     const tag = elemMult > 1 ? '💚 屬性克制！' : (elemMult < 1 && elemMult > 0 ? '💜 屬性被克…' : (elemMult === 0 ? '🚫 屬性免疫！' : ''));
@@ -3891,15 +5312,11 @@ function playerAttack() {
   // Apply monster debuff (provoke reduces defense)
   // 異常狀態對防禦的修正（石化 +25%、中毒 −25%）跟破防 debuff 疊乘
   const ailDef = ailDefMult(target);
-  let monDefVal = monDef.def * ailDef;
-  let monSoftVal = (monDef.defSoft || 0) * ailDef;
-  if (target.debuffDef && target.debuffDefEnd && Date.now() < target.debuffDefEnd) {
-    monDefVal = Math.round(monDefVal * target.debuffDef);
-    monSoftVal = Math.round(monSoftVal * target.debuffDef);
-  } else {
-    delete target.debuffDef;
-    delete target.debuffDefEnd;
-  }
+  /* 破防類減益（挑釁的 debuffDef、流氓的卸除盾牌／鎧甲）走 monDebuffDef()，
+     跟技能那條路（defOf）共用同一支，兩邊看到的防禦值才會一致。 */
+  const dcut = monDebuffDef(target);
+  let monDefVal = Math.round(monDef.def * ailDef * dcut);
+  let monSoftVal = Math.round((monDef.defSoft || 0) * ailDef * dcut);
 
   // 官方暴擊無視 DEF（也無視閃避）。以前暴擊照常吃減傷，等於只剩 1.5 倍那半邊效果，
   // 對高 DEF 的怪打起來跟普通攻擊差不了多少
@@ -3928,6 +5345,11 @@ function playerAttack() {
   tryPhysAoeStrikes(monDef);           // 黑暗瞬間（#59）：物理範圍追擊
   tryMagicCrasher(target, monDef);     // 魔擊術（#63）：MATK 傷害走物理防禦
   tryGanbantein();                     // 咖般塔音（#63）：帶著兩種礦石時全場暈眩
+  trySongProcs(target, monDef);        // 詩人／舞孃（#68）：冷笑話、驚聲尖叫、不諧和音…
+  tryRogueProcs(target, monDef);       // 流氓（#69）：偷錢、卸除四連、潛擊、脅持、緊密的約束
+  tryMonkProcs(target, monDef);        // 武僧（#70）：吸氣、真劍百破道、浸透勁、彈指神通、發勁
+  tryMonkCombo(target, monDef);        // 武僧（#70）：六合拳 → 連環全身掌 → 猛龍誇強 → 阿修羅霸凰拳
+  trySageProcs(target, monDef);        // 賢者（#71）：自動念咒、念咒拆除、魔法效果解除、隨機技能、元素更換
   // 命中音效（暴擊改放 Critical.ogg）
   if (typeof playHitSound === 'function') playHitSound(isCrit);
 
@@ -3954,7 +5376,7 @@ function playerAttack() {
   // 怒爆之火：普攻期間額外附加一段火屬性傷害
   const magnumBuff = state.buffs.find(b => b.type === 'magnumfire');
   if (magnumBuff) {
-    const fireMult = getElementMultiplierVsMonster('fire', monDef);
+    const fireMult = getElementMultiplierVsMonster('fire', monDef, target);
     const bonusDmg = mitigateDamage(skillBaseDamage(false, monDef, fireMult) * magnumBuff.flatBonus, monDefVal, monSoftVal);
     target.hp -= bonusDmg;
     logMsg(`🔥 怒爆之火附加了 ${bonusDmg} 點火屬性傷害！`);
@@ -4047,7 +5469,7 @@ function playerAttack() {
     for (let i = state.monsters.length - 1; i >= 0; i--) {
       const mon = state.monsters[i];
       const mDef = MONSTERS[mon.defId];
-      const elemMult = getElementMultiplierVsMonster('poison', mDef) * elementDmgMult('poison');
+      const elemMult = getElementMultiplierVsMonster('poison', mDef, mon) * elementDmgMult('poison');
       const dmg = mitigateDamage(skillBaseDamage(false, mDef, elemMult) * state.venominfusionDmgMult, ...defOf(mDef));
       mon.hp -= dmg;
       logMsg(`  → 對 ${mDef.name} 造成 ${dmg} 點傷害！`);
@@ -4068,7 +5490,7 @@ function playerAttack() {
     if (Math.random() * 100 < bbChance) {
       const bbSkill = findSkillById('blitzbeat');
       const passiveMultVal = bbSkill.passiveMult[bbLv - 1];
-      const bbElemMult = getElementMultiplierVsMonster(bbSkill.element || 'none', monDef);
+      const bbElemMult = getElementMultiplierVsMonster(bbSkill.element || 'none', monDef, target);
       let bbDmg = mitigateDamage(skillBaseDamage(false, monDef, bbElemMult) * passiveMultVal, ...defOf(monDef));
       if (state.falconFlatBonus) bbDmg += state.falconFlatBonus;
       target.hp -= bbDmg;
@@ -4148,9 +5570,17 @@ function monsterCastSkill(mon, monDef, sk) {
       return;
     }
     // 自動防禦（#22）：物理技能也擋，魔法不擋（官方自動防禦只擋物理）
-    if (playerBlocked()) {
+    const blockedBy = playerBlocked();
+    if (blockedBy) {
       logMsg(`🛡️ 你擋下了 ${nameOf()}！`);
       if (typeof showPlayerFloat === 'function') showPlayerFloat('GUARD', 'miss');
+      tryShrinkStun(mon, monDef, blockedBy);
+      return;
+    }
+    // 光之盾（#66）：機率完全免除這一擊，跟自動防禦是各自獨立的兩道判定
+    if (defenderNegates()) {
+      logMsg(`🛡️ 光之盾完全擋下了 ${nameOf()}！`);
+      if (typeof showPlayerFloat === 'function') showPlayerFloat('免傷', 'miss');
       return;
     }
     let hitDebuff = 0;
@@ -4178,7 +5608,7 @@ function monsterCastSkill(mon, monDef, sk) {
     if (sk.magic && state.cardMagicReflectChance > 0
         && Math.random() * 100 < state.cardMagicReflectChance) {
       const back = Math.max(1, Math.round(monsterBaseAtk(monDef, undefined, mon) * sk.mult * 1.2
-        * getElementMultiplierVsMonster(el, monDef)));
+        * getElementMultiplierVsMonster(el, monDef, mon)));
       mon.hp -= back;
       if (!_dpsPaused && state && state.dpsTracker) state.dpsTracker.damage += back;
       logMsg(`🪞 魔法反射！${nameOf()} 被自己的法術打了 ${back} 點傷害。`);
@@ -4187,6 +5617,7 @@ function monsterCastSkill(mon, monDef, sk) {
       return;
     }
     let raw = monsterBaseAtk(monDef, undefined, mon) * sk.mult * (sk.magic ? 1.2 : 1);
+    if (sk.magic) raw *= stripMult(mon, 'matk');   // 卸除頭盔（#69）
     raw *= ailAtkMult(mon);                                   // 詛咒讓怪物 ATK 下降
     // 防守側的屬性是玩家的鎧甲屬性（#17）。沒有鎧甲屬性卡時就是 none，行為跟以前一樣
     raw *= getElementMultiplier(el, state.playerElement || 'none');
@@ -4325,9 +5756,17 @@ function monsterAttackSingle(mon) {
     return;
   }
   // 自動防禦（#22）：機率完全擋下。跟完全迴避分開顯示——一個是躲掉、一個是擋掉
-  if (playerBlocked()) {
+  const blockedBy = playerBlocked();
+  if (blockedBy) {
     logMsg(`🛡️ 你擋下了 ${monDef.name} 的攻擊！`);
     if (typeof showPlayerFloat === 'function') showPlayerFloat('GUARD', 'miss');
+    tryShrinkStun(mon, monDef, blockedBy);
+    return;
+  }
+  // 光之盾（#66）：機率完全免除這一擊
+  if (defenderNegates()) {
+    logMsg(`🛡️ 光之盾完全擋下了 ${monDef.name} 的攻擊！`);
+    if (typeof showPlayerFloat === 'function') showPlayerFloat('免傷', 'miss');
     return;
   }
   // 噴砂被動造成的命中下降：等同降低這隻怪的fleeReq門檻，玩家更容易迴避
@@ -4646,7 +6085,9 @@ function killMonster(def, monObj) {
   // 波利/綠棉蟲/小惡魔/耳語的卡片因此一直掉不出來。所有呼叫端都有傳 monObj，用它的 defId 最準。
   const monKey = (monObj && monObj.defId) || def.id;
   // 卡片的種族經驗加成（狂暴野豬那一組：擊殺該族經驗+10%，代價是被該族打得更痛）
-  const expMult = 1 + ((def.race && state.cardExpRace && state.cardExpRace[def.race]) || 0);
+  // 經驗值倍增（#68）跟卡片的種族經驗加成相乘
+  const expMult = (1 + ((def.race && state.cardExpRace && state.cardExpRace[def.race]) || 0))
+    * (1 + buffMult('exp').flatBonus / 100);
   const gotExp = Math.round(def.exp * expMult);
   const gotJobExp = Math.round(def.jobExp * expMult);
   logMsg(`擊敗了 ${def.name}！獲得 ${gotExp} 經驗與 ${gotJobExp} 職業經驗。`);
@@ -4975,7 +6416,9 @@ function effectiveCooldownMs(skillId, baseCdSec) {
   const base = (baseCdSec || 0) * 1000;
   if (base <= 0) return base;                       // 本來就沒有冷卻的技能不給它加上冷卻
   const delta = (getCardBonus('skillCdFlat') + getCardBonus('skillCdFlat_' + skillId)) * 1000;
-  return Math.max(MIN_COOLDOWN_MS, base + delta);
+  // 布萊奇之詩（#68）：冷卻 −N%。乘在固定值增減之後，跟 #55 那批卡片同一條路
+  const pct = Math.max(0, 1 - buffMult('skillcd').flatBonus / 100);
+  return Math.max(MIN_COOLDOWN_MS, (base + delta) * pct);
 }
 
 function skillReady(skillId) {
@@ -5043,7 +6486,7 @@ function applyPassiveSkillOnce(sk, lv, trigger, mon) {
       if (!target || !monDef) return false;
       applyStun(target, pick('stunSec', 10), true);
       target.frozenByProc = true;
-      const elemMult = getElementMultiplierVsMonster(sk.element || 'none', monDef);
+      const elemMult = getElementMultiplierVsMonster(sk.element || 'none', monDef, target);
       const dmg = mitigateDamage(state.matk * pick('mult', 0.5) * elemMult, ...defOf(monDef, 1, true));
       target.hp -= dmg;
       logMsg(`❄️ ${monDef.name} 被凍結，並受到 ${dmg} 點魔法傷害！`);
@@ -5102,6 +6545,17 @@ function castSkill(skillId, opts) {
     logMsg(`⚠️ 「${sk.name}」需要裝備${weaponReqName(sk.requiresWeapon)}才能施放！`);
     return false;
   }
+  // 裝備欄位限定（十字軍的五個盾牌專用技）：跟武器限定各判各的，可以同時寫
+  if (!free && !equipReqMet(sk.requiresEquip)) {
+    logMsg(`⚠️ 「${sk.name}」需要裝備${equipReqName(sk.requiresEquip)}才能施放！`);
+    return false;
+  }
+  /* 聖十字審判的保險（使用者 2026-08-09 指定）：HP 低於門檻就不放。
+     官方是「消耗當前 HP 的 20% 再自傷一半」，放置遊戲會自動施放，
+     沒有這道門檻等於掛機掛到一半自己把自己耗死。 */
+  if (!free && sk.minHpPctToCast && state.hp < state.maxHp * sk.minHpPctToCast / 100) {
+    return false;
+  }
 
   const spCost = free ? 0 : skillSpCost(sk, lv);
   if (state.sp < spCost) return false;
@@ -5128,14 +6582,42 @@ function castSkill(skillId, opts) {
       return false;
     }
   }
+  // 樂器攻擊／纏箭投擲（#68）：消耗箭矢。跟弓的普攻共用同一套彈藥系統
+  if (sk.consumeAmmo && !free) {
+    if (getAmmoCount() < sk.consumeAmmo) {
+      logMsg(`⚠️ 箭矢不足，無法施放「${sk.name}」！`);
+      return false;
+    }
+  }
+  /* 賢者的礦石消耗（#71）：屬性附加吃靈碎片或靈礦石，元素領域吃藍色魔力礦石。
+     這裡只**檢查**湊不湊得出來（背包 → 倉庫），真正扣除在各自的 case 裡，
+     跟上面鋅幣／HP／箭矢那幾道守門同一個寫法。
+     元素領域從別的領域切換過來時官方不消耗礦石，所以那種情況直接放行。 */
+  if (sk.costItems && sk.costItems.length && !free
+      && !(sk.type === 'buff_elementfield' && elementFieldActive())
+      && !sageCanPay(sk.costItems, sk.costQty || 1)) {
+    logMsg(`⚠️ 缺少${sk.costItems.map(id => getItemDisplayName(id)).join('或')}，無法施放「${sk.name}」！`);
+    return false;
+  }
+
+  // 聖十字審判：消耗的是**當前HP的百分比**，跟上面那個固定值是兩回事，可以並存
+  if (sk.hpCostPct && !free) {
+    const pctCost = Math.floor(state.hp * sk.hpCostPct / 100);
+    if (state.hp <= pctCost) {
+      logMsg(`⚠️ HP不足，無法施放「${sk.name}」！`);
+      return false;
+    }
+    hpCost += pctCost;
+  }
 
   const isHeal = sk.type === 'heal' || sk.type === 'heal_over_time';
-  const isBuff = ['buff_atk', 'buff_auraflat', 'buff_meltdown', 'buff_windwalk', 'buff_sight', 'buff_matk', 'buff_basilica', 'buff_assumptio', 'buff_block', 'buff_def', 'buff_aspd', 'buff_flee', 'buff_gold', 'buff_crit', 'buff_maxroll', 'buff_blessing', 'buff_shield', 'buff_sprate', 'buff_lukflat', 'buff_holyweapon', 'debuff_def', 'debuff'].includes(sk.type);
+  const isBuff = ['buff_atk', 'buff_auraflat', 'buff_meltdown', 'buff_windwalk', 'buff_sight', 'buff_matk', 'buff_basilica', 'buff_assumptio', 'buff_reflect', 'buff_providence', 'buff_spearquicken', 'buff_song', 'buff_ensemble', 'encore', 'debuff_aspd_aoe', 'debuff_def_aoe', 'buff_block', 'buff_def', 'buff_aspd', 'buff_flee', 'buff_gold', 'buff_crit', 'buff_maxroll', 'buff_blessing', 'buff_shield', 'buff_sprate', 'buff_lukflat', 'buff_holyweapon', 'buff_elementweapon', 'buff_elementfield', 'buff_chemical', 'debuff_def', 'debuff'].includes(sk.type);
   const needsMonster = ['damage', 'magic', 'dot', 'damage_multihit', 'damage_multi', 'debuff_def', 'debuff', 'special_charge', 'poison_proc', 'stun_field', 'multi_dot_stun'].includes(sk.type);
   if (needsMonster && (!state.monsters || state.monsters.length === 0)) return false;
 
   state.sp -= spCost;
   if (hpCost > 0) state.hp -= hpCost;
+  if (sk.consumeAmmo && !free) for (let i = 0; i < sk.consumeAmmo; i++) consumeAmmo();
   if (zenyCost > 0) state.gold -= zenyCost;
   // 自動念咒不寫冷卻：那是玩家自己那份資源，不該被卡片的觸發吃掉
   if (!free) {
@@ -5162,13 +6644,28 @@ function castSkill(skillId, opts) {
      這個看的是**自己這一發的屬性**，而且只算魔法。放在 mult 上跟 skillDmg_ 同理。 */
   const magicElePct = useMag && skElement !== 'none' && skElement !== 'neutral'
     ? getCardBonus('magicEleDmg_' + skElement) : 0;
+  /* 聖十字攻擊：官方「裝備雙手矛時傷害會變成雙倍」（#66）。
+     乘進 mult 而不是另外算一份傷害，理由跟 skillDmg_ 那條完全一樣——
+     mult 是唯一能同時涵蓋直接傷害與場地／持續傷害的位置。 */
+  const twoHandSpear = (sk.twoHandSpearMult && aspdCategoryOf(getEquipBaseItemId('weapon')) === 'spear2')
+    ? sk.twoHandSpearMult : 1;
+  /* 背刺（#69）：官方「裝備弓傷害減半、裝備短劍造成 2 次傷害」。
+     短劍那條寫成 ×2 而不是真的打兩次——本作的傷害飄字與命中判定都是一次一發，
+     打兩次要改成 damage_multi，但那樣就吃不到 `damage` 分支的暴擊與卡片加成了。 */
+  const wCat = aspdCategoryOf(getEquipBaseItemId('weapon'));
+  const weaponSpecial = (sk.daggerMult && wCat === 'dagger') ? sk.daggerMult
+    : (sk.bowMult && wCat === 'bow') ? sk.bowMult : 1;
   const mult = (Array.isArray(sk.mult) ? sk.mult[lv - 1] : sk.mult)
-    * (1 + skillDmgPct / 100) * (1 + magicElePct / 100);
+    * (1 + skillDmgPct / 100) * (1 + magicElePct / 100) * twoHandSpear * weaponSpecial;
 
   // 各 case 推 buff 時常忘了標 skillId，導致「同 type 就算已生效」的判斷把不同來源
   // 混為一談（例：喝了集中藥水後，雙手劍加速因為都是 type:'aspd' 而永遠不再自動施放）。
-  // 這裡統一在 switch 結束後補標，個別 case 不必再自己寫。
-  const buffCountBefore = state.buffs.length;
+  /* 這裡統一在 switch 結束後補標，個別 case 不必再自己寫。
+
+     記的是**施放前那批 buff 物件本身**而不是陣列長度：#68 的演奏／合奏技能會先
+     把同一互斥組的舊 buff 撤掉再推新的，長度會先變短再變長，用索引切割會切錯位置
+     ——實測是「暴擊 +10 被吃掉、暴擊傷害 +20% 留著」這種只掉一半的怪現象。 */
+  const buffsBefore = new Set(state.buffs);
 
   switch (sk.type) {
     case 'damage':
@@ -5185,6 +6682,10 @@ function castSkill(skillId, opts) {
         if (sk.id === 'bash' && sk.hitBonus) {
           effectiveHit += Array.isArray(sk.hitBonus) ? sk.hitBonus[lv - 1] : sk.hitBonus;
         }
+        // 背刺（#69）：這一擊的命中 +4~40。用另一個欄位名，才不會跟狂擊那條寫死 id 的打架
+        if (sk.hitBonusOnCast) {
+          effectiveHit += Array.isArray(sk.hitBonusOnCast) ? sk.hitBonusOnCast[lv - 1] : sk.hitBonusOnCast;
+        }
         const hitPct = hitChancePctVsMonster(effectiveHit, def, target);
         if (Math.random() * 100 > hitPct) {
           logMsg(`「${sk.name}」被 ${def.name} 閃避了！`);
@@ -5193,7 +6694,7 @@ function castSkill(skillId, opts) {
           break;
         }
       }
-      const elemMult = getElementMultiplierVsMonster(skElement, def);
+      const elemMult = getElementMultiplierVsMonster(skElement, def, target);
       if (elemMult !== 1) {
         const pctStr = Math.round(elemMult * 100);
         const tag = elemMult > 1 ? '💚 屬性克制！' : (elemMult < 1 && elemMult > 0 ? '💜 屬性被克…' : (elemMult === 0 ? '🚫 屬性免疫！' : ''));
@@ -5318,6 +6819,9 @@ function castSkill(skillId, opts) {
       // 範圍技：打全部怪物
       if (!state.monsters || state.monsters.length === 0) break;
       logMsg(`💥 「${sk.name}」Lv${lv} 範圍攻擊！`);
+      // 聖十字審判的自傷（#66）用的是「單一目標的傷害」，不是全場加總——
+      // 官方是同一發法術打到自己，怪多不會讓自傷變多
+      let aoeTopDmg = 0;
       for (let i = state.monsters.length - 1; i >= 0; i--) {
         const mon = state.monsters[i];
         const monDef = MONSTERS[mon.defId];
@@ -5329,7 +6833,7 @@ function castSkill(skillId, opts) {
             continue;
           }
         }
-        const monElemMult = getElementMultiplierVsMonster(skElement, monDef);
+        const monElemMult = getElementMultiplierVsMonster(skElement, monDef, mon);
         const monEleDmgBonus = cardTargetDmgMult(monDef) - 1;
         // 負重量上升：加成手推車攻擊傷害
         let aoeMult = mult;
@@ -5366,6 +6870,7 @@ function castSkill(skillId, opts) {
         let dmg = mitigateDamage(skillBaseDamage(useMag, monDef, monElemMult) * aoeMult * (1 + monEleDmgBonus) * ailDmgTakenMult(mon), ...defOf(monDef, 1, useMag, mon)) + raceFlatBonus(monDef);
         // 鋼製喙：閃電衝擊額外固定傷害（不受倍率影響）
         if (sk.id === 'blitzbeat' && state.falconFlatBonus) dmg += state.falconFlatBonus;
+        if (dmg > aoeTopDmg) aoeTopDmg = dmg;
         mon.hp -= dmg;
         ailBreakOnDamage(mon, monDef);   // 睡眠被打就醒
         if (useMag) tryCardAilments('magic', mon);
@@ -5404,6 +6909,19 @@ function castSkill(skillId, opts) {
         state.buffs = state.buffs.filter(b => b.type !== 'magnumfire');
         state.buffs.push({ type: 'magnumfire', flatBonus: buffPct / 100, msRemaining: buffDur * 1000 });
         logMsg(`🔥 「${sk.name}」發動，接下來${buffDur}秒內普攻附加額外火屬性傷害！`);
+      }
+      /* 聖十字審判：官方「自身亦會受到一半傷害」（#66）。
+         使用者 2026-08-09 指定做出來，但**永遠留 1 HP**——放置遊戲會自動施放，
+         讓它能打死自己等於逼玩家把技能關掉，那還不如不做。
+         走 state.hp 直接扣而不是 takeDamage()：這是技能自己的代價，
+         不該吃減傷、不該觸發反射、也不該被算成「被怪打到」。 */
+      if (sk.selfDamagePct && aoeTopDmg > 0) {
+        const self = Math.min(state.hp - 1, Math.max(0, Math.round(aoeTopDmg * sk.selfDamagePct / 100)));
+        if (self > 0) {
+          state.hp -= self;
+          logMsg(`✝️ 神之審判也降在自己身上，受到 ${self} 點傷害。`);
+          if (typeof showPlayerFloat === 'function') showPlayerFloat('-' + self, 'normal');
+        }
       }
       if (typeof renderLog === 'function') renderLog();
       break;
@@ -5495,6 +7013,130 @@ function castSkill(skillId, opts) {
       logMsg(`✨ 「${sk.name}」Lv${lv} 發動，武器暫時附加聖屬性！`);
       break;
     }
+    /* 屬性附加（#71）：武器變成該屬性，並讓該屬性的傷害 +1~5%。
+       兩件事拆成兩個 buff 推出去，因為消費點本來就是兩個：
+         eleweapon        playerAttack 決定攻擊屬性時讀（跟聖屬武器同一個位置）
+         eledmg_<屬性>    elementDmgMult() 讀，普攻與技能都吃得到
+       同一時間只留一個屬性附加——官方就是換一個蓋掉前一個。 */
+    case 'buff_elementweapon': {
+      const dur = Array.isArray(sk.duration) ? sk.duration[lv - 1] : sk.duration;
+      const pct = Array.isArray(sk.mult) ? sk.mult[lv - 1] : sk.mult;
+      const paid = sagePay(sk.costItems, 1, 0);
+      state.buffs = state.buffs.filter(b => b.type !== 'eleweapon' && b.eleWeaponTag !== 1);
+      state.buffs.push({ type: 'eleweapon', element: sk.element, mult: 1, msRemaining: dur * 1000, skillId: sk.id, eleWeaponTag: 1 });
+      state.buffs.push({ type: 'eledmg_' + sk.element, mult: 1 + pct / 100, msRemaining: dur * 1000, skillId: sk.id, eleWeaponTag: 1 });
+      logMsg(`✨ 「${sk.name}」Lv${lv} 發動（消耗${paid ? paid.label : '—'}），`
+        + `武器變成${ELEMENT_NAMES[sk.element]}屬性、${ELEMENT_NAMES[sk.element]}屬性傷害 +${pct}%，持續 ${Math.round(dur / 60)} 分鐘。`);
+      break;
+    }
+    /* 元素領域（#71）：官方是設在地上的 7×7 領域，本作沒有座標 → 自身領域 buff。
+       **同時只能開一個**，但從別的領域切換過來不消耗礦石（官方就有這條）。
+       之後開放隊友模式時這裡要改成全隊加成——官方是範圍內所有角色都吃。 */
+    case 'buff_elementfield': {
+      const dur = Array.isArray(sk.duration) ? sk.duration[lv - 1] : sk.duration;
+      const pct = Array.isArray(sk.mult) ? sk.mult[lv - 1] : sk.mult;
+      const switching = elementFieldActive();
+      const paid = switching ? null : sagePay(sk.costItems, 1, 0);
+      state.buffs = state.buffs.filter(b => b.eleFieldTag !== 1);
+      const tag = { eleFieldTag: 1, skillId: sk.id };
+      state.buffs.push(Object.assign({ type: 'eledmg_' + sk.element, mult: 1 + pct / 100, msRemaining: dur * 1000 }, tag));
+      const bits = [`${ELEMENT_NAMES[sk.element]}屬性傷害 +${pct}%`];
+      const push = (type, extra, label) => {
+        state.buffs.push(Object.assign({ type, mult: 1, msRemaining: dur * 1000 }, extra, tag));
+        bits.push(label);
+      };
+      const at = Array.isArray(sk.atkFlat) ? sk.atkFlat[lv - 1] : sk.atkFlat;
+      if (at) { push('atkflat', { flatBonus: at }, `ATK +${at}`); push('matk', { mult: 1, flatBonus: at }, `MATK +${at}`); }
+      const fl = Array.isArray(sk.fleeFlat) ? sk.fleeFlat[lv - 1] : sk.fleeFlat;
+      if (fl) push('flee', { flatBonus: fl }, `迴避 +${fl}`);
+      const df = Array.isArray(sk.defFlat) ? sk.defFlat[lv - 1] : sk.defFlat;
+      if (df) push('defflat', { flatBonus: df }, `DEF +${df}`);
+      const hp = Array.isArray(sk.maxHpPct) ? sk.maxHpPct[lv - 1] : sk.maxHpPct;
+      // `maxhppct` 的消費端讀的是 **flatBonus**（百分比數字），不是 mult
+      if (hp) push('maxhppct', { mult: 1, flatBonus: hp }, `最大HP +${hp}%`);
+      logMsg(`🌐 「${sk.name}」Lv${lv} 展開（${switching ? '由其他領域切換，不消耗礦石' : '消耗' + (paid ? paid.label : '—')}）：`
+        + `${bits.join('、')}，持續 ${Math.round(dur / 60)} 分鐘。`);
+      break;
+    }
+    /* 火煙瓶投擲（#72）：官方是 3×3 的火焰地面，本作沒有座標 → 打場上全體。
+       官方就是每 0.5 秒一跳，場域迴圈的補跳（見 tickFields 那段註解）讓它在
+       1 秒心跳下也結算得完整。 */
+    case 'field_phys_aoe': {
+      const dur = Array.isArray(sk.duration) ? sk.duration[lv - 1] : sk.duration;
+      const mult = Array.isArray(sk.mult) ? sk.mult[lv - 1] : sk.mult;
+      state.activeFieldEffects = (state.activeFieldEffects || []).filter(f => f.skillId !== sk.id);
+      state.activeFieldEffects.push({
+        kind: 'alchemy_strike', skillId: sk.id, name: sk.name, mult, aoe: true,
+        element: sk.element || 'fire', tickIntervalSec: sk.tickSec || 0.5,
+        nextTickAt: Date.now(), endsAt: Date.now() + dur * 1000,
+      });
+      logMsg(`🔥 「${sk.name}」Lv${lv} 布下火場：每 ${sk.tickSec || 0.5} 秒對全體造成 ATK ${Math.round(mult * 100)}% 傷害，持續 ${dur} 秒。`);
+      break;
+    }
+    /* 生物調撥與生命體召喚（#72）：官方都是召喚實體，本作玩家側召喚是 0 行，
+       使用者 2026-08-10 指定改成**定時自動攻擊的場域**。兩者共用這個 case，
+       差別只在倍率、間隔、持續時間與有沒有附帶回血。 */
+    case 'alchemy_summon': {
+      const dur = Array.isArray(sk.duration) ? sk.duration[lv - 1] : sk.duration;
+      const mult = Array.isArray(sk.mult) ? sk.mult[lv - 1] : sk.mult;
+      state.activeFieldEffects = (state.activeFieldEffects || []).filter(f => f.skillId !== sk.id);
+      state.activeFieldEffects.push({
+        kind: 'alchemy_strike', skillId: sk.id, name: sk.name, mult, aoe: false,
+        element: sk.element || 'neutral', healFlat: sk.healFlat || 0,
+        tickIntervalSec: sk.tickSec || 3,
+        nextTickAt: Date.now() + (sk.tickSec || 3) * 1000, endsAt: Date.now() + dur * 1000,
+      });
+      logMsg(`⚗️ 「${sk.name}」Lv${lv} 登場：每 ${sk.tickSec || 3} 秒造成 ATK ${Math.round(mult * 100)}% 傷害`
+        + `${sk.healFlat ? `並回復 ${sk.healFlat} HP` : ''}，持續 ${Math.round(dur / 60)} 分鐘。`);
+      break;
+    }
+    /* 氣泡蟲召喚（#72）：官方是放地雷、被打才自爆，傷害等於剩餘 HP 且無視防禦。
+       本作不做召喚實體，只留自爆那一下：隨機挑 1~3 隻，各吃一發無視防禦的固定傷害。 */
+    case 'bomb_random': {
+      const flat = Math.round(Array.isArray(sk.mult) ? sk.mult[lv - 1] : sk.mult);
+      const alive = (state.monsters || []).filter(m => m.hp > 0);
+      if (!alive.length) return false;
+      const n = Math.min(alive.length, 1 + Math.floor(Math.random() * 3));
+      const pool = alive.slice();
+      const picked = [];
+      for (let i = 0; i < n && pool.length; i++) {
+        picked.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+      }
+      logMsg(`💣 「${sk.name}」Lv${lv} 引爆！${picked.length} 隻敵人被波及。`);
+      picked.forEach(mon => {
+        const md = MONSTERS[mon.defId];
+        if (!md) return;
+        mon.hp -= flat;                 // 官方寫的就是無視防禦，所以不走 mitigateDamage
+        ailBreakOnDamage(mon, md);
+        if (typeof showDamageFloatAt === 'function') showDamageFloatAt(mon.id, '-' + flat, 'normal');
+        combatLogBuf.push(`  → ${md.name} 承受 ${flat} 點無視防禦的傷害！`);
+      });
+      for (let i = state.monsters.length - 1; i >= 0; i--) {
+        const mon = state.monsters[i];
+        if (mon.hp <= 0) killMonster(MONSTERS[mon.defId], mon);
+      }
+      break;
+    }
+    /* 化學保護 ×4（#72）：官方是「使裝備不會被卸除或損壞」，
+       本作裝備不會損壞、怪也不會卸除玩家裝備，所以那個效果沒有對象。
+       使用者指定四個各換一種實際的防護，全部推成 buff——
+       盾牌那個推的是既有的 `block`（自動防禦讀同一個），不另開消費點。 */
+    case 'buff_chemical': {
+      const dur = Array.isArray(sk.duration) ? sk.duration[lv - 1] : sk.duration;
+      const v = Array.isArray(sk.mult) ? sk.mult[lv - 1] : sk.mult;
+      state.buffs = state.buffs.filter(b => b.skillId !== sk.id);
+      const push = (o) => state.buffs.push(Object.assign({ msRemaining: dur * 1000, skillId: sk.id }, o));
+      let label = '';
+      if (sk.chemKind === 'def') { push({ type: 'defflat', mult: 1, flatBonus: v }); label = `DEF +${v}`; }
+      else if (sk.chemKind === 'block') {
+        const cd = Array.isArray(sk.internalCooldown) ? sk.internalCooldown[lv - 1] : (sk.internalCooldown || 10);
+        push({ type: 'block', mult: 1, flatBonus: v, blockCdSec: cd });
+        label = `被攻擊時 ${v}% 機率免傷（冷卻 ${cd} 秒）`;
+      } else if (sk.chemKind === 'maxhp') { push({ type: 'maxhppct', mult: 1, flatBonus: v }); label = `最大HP +${v}%`; }
+      else if (sk.chemKind === 'weaponatk') { push({ type: 'weaponatk', mult: 1 + v / 100 }); label = `武器ATK +${v}%`; }
+      logMsg(`🧪 「${sk.name}」Lv${lv} 生效：${label}，持續 ${Math.round(dur / 60)} 分鐘。`);
+      break;
+    }
     case 'buff_shield': {
       const dur = Array.isArray(sk.duration) ? sk.duration[lv - 1] : sk.duration;
       const capacityPct = Array.isArray(sk.shieldCapacityPct) ? sk.shieldCapacityPct[lv - 1] : sk.shieldCapacityPct;
@@ -5552,7 +7194,7 @@ function castSkill(skillId, opts) {
         if (typeof showPlayerFloat === 'function') showPlayerFloat('MISS', 'miss');
         break;
       }
-      const elemMult = getElementMultiplierVsMonster(skElement, def);
+      const elemMult = getElementMultiplierVsMonster(skElement, def, target);
       const dotEleDmgBonus = cardTargetDmgMult(def) - 1;
       const dmg = mitigateDamage(skillBaseDamage(useMag, def, elemMult) * mult * (1 + dotEleDmgBonus) * ailDmgTakenMult(target), ...defOf(def, 0.6, false, target));
       target.hp -= dmg;
@@ -5571,7 +7213,7 @@ function castSkill(skillId, opts) {
         if (typeof showPlayerFloat === 'function') showPlayerFloat('MISS', 'miss');
         break;
       }
-      const elemMult = getElementMultiplierVsMonster(skElement, def);
+      const elemMult = getElementMultiplierVsMonster(skElement, def, target);
       const dmg = mitigateDamage(skillBaseDamage(useMag, def, elemMult) * mult * ailDmgTakenMult(target), ...defOf(def, 1, false, target));
       target.hp -= dmg;
       logMsg(`⚡ 「${sk.name}」Lv${lv} 造成 ${dmg} 點傷害！`);
@@ -5702,6 +7344,145 @@ function castSkill(skillId, opts) {
       logMsg(`🎯 「${sk.name}」Lv${lv} 發動！全素質 +${allStat}、攻擊 +${Math.round((mult - 1) * 100)}%、暴擊 +${cri}、命中 +${hit}，持續 ${dur} 秒。`);
       break;
     }
+    /* ---- 詩人／舞孃：演奏・舞蹈與合奏（#68）----
+
+       兩個共通機制：
+
+       **互斥組**（使用者 2026-08-09 指定）：官方每個演奏／舞蹈技能都寫著
+       「無法與其它演奏技能效果重疊」。`exclusiveGroup: 'song'` 的技能同時只能開一個，
+       `exclusiveGroup: 'ensemble'` 的合奏也只能開一個，但**兩組之間互不排斥**——
+       所以可以「一個專用技 + 一個合奏」同時掛著。
+
+       **合奏單人減半**：官方合奏要 9×9 內有一個異性的詩舞系隊員。本作沒有隊伍，
+       所以單人放得出來但效果減半（`soloMult`）。日後開隊友模式時，
+       兩個人各放一次就是兩份半效果疊起來＝官方的完整效果，資料不必改。 */
+    case 'buff_song':
+    case 'buff_ensemble': {
+      const dur = Array.isArray(sk.duration) ? sk.duration[lv - 1] : sk.duration;
+      const ms = dur * 1000;
+      const grp = sk.exclusiveGroup || (sk.type === 'buff_ensemble' ? 'ensemble' : 'song');
+      // 同一組的舊 buff 先撤掉（官方：無法與其它演奏／合奏技能重疊）
+      const dropped = state.buffs.filter(b => b.exclusiveGroup === grp);
+      if (dropped.length) {
+        state.buffs = state.buffs.filter(b => b.exclusiveGroup !== grp);
+        const oldName = (SKILLS[dropped[0].skillId] || {}).name || '';
+        if (oldName && dropped[0].skillId !== sk.id) logMsg(`🎵 停下了「${oldName}」，換上新的曲子。`);
+      }
+      // 合奏單人只有一半效果
+      const k = (sk.type === 'buff_ensemble') ? (sk.soloMult || 0.5) : 1;
+      const at = (f, d) => {
+        const raw = Array.isArray(sk[f]) ? sk[f][lv - 1] : (sk[f] != null ? sk[f] : d);
+        return raw == null ? null : raw * k;
+      };
+      const push = (type, opts) => state.buffs.push(
+        Object.assign({ type, mult: 1, msRemaining: ms, skillId: sk.id, exclusiveGroup: grp }, opts));
+
+      const bits = [];
+      const flat = [
+        ['fleeFlat', 'flee', '迴避 +'], ['perfectDodgeFlat', 'perfectdodge', '完全迴避 +'],
+        ['hitFlat', 'hit', '命中 +'], ['critFlat', 'crit', '暴擊 +'],
+        ['critDmgPct', 'critdmg', '暴擊傷害 +%'], ['maxHpPct', 'maxhppct', '最大HP +%'],
+        ['maxSpPct', 'maxsppct', '最大SP +%'], ['skillCdPct', 'skillcd', '技能冷卻 −%'],
+        ['expPct', 'exp', '經驗值 +%'], ['atkFlat', 'atkflat', 'ATK +'],
+        ['defFlat', 'defflat', 'DEF +'],
+      ];
+      flat.forEach(([f, type, label]) => {
+        const v = at(f);
+        if (v == null || v === 0) return;
+        push(type, { flatBonus: v });
+        bits.push(label.replace('+%', '+' + Math.round(v * 10) / 10 + '%')
+          .replace('−%', '−' + Math.round(v * 10) / 10 + '%')
+          .replace(/\+$/, '+' + Math.round(v * 10) / 10));
+      });
+      // SP 消耗是負向的，資料寫正數，這裡轉成負值推進去
+      const spCut = at('spCostCutPct');
+      if (spCut) { push('spcost', { flatBonus: -spCut }); bits.push(`技能SP消耗 −${Math.round(spCut * 10) / 10}%`); }
+      // 攻速是倍率制
+      const aspdPct = at('aspdPct');
+      if (aspdPct) { push('aspd', { mult: 1 + aspdPct / 100 }); bits.push(`攻速 +${Math.round(aspdPct * 10) / 10}%`); }
+      // 受到的治癒恢復量
+      const healPct = at('healRecvPct');
+      if (healPct) { push('healrecv', { mult: 1 + healPct / 100 }); bits.push(`治癒恢復量 +${Math.round(healPct * 10) / 10}%`); }
+      // 四屬性耐性與異常狀態抗性（不死神齊格弗里德）
+      const eleR = at('eleResistPct');
+      if (eleR) { push('songelereduce', { flatBonus: eleR }); bits.push(`地水火風耐性 +${Math.round(eleR * 10) / 10}%`); }
+      const ailR = at('ailResistPct');
+      if (ailR) { push('songailresist', { flatBonus: ailR }); bits.push(`異常狀態抗性 +${Math.round(ailR * 10) / 10}%`); }
+      // 魔力礦石消耗（觸媒之所）：單人版做成「機率不消耗」，減半才有意義
+      const gem = at('gemFreeChance');
+      if (gem) { push('gemfree', { flatBonus: gem }); bits.push(`魔力礦石 ${Math.round(gem)}% 機率不消耗`); }
+
+      state.lastSongSkillId = sk.id;   // 安可要用
+      recomputeDerived(false);
+      const half = (sk.type === 'buff_ensemble') ? '（單人合奏，效果減半）' : '';
+      logMsg(`🎶 「${sk.name}」Lv${lv}${half}：${bits.join('、') || '演奏中'}，持續 ${dur} 秒。`);
+      break;
+    }
+    /* 安可：重放上一個演奏／舞蹈技能，只花一半 SP。
+       SP 在上面就已經按本技能的 spCost 扣過了，這裡再補扣目標技能的一半。 */
+    case 'encore': {
+      const lastId = state.lastSongSkillId;
+      const last = lastId ? SKILLS[lastId] : null;
+      if (!last) { logMsg('⚠️ 還沒有演奏過任何曲子，安可沒有東西可以重放。'); break; }
+      const lastLv = skillLv(lastId) || 1;
+      const half = Math.floor(skillSpCost(last, lastLv) / 2);
+      if (state.sp < half) { logMsg(`⚠️ SP 不足，無法安可「${last.name}」。`); break; }
+      state.sp -= half;
+      logMsg(`🎤 安可！再一次「${last.name}」（半價 ${half} SP）。`);
+      castSkill(lastId, { free: true, forceLv: lastLv });
+      break;
+    }
+    /* 勿忘我：官方只對敵方玩家有效，本作改成對怪物的攻速減益。
+       跟野蠻凶砍的 debuffAtk 同一種寫法（值掛在怪物實體上、附到期時間）。 */
+    case 'debuff_aspd_aoe': {
+      if (!state.monsters || !state.monsters.length) break;
+      const dur = Array.isArray(sk.duration) ? sk.duration[lv - 1] : sk.duration;
+      const cut = Array.isArray(sk.aspdCutPct) ? sk.aspdCutPct[lv - 1] : sk.aspdCutPct;
+      const grp = 'song';
+      state.buffs = state.buffs.filter(b => b.exclusiveGroup !== grp);
+      state.buffs.push({ type: 'dontforgetme', mult: 1, flatBonus: cut, msRemaining: dur * 1000, skillId: sk.id, exclusiveGroup: grp });
+      state.monsters.forEach(mon => {
+        mon.debuffAspd = Math.max(0.1, 1 - cut / 100);
+        mon.debuffAspdEnd = Date.now() + dur * 1000;
+      });
+      state.lastSongSkillId = sk.id;
+      logMsg(`🎶 「${sk.name}」Lv${lv}：場上敵人的攻擊速度 −${cut}%，持續 ${dur} 秒。`);
+      break;
+    }
+    /* ---- 十字軍三個 buff（#66）---- */
+    /* 反射盾：反射比率合進 applyPlayerReflect()，跟卡片的 reflectPct 相加。
+       用 flatBonus 存百分比（跟 block 那個 buff 同一種寫法）。 */
+    case 'buff_reflect': {
+      const dur = Array.isArray(sk.duration) ? sk.duration[lv - 1] : sk.duration;
+      const pct = Array.isArray(sk.reflectPct) ? sk.reflectPct[lv - 1] : sk.reflectPct;
+      state.buffs.push({ type: 'reflect', mult: 1, flatBonus: pct, msRemaining: dur * 1000, skillId: sk.id });
+      logMsg(`🛡️ 「${sk.name}」Lv${lv} 發動！受到的近距離物理傷害反射 ${pct}%，持續 ${dur} 秒。`);
+      break;
+    }
+    /* 神祐之光：聖屬性與惡魔種族減傷。數值存在 buff 上，
+       recomputeDerived() 會把它併進 cardEleDmgReduce / cardRaceDmgReduce，
+       所以八個消費點一次接滿——這裡只負責推 buff 並觸發一次重算。 */
+    case 'buff_providence': {
+      const dur = Array.isArray(sk.duration) ? sk.duration[lv - 1] : sk.duration;
+      const pct = Array.isArray(sk.reducePct) ? sk.reducePct[lv - 1] : sk.reducePct;
+      state.buffs.push({ type: 'providence', mult: 1, reducePct: pct, msRemaining: dur * 1000, skillId: sk.id });
+      recomputeDerived(false);
+      logMsg(`✝️ 「${sk.name}」Lv${lv} 發動！受到的聖屬性與惡魔種族傷害 −${pct}%，持續 ${dur} 秒。`);
+      break;
+    }
+    // 長矛加速術：攻速 + 暴擊 + 迴避三份，全部走既有的 buff 型別
+    case 'buff_spearquicken': {
+      const dur = Array.isArray(sk.duration) ? sk.duration[lv - 1] : sk.duration;
+      const ms = dur * 1000;
+      const cri = Array.isArray(sk.critFlat) ? sk.critFlat[lv - 1] : (sk.critFlat || 0);
+      const fle = Array.isArray(sk.fleeFlat) ? sk.fleeFlat[lv - 1] : (sk.fleeFlat || 0);
+      state.buffs.push({ type: 'aspd', mult, msRemaining: ms, skillId: sk.id });
+      state.buffs.push({ type: 'crit', mult: 1, flatBonus: cri, msRemaining: ms, skillId: sk.id });
+      state.buffs.push({ type: 'flee', mult: 1, flatBonus: fle, msRemaining: ms, skillId: sk.id });
+      recomputeDerived(false);
+      logMsg(`🔱 「${sk.name}」Lv${lv} 發動！攻速 +${Math.round((mult - 1) * 100)}%、暴擊 +${cri}、迴避 +${fle}，持續 ${dur} 秒。`);
+      break;
+    }
     /* 靈氣劍（#58）：每次攻擊附加固定傷害且無視防禦。
        存成 `auraflat` 型的 buff，recomputeDerived 會收斂成 state.auraBladeFlat，
        實際加在 raceFlatBonus()——那是防禦之後才加的那一項。 */
@@ -5753,7 +7534,7 @@ function castSkill(skillId, opts) {
         if (typeof showPlayerFloat === 'function') showPlayerFloat('MISS', 'miss');
         break;
       }
-      const elemMult = getElementMultiplierVsMonster(skElement, def);
+      const elemMult = getElementMultiplierVsMonster(skElement, def, target);
       const mhEleDmgBonus = cardTargetDmgMult(def) - 1;
       // 第一段：單體傷害
       const dmg1 = mitigateDamage(skillBaseDamage(useMag, def, elemMult) * mult * (1 + mhEleDmgBonus) * ailDmgTakenMult(target), ...defOf(def, 1, false, target)) + raceFlatBonus(def);
@@ -5767,7 +7548,7 @@ function castSkill(skillId, opts) {
       for (let i = state.monsters.length - 1; i >= 0; i--) {
         const mon = state.monsters[i];
         const monDef = MONSTERS[mon.defId];
-        const monElemMult = getElementMultiplierVsMonster(skElement, monDef);
+        const monElemMult = getElementMultiplierVsMonster(skElement, monDef, mon);
         const mon2EleDmgBonus = cardTargetDmgMult(monDef) - 1;
         const dmg2 = mitigateDamage(skillBaseDamage(useMag, monDef, monElemMult) * mult2 * (1 + mon2EleDmgBonus) * ailDmgTakenMult(mon), ...defOf(monDef, 1, false, mon)) + raceFlatBonus(monDef);
         mon.hp -= dmg2;
@@ -5789,7 +7570,7 @@ function castSkill(skillId, opts) {
         if (typeof showPlayerFloat === 'function') showPlayerFloat('MISS', 'miss');
         break;
       }
-      const elemMult = getElementMultiplierVsMonster(skElement, def);
+      const elemMult = getElementMultiplierVsMonster(skElement, def, target);
       const multiEleDmgBonus = cardTargetDmgMult(def) - 1;
       const hits = Array.isArray(sk.hits) ? sk.hits[lv - 1] : (sk.hits || 1);
       let totalDmg = 0;
@@ -5811,7 +7592,7 @@ function castSkill(skillId, opts) {
       // 命中判定：miss 時不造成傷害，但衝鋒生怪效果仍然發動
       const scHitPct = hitChancePctVsMonster(effectiveHitWithBuff(), def, target);
       if (Math.random() * 100 <= scHitPct) {
-        const elemMult = getElementMultiplierVsMonster(skElement, def);
+        const elemMult = getElementMultiplierVsMonster(skElement, def, target);
         const scEleDmgBonus = cardTargetDmgMult(def) - 1;
         const dmg = mitigateDamage(skillBaseDamage(useMag, def, elemMult) * mult * (1 + scEleDmgBonus) * ailDmgTakenMult(target), ...defOf(def, 1, false, target));
         target.hp -= dmg;
@@ -5880,17 +7661,25 @@ function castSkill(skillId, opts) {
       logMsg(`🔥 「${sk.name}」Lv${lv} 發動，敵人防禦下降！`);
       break;
     }
+    // 永遠的混沌（#68）：全體版的防禦下降。跟上面共用 mon.debuffDef，只是打全場
+    case 'debuff_def_aoe': {
+      if (!state.monsters || state.monsters.length === 0) break;
+      const dur = Array.isArray(sk.duration) ? sk.duration[lv - 1] : sk.duration;
+      const until = Date.now() + dur * 1000;
+      state.monsters.forEach(mon => { mon.debuffDef = mult; mon.debuffDefEnd = until; });
+      state.lastSongSkillId = sk.id;
+      logMsg(`🎶 「${sk.name}」Lv${lv} 發動！場上敵人的防禦力 −${Math.round((1 - mult) * 100)}%，持續 ${dur} 秒。`);
+      break;
+    }
   }
   // 新推的 buff 一律掛上來源技能；同一個技能重放時先清掉自己的舊 buff，避免連點疊加
-  if (state.buffs.length > buffCountBefore) {
-    for (let i = buffCountBefore; i < state.buffs.length; i++) {
-      if (!state.buffs[i].skillId) state.buffs[i].skillId = sk.id;
+  {
+    const fresh = state.buffs.filter(b => !buffsBefore.has(b));
+    if (fresh.length) {
+      fresh.forEach(b => { if (!b.skillId) b.skillId = sk.id; });
+      // 只丟掉「施放前就在、而且也是這個技能推的」那些，順序原封不動
+      state.buffs = state.buffs.filter(b => !(buffsBefore.has(b) && b.skillId === sk.id));
     }
-    const fresh = state.buffs.slice(buffCountBefore);
-    state.buffs = state.buffs
-      .slice(0, buffCountBefore)
-      .filter(b => b.skillId !== sk.id)
-      .concat(fresh);
   }
   saveGame();
   return true;
@@ -5903,7 +7692,9 @@ function wastesResourceInTown(sk, lv) {
   if (!isInTown()) return false;
   const hpCostCheck = Array.isArray(sk.hpCost) ? sk.hpCost[lv - 1] : sk.hpCost;
   if (hpCostCheck > 0) return true;
-  return ['heal', 'heal_over_time', 'field_heal', 'field_aoe_magic', 'stun_field', 'multi_dot_stun', 'debuff_def', 'debuff'].includes(sk.type);
+  // #72 鍊金術士：火煙瓶投擲／生物調撥／生命體召喚／氣泡蟲召喚／化學保護都是「掛著讓它跑」的輔助
+  return ['heal', 'heal_over_time', 'field_heal', 'field_aoe_magic', 'stun_field', 'multi_dot_stun', 'debuff_def', 'debuff',
+    'field_phys_aoe', 'alchemy_summon', 'bomb_random', 'buff_chemical'].includes(sk.type);
 }
 
 function tryAutoCastSkill() {
@@ -5919,6 +7710,7 @@ function tryAutoCastSkill() {
       if (!skillReady(sk.id)) continue;
       // 武器不對就跳過，不要讓 castSkill 每秒噴一次警告訊息洗版
       if (!weaponReqMet(sk.requiresWeapon)) continue;
+      if (!equipReqMet(sk.requiresEquip)) continue;
       const spCost = skillSpCost(sk, lv);
       if (state.sp < spCost) continue;
       const isAttack = ['damage', 'magic', 'dot', 'damage_multihit', 'damage_multi', 'damage_aoe', 'magic_aoe', 'poison_proc'].includes(sk.type);
@@ -5935,7 +7727,7 @@ function tryAutoCastSkill() {
     const sk = findSkillForUse(config.skillId);
     if (sk) {
       const lv = skillLv(sk.id);
-      if (lv && skillReady(sk.id) && weaponReqMet(sk.requiresWeapon)) {
+      if (lv && skillReady(sk.id) && weaponReqMet(sk.requiresWeapon) && equipReqMet(sk.requiresEquip)) {
         const spCost = skillSpCost(sk, lv);
         const isAttack = ['damage', 'magic', 'dot', 'damage_multihit', 'damage_multi', 'damage_aoe', 'magic_aoe', 'poison_proc'].includes(sk.type);
         if (state.sp >= spCost && spPct >= config.spThreshold && !wastesResourceInTown(sk, lv)) {
@@ -5953,7 +7745,7 @@ function tryAutoCastSkill() {
     const sk2 = findSkillForUse(config.skillId2);
     if (sk2) {
       const lv2 = skillLv(sk2.id);
-      if (lv2 && skillReady(sk2.id) && weaponReqMet(sk2.requiresWeapon)) {
+      if (lv2 && skillReady(sk2.id) && weaponReqMet(sk2.requiresWeapon) && equipReqMet(sk2.requiresEquip)) {
         const spCost2 = skillSpCost(sk2, lv2);
         if (state.sp >= spCost2 && spPct >= config.spThreshold2 && monsterCount >= config.monsterCount2 && !wastesResourceInTown(sk2, lv2)) {
           castSkill(sk2.id);
@@ -5972,6 +7764,7 @@ function tryAutoCastSupportSkills() {
       if (!state.autoSupportSkills[sk.id]) continue;
       if (!skillReady(sk.id)) continue;
       if (!weaponReqMet(sk.requiresWeapon)) continue;
+      if (!equipReqMet(sk.requiresEquip)) continue;
       if (wastesResourceInTown(sk, lv)) continue;
 
       const spCost = skillSpCost(sk, lv);
@@ -5980,7 +7773,7 @@ function tryAutoCastSupportSkills() {
       // Buff 類：只有「這個技能自己的」buff 還在時才跳過（等 buff 消失後自動補）。
       // 不能只比 type：攻速藥水與雙手劍加速同樣是 type:'aspd'，比 type 會讓藥水一喝下去
       // 就把技能擋掉 30 分鐘；不同職業同 type 的 buff 也會互相卡住。
-      if (['buff_atk', 'buff_auraflat', 'buff_meltdown', 'buff_windwalk', 'buff_sight', 'buff_matk', 'buff_basilica', 'buff_assumptio', 'buff_block', 'buff_def', 'buff_aspd', 'buff_flee', 'buff_gold', 'buff_crit', 'buff_poison', 'buff_statpct', 'buff_flatstat', 'buff_maxroll', 'buff_blessing', 'buff_sprate', 'buff_lukflat', 'buff_holyweapon'].includes(sk.type)) {
+      if (['buff_atk', 'buff_auraflat', 'buff_meltdown', 'buff_windwalk', 'buff_sight', 'buff_matk', 'buff_basilica', 'buff_assumptio', 'buff_reflect', 'buff_providence', 'buff_spearquicken', 'buff_song', 'buff_ensemble', 'encore', 'debuff_aspd_aoe', 'debuff_def_aoe', 'buff_block', 'buff_def', 'buff_aspd', 'buff_flee', 'buff_gold', 'buff_crit', 'buff_poison', 'buff_statpct', 'buff_flatstat', 'buff_maxroll', 'buff_blessing', 'buff_sprate', 'buff_lukflat', 'buff_holyweapon', 'buff_elementweapon', 'buff_elementfield', 'buff_chemical'].includes(sk.type)) {
         if (state.buffs.some(b => b.skillId === sk.id)) continue;
       }
       // 護盾類：耐久或次數尚未耗盡時跳過
@@ -6264,6 +8057,8 @@ function canJobChange(targetId) {
   if (targetId !== locked && !job.next.includes(targetId)) return false;
   const target = JOB_TREE[targetId];
   if (!target) return false;                // 進階二轉還沒進資料時安全擋下
+  // 性別鎖（#68 詩人／舞孃）：官方就是依性別二選一
+  if (target.genderLock && (state.gender || 'male') !== target.genderLock) return false;
   // 基本條件：等級夠
   if (state.jobLevel < job.jobLevelMax || state.baseLevel < target.baseLevelReq) return false;
   // 技能點檢查：當前職業的技能點必須花完
@@ -6293,6 +8088,11 @@ function jobChangeBlockReason(targetId) {
   const locked = jobLockReason(targetId);
   if (locked) return locked;
 
+  // 性別鎖（#68）：擋得最早，因為這條再怎麼練都解不開
+  if (target.genderLock && (state.gender || 'male') !== target.genderLock) {
+    return `這個職業只有${target.genderLock === 'male' ? '男性' : '女性'}角色能轉。`;
+  }
+
   // 不在路線上（沒轉生過的一般情況）
   const lockedNext = rebirthPathNext();
   if (targetId !== lockedNext && !job.next.includes(targetId)) {
@@ -6309,6 +8109,29 @@ function jobChangeBlockReason(targetId) {
     return `還有 ${left} 點技能點沒用完。`;
   }
   return null;
+}
+
+/* 轉職就自動獲得、不吃技能點的被動（`autoGrant: true`）。
+
+   跟既有的 `isQuest` 是兩件事：任務技能官方要跑任務才拿得到，這些是
+   「官方 maxLv 0 或未開放、本作改成職業自帶的小被動」（十字軍的退縮、
+   詩人的陣痛之聲、舞孃的眨眼之誘）。它們不該佔技能點——**沒有人會為了
+   1 秒暈眩去花點數**，做成要點的話等於做了個沒人點的技能。
+
+   除了轉職時發，讀檔時也補發一次：技能是後來才加的，
+   已經轉好職的存檔不補就永遠拿不到。 */
+function grantAutoSkills(verbose) {
+  const job = currentJob();
+  if (!job || !job.skills) return 0;
+  if (!state.learnedSkills) state.learnedSkills = {};
+  let n = 0;
+  job.skills.forEach(sk => {
+    if (!sk.autoGrant || state.learnedSkills[sk.id]) return;
+    state.learnedSkills[sk.id] = sk.maxLv || 1;
+    n++;
+    if (verbose) logMsg(`✨ 自動獲得職業被動：${sk.name}！`);
+  });
+  return n;
 }
 
 function doJobChange(targetId) {
@@ -6350,6 +8173,7 @@ function doJobChange(targetId) {
       logMsg(`自動習得任務技能：${sk.name}！`);
     }
   });
+  grantAutoSkills(true);
 
   recomputeDerived(true);
   logMsg(`🎊 恭喜！你轉職成為「${target.icon} ${target.name}」！`);
@@ -6528,6 +8352,28 @@ function useItem(itemId) {
         : rare ? '🎊🎊 大獎！' : '📦';
       const price = (!CARDS[got] && g.sell >= 500) ? `（售價 ${g.sell.toLocaleString()}z）` : '';
       logMsg(`${tag} 打開 ${def.name}，獲得了 ${g.name}${price}！`);
+      saveGame();
+      return true;
+    }
+    /* 四種屬性抵抗藥水（#72）：本作原本是完全沒有效果的雜物道具。
+       使用者 2026-08-10 指定綁在配藥的等級上——Lv5 火／Lv6 水／Lv7 地／Lv8 風，
+       沒點到就用不了（官方這四瓶本來就是鍊金術士配出來的東西）。
+       減傷併進 `cardEleDmgReduce`，那桶已經有八個消費者。 */
+    if (def.eleResist) {
+      const need = ELE_RESIST_PHARMACY_LV[def.eleResist.element];
+      if ((state.pharmacyLv || 0) < need) {
+        logMsg(`⚠️ ${def.name}：需要配藥 Lv${need} 才能使用。`);
+        return false;
+      }
+      removeItem(itemId, 1);
+      state.buffs = state.buffs.filter(b => b.skillId !== 'resist_' + def.eleResist.element);
+      state.buffs.push({
+        type: 'eleresist', element: def.eleResist.element, mult: 1,
+        reducePct: def.eleResist.pct, msRemaining: def.eleResist.sec * 1000,
+        skillId: 'resist_' + def.eleResist.element,
+      });
+      recomputeDerived(false);
+      logMsg(`🧪 使用了 ${def.name}，${ELEMENT_NAMES[def.eleResist.element]}屬性傷害 −${def.eleResist.pct}%，持續 ${Math.round(def.eleResist.sec / 60)} 分鐘。`);
       saveGame();
       return true;
     }
@@ -7094,7 +8940,8 @@ function skillSpCost(sk, lv) {
     ? (sk.spCost[lv - 1] ?? sk.spCost[sk.spCost.length - 1] ?? 0)
     : (sk.spCost || 0);
   // 卡片的增減與魔力減免（#64，一律是負值）相加後一起套用
-  const pct = ((state && state.cardSpCostPct) || 0) + ((state && state.skillSpCostPct) || 0);
+  const pct = ((state && state.cardSpCostPct) || 0) + ((state && state.skillSpCostPct) || 0)
+    + buffMult('spcost').flatBonus;   // 為您服務／臨機應變（#68）
   if (!pct) return base;
   return Math.max(0, Math.round(base * (1 + pct / 100)));
 }
@@ -7772,6 +9619,8 @@ function loadGame() {
       state.monsters = [];
     }
 
+    // 舊存檔補發轉職自帶的被動（技能是後來才加的，不補就永遠拿不到）
+    if (typeof grantAutoSkills === 'function') grantAutoSkills(false);
     recomputeDerived(false);
     return true;
   } catch (e) {

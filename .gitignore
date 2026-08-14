@@ -144,3 +144,6 @@ ro_skills_data/
 tools/
 暴擊特效/
 職業攻擊圖/
+
+# Godot 素材匯入殘留（本作是純瀏覽器 JS，這些檔沒有任何程式讀它）
+*.import
