@@ -18,7 +18,27 @@ const SLOTS_PER_PAGE = 3;
 
 function initApp() {
   renderCreationStats();
+  bindSearchComposition();
   showScreen('screen-title');
+}
+
+/* 注音／中文輸入法送出時補一次重畫。
+
+   **不能寫成 `oncompositionend="..."` 的 inline 屬性**——HTML 規格的
+   event handler content attribute 清單裡沒有 composition 那組，瀏覽器不會建立
+   對應的 handler，屬性寫了完全沒作用（第一版就是這樣，屬性在、事件不觸發）。
+   輸入框每次重畫都會換成新元素，所以掛在 document 上做委派，只綁一次。 */
+const SEARCH_INPUT_HANDLERS = {
+  'codex-search': v => onCodexSearch(v),
+  'inv-search': v => onInvSearch(v),
+  'wh-search': v => onWhSearch(v),
+};
+function bindSearchComposition() {
+  document.addEventListener('compositionend', ev => {
+    const t = ev.target;
+    const fn = t && t.id ? SEARCH_INPUT_HANDLERS[t.id] : null;
+    if (fn) fn(t.value);
+  });
 }
 
 function playTitleMusic() {
@@ -204,11 +224,272 @@ function onTickUI() {
     } else {
       updateMonsterHp();
     }
-    renderSkillBar();
     updateSkillAura();
     updatePlayerSprite();   // 換武器要即時換騎乘圖；key 沒變時這個函式會直接 return
+    renderGmPanel();
+    syncForgeTabBtn();        // 轉職／學會鍛造技能後，分頁列上的「🔨 鍛造」要自己出現
+    if (forgeIsOpen()) refreshForgeIfChanged();   // 掛機中材料與鋅幣會變，數字要跟著走
+    syncSkillScaleSlider();   // 換職業時滑桿要跳到那個職業記住的值
+    renderAllySprites();
+    updateAllyPanelLive();   // 只改數字，整個重畫會把展開中的下拉選單刪掉
     // 即時更新角色分頁的 BUFF 倒數
     if (activeTab === 'character') updateBuffCountdown();
+  }
+}
+
+/* GM 測試面板只在安全區出現。掛在每秒的 UI 心跳上，換地圖就會自己跟著開關，
+   不用在 changeMap() 那邊另外埋一次呼叫。 */
+function renderGmPanel() {
+  const el = document.getElementById('gm-panel');
+  if (el) el.classList.toggle('hidden', !inSafeZone());
+
+}
+
+/* ---------------- 隊友（#83）----------------
+
+   立繪站在玩家的上下方、往後靠一些（`left` 比玩家小）。
+   兩個容器是空的 <div>，有沒有人、長什麼樣都由這裡填。 */
+/* 隊友立繪也要動。第一版只放 frame_000.png 的靜態 <img>，所以隊友一直站著不動
+   （使用者 2026-08-15 回報）。改成跟玩家一樣輪播 frames 資料夾裡的圖：
+   引擎那邊在隊友揮擊時把 `_swingAt` 蓋上時間戳，這裡看到就從第 0 格重播一輪。
+
+   用 <img> 換 src 而不是像玩家那樣開 canvas：隊友只要看得出在動就好，
+   不需要量邊界框那一套（那是為了讓施放姿勢跟基本姿勢對齊，隊友沒有施放姿勢）。 */
+/* 隊友立繪用哪個資料夾。跟玩家共用同一套命名（見 updatePlayerSprite），
+   查不到就退回 SVG——不能直接沿用玩家的 baseAnimKey()，那支讀的是 state。 */
+function spriteFolderFor(jobId, gender) {
+  const alias = (typeof SPRITE_ALIAS !== 'undefined' && SPRITE_ALIAS[jobId]) || jobId;
+  return alias + '_' + (gender === 'female' ? 'female' : 'male');
+}
+
+function allySpriteHtml(a) {
+  const jd = JOB_TREE[a.jobId] || {};
+  const key = spriteFolderFor(a.jobId, a.gender || 'male');
+  if (key) loadAnimFrames(key);       // 有快取，重複呼叫直接 return
+  const first = key ? `images/frames/${key}/frame_000.png` : `images/player_${a.jobId}.svg`;
+  return `<div class="ally-figure" data-key="${key || ''}" title="${a._allyName}（${jd.name || a.jobId}）Lv.${a.baseLevel}">
+    <img class="ally-img" src="${first}" alt="${a._allyName}" onerror="this.onerror=null;this.src='${placeholderImgSrc('monster')}'">
+    <div class="ally-tag"></div>
+    <div class="ally-hp"><div class="ally-hp-fill"></div></div>
+  </div>`;
+}
+
+/* 立繪的骨架只有在「隊友換人」時才重建；血條、名牌、動畫格每個 UI 心跳更新。
+   每次都重建 innerHTML 的話 <img> 會一直換新的，反而永遠停在第一格。 */
+let allySpriteSig = '';
+const allyAnimIdx = [0, 0];
+function renderAllySprites() {
+  const list = (state && state.allies) || [];
+  const sig = list.map(a => a ? a._slot + ':' + a.jobId + ':' + (a.gender || 'male') : '-').join('|');
+  if (sig !== allySpriteSig) {
+    allySpriteSig = sig;
+    for (let i = 0; i < 2; i++) {
+      const el = document.getElementById('ally-sprite-' + i);
+      if (el) el.innerHTML = list[i] ? allySpriteHtml(list[i]) : '';
+    }
+  }
+  for (let i = 0; i < 2; i++) {
+    const a = list[i];
+    const el = document.getElementById('ally-sprite-' + i);
+    if (!a || !el) continue;
+    const fig = el.querySelector('.ally-figure');
+    if (!fig) continue;
+    fig.classList.toggle('downed', !!a._downed);
+    const tag = fig.querySelector('.ally-tag');
+    const txt = (a._downed ? '💀 ' : '') + a._allyName;
+    if (tag && tag.textContent !== txt) tag.textContent = txt;
+    const bar = fig.querySelector('.ally-hp-fill');
+    if (bar) bar.style.width = Math.max(0, Math.min(100, (a.hp / Math.max(1, a.maxHp)) * 100)) + '%';
+    stepAllyAnim(i, a, fig);
+  }
+}
+
+/* 揮擊時從第 0 格播到最後一格。UI 心跳是 100ms 一次，一輪 6~8 格約 0.6~0.8 秒，
+   比大多數的攻擊間隔短，所以看起來就是「打一下、收回來」。 */
+function stepAllyAnim(i, ally, fig) {
+  const img = fig.querySelector('.ally-img');
+  const key = fig.getAttribute('data-key');
+  if (!img || !key) return;
+  const frames = animFrameImages[key];
+  if (!frames || frames.length < 2) return;
+  if (ally._downed) { allyAnimIdx[i] = 0; img.src = frames[0].src; return; }
+  if (allyAnimIdx[i] > 0) {
+    // 播放中：一路播到最後一格再回待機格。**播放中不理會新的揮擊**，
+    // 不然攻速快的時候每次心跳都被重設成第 0 格，看起來就是完全不動。
+    allyAnimIdx[i] = (allyAnimIdx[i] + 1) % frames.length;
+    ally._swingShown = ally._swingAt;
+  } else if (ally._swingAt && ally._swingAt !== ally._swingShown) {
+    ally._swingShown = ally._swingAt;
+    allyAnimIdx[i] = 1;                     // 新的一次揮擊：起手
+  }
+  const f = frames[Math.min(allyAnimIdx[i], frames.length - 1)];
+  if (f && img.src !== f.src) img.src = f.src;
+}
+
+/* 浮動面板，不是 modal——使用者 2026-08-15 指定「到戰鬥地圖改為浮動式視窗、
+   不會讓掛機停止」。原本是 modal-overlay，蓋住整個畫面看不到戰鬥。
+   雇傭／更新仍然只有安全區做得到（engine 那邊擋），但喝水設定、自動購買、
+   復活這些在打怪時才需要的，就得在戰鬥地圖上按得到。 */
+let allyPanelOpen = false;
+function toggleAllyPanel() {
+  allyPanelOpen = !allyPanelOpen;
+  document.getElementById('ally-panel').classList.toggle('hidden', !allyPanelOpen);
+  if (allyPanelOpen) renderAllyPanel();
+}
+function allyAction(fn, slot) {
+  fn(slot);
+  renderAllyPanel();
+  renderAll();
+}
+/* 面板分兩層：`renderAllyPanel()` 整個重畫（開啟時、按下動作時），
+   `updateAllyPanelLive()` 每秒只改會變的幾個數字。
+
+   **不能每秒整個重畫**：innerHTML 一換，正在展開的 <select> 就被刪掉重建，
+   藥水選單永遠選不下去（使用者 2026-08-15 回報）。跟三個搜尋框那個注音問題
+   同一個病——重畫把使用者正在互動的元素抽掉了。 */
+function renderAllyPanel() {
+  const el = document.getElementById('ally-panel-body');
+  if (!el) return;
+  const list = state.allies || [];
+  const cands = allyHireCandidates();
+  const leaf = ITEMS[ALLY_REVIVE_ITEM];
+  const safe = inSafeZone();
+
+  let html = `<div class="ally-note">最多 ${ALLY_MAX} 名。雇傭價 = 對方基礎等級 × ${ALLY_HIRE_PRICE_PER_LEVEL.toLocaleString()}，
+    更新快照只要 ${ALLY_REFRESH_DIVISOR} 分之一。隊友額外累積 ${ALLY_MERC_EXP_PCT}% 經驗，退隊後由他本人上線時領取。
+    ${safe ? '' : '<b>雇傭與更新要回安全區</b>，喝水設定與復活在這裡就能改。'}</div>`;
+
+  html += '<div class="ally-sec">目前隊伍</div>';
+  if (!list.length) {
+    html += '<div class="ally-empty">還沒有隊友。</div>';
+  } else {
+    html += list.map(a => {
+      const jd = JOB_TREE[a.jobId] || {};
+      const refresh = Math.ceil(allyHirePrice(a.baseLevel || 1) / ALLY_REFRESH_DIVISOR);
+      return `<div class="ally-row" data-ally="${a._slot}">
+        <span class="ally-row-name">${jd.icon || '🧍'} ${a._allyName}</span>
+        <span class="ally-row-job">${jd.name || a.jobId} Lv.${a.baseLevel}</span>
+        <span class="ally-row-hp"></span>
+        <span class="ally-row-exp" title="退隊時結算給本人"></span>
+        <button class="btn-small ally-revive" onclick="allyAction(reviveAllyBySlot,'${a._slot}')">🍃 扶起</button>
+        <button class="btn-small" ${safe ? '' : 'disabled'} onclick="allyAction(refreshAlly,'${a._slot}')">🔄 更新 ${refresh.toLocaleString()}z</button>
+        <button class="btn-small danger" onclick="allyAction(dismissAlly,'${a._slot}')">退隊</button>
+      </div>`;
+    }).join('');
+  }
+
+  /* 「其他存檔的角色」在戰鬥地圖預設收起——那邊本來就雇不了，
+     展開只是佔掉面板高度（使用者 2026-08-15 指定）。 */
+  const free = cands.filter(c => !c.hired);
+  const open = allyHireListOpen === null ? safe : allyHireListOpen;
+  html += `<div class="ally-sec ally-sec-toggle" onclick="toggleAllyHireList()">
+    <span>${open ? '▾' : '▸'} 其他存檔的角色（${free.length}）</span>
+    ${safe ? '' : '<span class="codex-sec-hint">回安全區才能雇傭</span>'}
+  </div>`;
+  if (open) {
+    html += !free.length
+      ? '<div class="ally-empty">沒有其他存檔的角色可以雇傭。</div>'
+      : free.map(c => `<div class="ally-row">
+          <span class="ally-row-name">${c.jobIcon} ${c.name}</span>
+          <span class="ally-row-job">${c.jobName} Lv.${c.baseLevel}</span>
+          <span class="ally-row-hp">存檔 ${Number(c.slot) + 1}</span>
+          <span class="ally-row-exp"></span>
+          <button class="btn-small" ${!safe || list.length >= ALLY_MAX || state.gold < c.price ? 'disabled' : ''}
+            onclick="allyAction(hireAlly,'${c.slot}')">🤝 雇傭 ${c.price.toLocaleString()}z</button>
+        </div>`).join('');
+  }
+
+  const cfg = state.allyPotion || {};
+  const potOpts = state.inventory
+    .filter(r => !r.instanceId && ITEMS[r.item] && (ITEMS[r.item].heal || ITEMS[r.item].healPct))
+    .map(r => `<option value="${r.item}" ${cfg.primary === r.item ? 'selected' : ''}>${ITEMS[r.item].name}（${r.qty}）</option>`)
+    .join('');
+  html += `<div class="ally-sec">隊友喝水<span class="codex-sec-hint">喝的是玩家背包裡的藥水</span></div>
+    <div class="ally-opt">
+      <label><input type="checkbox" ${cfg.enabled ? 'checked' : ''} onchange="setAllyPotionCfg('enabled', this.checked)">
+        隊友 HP 低於
+        <input class="ally-num" type="number" min="10" max="95" value="${cfg.hpThreshold || 50}"
+          onchange="setAllyPotionCfg('hpThreshold', Math.max(10, Math.min(95, parseInt(this.value) || 50)))">% 時自動喝</label>
+      <label>優先喝
+        <select class="ally-sel" onchange="setAllyPotionCfg('primary', this.value)">
+          <option value="">（不指定）</option>${potOpts}
+        </select>
+        用完改喝 ${ITEMS[ALLY_POTION_FALLBACK].name}</label>
+      <label><input type="checkbox" ${state.autoBuyAllyPotion ? 'checked' : ''} onchange="setAutoBuyAllyPotion(this.checked)">
+        藥水用完自動購買</label>
+    </div>`;
+
+  /* 隊友的箭跟藥水同一個規則：射的是玩家背包裡的箭，錢也是玩家出（#93）。
+     玩家自己那支自動補箭只在玩家拿弓時才會動，補不到隊友。 */
+  html += `<div class="ally-sec">隊友箭矢<span class="codex-sec-hint">射的是玩家背包裡的箭</span></div>
+    <div class="ally-opt">
+      <label><input type="checkbox" ${state.autoBuyAllyArrow ? 'checked' : ''} onchange="setAutoBuyAllyArrow(this.checked)">
+        箭矢少於 ${AUTO_BUY_ALLY_ARROW_THRESHOLD + 1} 支時自動購買（一次 ${AUTO_BUY_ALLY_ARROW_QTY} 支）</label>
+      <div class="ally-stock" id="ally-arrow-stock"></div>
+    </div>`;
+
+  html += `<div class="ally-sec">隊友音效</div>
+    <div class="ally-opt">
+      <label><input type="checkbox" ${state.allySfxOff ? '' : 'checked'} onchange="setAllySfxOff(!this.checked)">
+        播放隊友的攻擊／技能音效</label>
+      <label>音量
+        <input class="ally-range" type="range" min="0" max="100"
+          value="${Math.round((state.allySfxRatio != null ? state.allySfxRatio : 0.5) * 100)}"
+          oninput="setAllySfxRatio(this.value)">
+        <span id="vol-ally-text">${Math.round((state.allySfxRatio != null ? state.allySfxRatio : 0.5) * 100)}%</span>
+        <span class="codex-sec-hint">相對於主音效音量</span></label>
+    </div>`;
+
+  html += `<div class="ally-sec">倒地與復活</div>
+    <div class="ally-opt">
+      <label><input type="checkbox" ${state.autoReviveAlly ? 'checked' : ''} onchange="setAutoReviveAlly(this.checked)">
+        倒地 ${ALLY_DOWN_REVIVE_CD_SEC} 秒後自動用${leaf.name}扶起</label>
+      <label><input type="checkbox" ${state.autoBuyReviveLeaf ? 'checked' : ''} onchange="setAutoBuyReviveLeaf(this.checked)">
+        ${leaf.name}少於 ${AUTO_BUY_LEAF_THRESHOLD + 1} 個時自動購買（${leaf.buyPrice.toLocaleString()}z／個）</label>
+      <div class="ally-stock" id="ally-leaf-stock"></div>
+    </div>`;
+  el.innerHTML = html;
+  updateAllyPanelLive();
+}
+let allyHireListOpen = null;   // null = 照地圖決定（安全區展開、戰鬥圖收起）
+function toggleAllyHireList() {
+  const safe = inSafeZone();
+  allyHireListOpen = !(allyHireListOpen === null ? safe : allyHireListOpen);
+  renderAllyPanel();
+}
+
+// 每秒只改這幾個會變的數字，不動任何 input／select
+function updateAllyPanelLive() {
+  if (!allyPanelOpen) return;
+  (state.allies || []).forEach(a => {
+    const row = document.querySelector(`#ally-panel-body .ally-row[data-ally="${a._slot}"]`);
+    if (!row) return;
+    row.classList.toggle('downed', !!a._downed);
+    const hp = row.querySelector('.ally-row-hp');
+    const txt = a._downed ? '💀 倒地' : `HP ${Math.round(a.hp)}/${a.maxHp}`;
+    if (hp && hp.textContent !== txt) hp.textContent = txt;
+    const ex = row.querySelector('.ally-row-exp');
+    const et = '累積 ' + Math.round(a._pendingExp || 0).toLocaleString();
+    if (ex && ex.textContent !== et) ex.textContent = et;
+    const rv = row.querySelector('.ally-revive');
+    if (rv) rv.style.display = a._downed ? '' : 'none';
+  });
+  const stock = document.getElementById('ally-leaf-stock');
+  if (stock) {
+    const t = `目前持有 ${getItemQty(ALLY_REVIVE_ITEM)} 個　·　回安全區全隊免費滿血復活`;
+    if (stock.textContent !== t) stock.textContent = t;
+  }
+  const arrow = document.getElementById('ally-arrow-stock');
+  if (arrow) {
+    // 一位一行：哪位隊友在用哪種箭、玩家背包還剩幾支
+    const users = allyArrowUsers();
+    const t = !users.length
+      ? '目前沒有需要箭矢的隊友。'
+      : users.map(a => {
+        const id = allyAmmoId(a);
+        return `${a._allyName}：${ITEMS[id].name} ${getItemQty(id)} 支`;
+      }).join('　·　');
+    if (arrow.textContent !== t) arrow.textContent = t;
   }
 }
 
@@ -272,7 +553,7 @@ function renderTopBar() {
   setBar('hud-sp-bar', 'hud-sp-text', state.sp, state.maxSp, 'SP');
   const bexpNeed = expToNextBaseLevel(state.baseLevel);
   setBar('hud-bexp-bar', 'hud-bexp-text', state.baseExp, bexpNeed, 'EXP');
-  const jexpNeed = expToNextJobLevel(state.jobLevel);
+  const jexpNeed = expToNextJobLevel(state.jobLevel, job.tier);
   const jobCapped = state.jobLevel >= job.jobLevelMax;
   setBar('hud-jexp-bar', 'hud-jexp-text', jobCapped ? 1 : state.jobExp, jobCapped ? 1 : jexpNeed, jobCapped ? '職業已滿' : 'JOB EXP');
 
@@ -393,6 +674,177 @@ function updatePlayerSprite() {
   img.src = 'images/player_swordsman.svg';
 }
 
+/* 立繪的顯示尺寸。
+
+   **不能照圖檔尺寸縮放**：領主騎士的 frame_000 是 175×170，_skill 只有 62×99，
+   但兩張圖裡的**人**都是 91~92 px 高——差別全在留白。舊版把畫布 CSS 寫死
+   120×160、兩種圖都拉去填滿，結果基本姿勢的人縮到 87px、施放姿勢卻放大到 147px，
+   一放技能角色就整個大一號（使用者 2026-08-15 回報）。
+
+   改成量**非透明像素的邊界框**，把「人」統一縮放到 SPRITE_CHAR_H 這麼高，
+   再用邊界框把畫布擺成「腳底貼著框底、身體置中」。留白多少都不影響。
+   一個 key 只量一次（讀一次 pixel），存進 spriteMetrics 快取。 */
+/* 目標身高。舊版（沒有這套縮放）的基本姿勢實際畫出來是 87px，
+   設 100 的話整體比原本大一號，使用者 2026-08-15 仍反映技能動畫太大——
+   壓回 84，跟改動前的基本姿勢差不多，施放姿勢也跟著對齊。 */
+const SPRITE_BOX_W = 120;
+/* 立繪身高的基準值，以及玩家可調的百分比（#89）。
+
+   「太大／太小」是主觀的，而且同一組動作裡的落差本來就大，我改了三輪都還在猜。
+   拉出來變成一支滑桿，玩家自己拉到順眼為止。改動時要清掉 spriteMetrics
+   讓每個 key 重新量一次，不然舊的倍率會留著。 */
+const SPRITE_CHAR_H_BASE = 84;
+function spriteScalePct() {
+  const s = (typeof allyOwnerState === 'function') ? allyOwnerState() : state;
+  return (s && s.spriteScalePct != null) ? s.spriteScalePct : 100;
+}
+function spriteCharH() { return SPRITE_CHAR_H_BASE; }
+/* 直接縮放 `#player-sprite` 這個外框，而不是去改畫布的 CSS 尺寸。
+
+   前一版是重新量邊界框、重算畫布尺寸——在我這邊實測有效（155px→233px），
+   但使用者那邊只有隊友會動、玩家完全沒反應。隊友走的是外框的
+   `transform: scale()`，那條路徑他看得到效果，所以玩家也改走同一條。
+   外框縮放不管裡面是畫布還是 <img> 都會跟著縮，沒有「量不到就失效」的問題。
+
+   **隊友維持原本大小**（使用者說 100% 剛好），這支滑桿只管玩家。 */
+/* 施放姿勢另外一支倍率（#90）。
+
+   量到的數字兩種姿勢是**一樣的**（都是 84px）：
+     基本 lordknight_male       邊界框 69×92 → 倍率 0.913 → 84px
+     施放 lordknight_male_skill 邊界框 54×91 → 倍率 0.923 → 84px
+   但**邊界框裡裝的東西不一樣**：基本姿勢那 92px 含了垂下來的劍，身體只佔一部分；
+   施放姿勢那 91px 幾乎全是身體。照邊界框對齊，施放時的「人」就會顯得比較大。
+   這件事量不出來（要知道身體佔多少才行），所以拉成一支獨立的滑桿。 */
+/* **每個職業各記一份**。合適的倍率跟美術怎麼畫有關，不同職業差很多——
+   使用者實測：領主騎士 55% 才剛好、十字刺客要 80%。一支全域滑桿蓋不住。
+   拉滑桿時存的是「目前這個職業」的值，換職業就換一組。 */
+const SKILL_SPRITE_SCALE_DEFAULT = { lordknight: 55, assassincross: 80 };
+const SKILL_SPRITE_SCALE_FALLBACK = 85;
+function skillSpriteScalePct() {
+  const s = (typeof allyOwnerState === 'function') ? allyOwnerState() : state;
+  if (!s) return SKILL_SPRITE_SCALE_FALLBACK;
+  const job = s.jobId || '';
+  const map = s.skillSpriteScaleByJob;
+  if (map && map[job] != null) return map[job];
+  return SKILL_SPRITE_SCALE_DEFAULT[job] != null ? SKILL_SPRITE_SCALE_DEFAULT[job] : SKILL_SPRITE_SCALE_FALLBACK;
+}
+function setSkillSpriteScalePct(val) {
+  const s = (typeof allyOwnerState === 'function') ? allyOwnerState() : state;
+  if (!s.skillSpriteScaleByJob) s.skillSpriteScaleByJob = {};
+  s.skillSpriteScaleByJob[s.jobId || ''] = Math.max(50, Math.min(150, Math.round(val)));
+  const t = document.getElementById('skill-scale-text');
+  if (t) t.textContent = skillSpriteScalePct() + '%';
+  applySpriteScale();
+  saveGame();
+}
+// 換職業時把滑桿撥到那個職業記住的值
+function syncSkillScaleSlider() {
+  const sl = document.getElementById('skill-scale');
+  const t = document.getElementById('skill-scale-text');
+  const v = skillSpriteScalePct();
+  if (sl && sl.value !== String(v)) sl.value = v;
+  if (t) t.textContent = v + '%';
+}
+function applySpriteScale() {
+  const el = document.getElementById('player-sprite');
+  if (!el) return;
+  // 施放中再乘一次施放姿勢的倍率
+  const r = (spriteScalePct() / 100) * (castingAnim ? skillSpriteScalePct() / 100 : 1);
+  el.style.transform = 'scale(' + r.toFixed(3) + ')';
+  el.style.transformOrigin = 'bottom center';
+}
+function setSpriteScalePct(val) {
+  const s = (typeof allyOwnerState === 'function') ? allyOwnerState() : state;
+  s.spriteScalePct = Math.max(50, Math.min(150, Math.round(val)));
+  const t = document.getElementById('sprite-scale-text');
+  if (t) t.textContent = s.spriteScalePct + '%';
+  applySpriteScale();
+  saveGame();
+}
+const spriteMetrics = {};
+function frameBBox(frame) {
+  const c = document.createElement('canvas');
+  c.width = frame.naturalWidth; c.height = frame.naturalHeight;
+  const cx = c.getContext('2d', { willReadFrequently: true });
+  cx.drawImage(frame, 0, 0);
+  let d;
+  try { d = cx.getImageData(0, 0, c.width, c.height).data; } catch (e) { return null; }
+  let x0 = c.width, y0 = c.height, x1 = -1, y1 = -1;
+  for (let y = 0; y < c.height; y++) {
+    for (let x = 0; x < c.width; x++) {
+      if (d[(y * c.width + x) * 4 + 3] > 16) {
+        if (x < x0) x0 = x; if (x > x1) x1 = x;
+        if (y < y0) y0 = y; if (y > y1) y1 = y;
+      }
+    }
+  }
+  if (x1 < 0) return null;
+  return { x0, y0, bw: x1 - x0 + 1, bh: y1 - y0 + 1, cw: c.width, ch: c.height };
+}
+/* 縮放同時吃兩個條件，取比較小的那個：
+
+     待機格縮到 SPRITE_CHAR_H 高      —— 讓「站著的人」大小一致
+     整組最高的那一格不超過 SPRITE_MAX_H —— 免得某一格暴衝
+
+   只用待機格算會出事：領主騎士待機 92px，但 frame_004 大幅揮擊有 161px，
+   實測那一格畫出來是 **147px**，其餘每一格都是 72~85px——打起來就是
+   「偶爾突然變大一隻」（使用者 2026-08-15 連續兩次反映太大，就是這一格）。
+   只用最高格算也不行，那會把待機縮到 48px。兩個條件一起夾才對。
+
+   動作溫和的職業（祭司最高格 93px）不受上限影響，待機維持 84px；
+   有大幅揮擊的（領主騎士）整體縮到 0.807，待機 74px、最高格剛好 130px。 */
+const SPRITE_MAX_H_BASE = 100;
+function spriteMaxH() { return SPRITE_MAX_H_BASE; }
+function measureSprite(key, frame) {
+  if (spriteMetrics[key] || !frame || !frame.naturalWidth) return spriteMetrics[key];
+  const b = frameBBox(frame);
+  if (!b) return null;
+  let scale = spriteCharH() / b.bh;
+  /* 施放姿勢**直接沿用基本姿勢算出來的畫面身高**。
+     各自算的話會差一截：領主騎士的基本姿勢因為有大幅揮擊那格被夾到 0.807
+     （待機 74px），施放姿勢沒有那種格子就維持 0.923（84px）——同一個人一放技能
+     大 13%。同一個角色本來就該一樣高。 */
+  const baseKey = key.endsWith('_skill') ? key.slice(0, -6) : null;
+  const bm = baseKey ? spriteMetrics[baseKey] : null;
+  if (bm) scale = (bm.bh * bm.scale) / b.bh;
+  /* 每一格自己的邊界框也先量好。同一組動作裡的落差可以很大：
+     騎士待機是 89px、但 frame_004 大幅揮擊有 161px（劍舉起來），
+     照同一個倍率畫的話那一格會是待機的 1.8 倍。 */
+  const frames = (animFrameImages[key] || []).map(f => frameBBox(f) || b);
+  spriteMetrics[key] = { scale, frames, x0: b.x0, y0: b.y0, bw: b.bw, bh: b.bh, cw: b.cw, ch: b.ch };
+  return spriteMetrics[key];
+}
+/* 每一格各自算倍率：平常就是這個 key 的基準倍率，只有**畫出來會超過
+   SPRITE_MAX_H 的那幾格**才另外縮小。這樣待機維持該有的大小，
+   而大幅揮擊那一格不會突然變成兩倍（使用者連續三次反映「太大」就是這個）。
+   不往上放大——`Math.min` 保證了縮放只會變小。 */
+function frameScaleOf(m, idx) {
+  const fb = (m.frames && m.frames[idx]) || m;
+  return Math.min(m.scale, spriteMaxH() / fb.bh);
+}
+function sizeAnimCanvas(key, frame, idx) {
+  if (!animCanvas || !frame) return;
+  animCanvas.width = frame.naturalWidth;
+  animCanvas.height = frame.naturalHeight;
+  const m = measureSprite(key, frame);
+  if (!m) {   // 量不到（跨網域之類）就退回填滿整個框
+    animCanvas.style.width = SPRITE_BOX_W + 'px';
+    animCanvas.style.height = '160px';
+    animCanvas.style.left = '50%'; animCanvas.style.bottom = '0';
+    animCanvas.style.marginLeft = -(SPRITE_BOX_W / 2) + 'px';
+    return;
+  }
+  const i = idx || 0;
+  const fb = (m.frames && m.frames[i]) || m;
+  const sc = frameScaleOf(m, i);
+  animCanvas.style.width = Math.round(fb.cw * sc) + 'px';
+  animCanvas.style.height = Math.round(fb.ch * sc) + 'px';
+  // 這一格的人：水平中心對齊框中心、腳底對齊框底
+  animCanvas.style.left = '50%';
+  animCanvas.style.marginLeft = -Math.round((fb.x0 + fb.bw / 2) * sc) + 'px';
+  animCanvas.style.bottom = -Math.round((fb.ch - fb.y0 - fb.bh) * sc) + 'px';
+}
+
 function showAnimCanvas(key) {
   const img = document.getElementById('player-img');
   if (!img) return;
@@ -401,12 +853,11 @@ function showAnimCanvas(key) {
   img.style.display = 'none';
   if (!animCanvas) {
     animCanvas = document.createElement('canvas');
-    animCanvas.style.cssText = 'width:120px;height:160px;image-rendering:auto;';
+    animCanvas.className = 'player-anim-canvas';
     img.parentNode.insertBefore(animCanvas, img);
   }
   animCanvas.style.display = '';
-  animCanvas.width = frames[0].naturalWidth;
-  animCanvas.height = frames[0].naturalHeight;
+  sizeAnimCanvas(key, frames[0]);
   animCanvasCtx = animCanvas.getContext('2d');
   stopCastAnim();               // 換職業／換武器時把播到一半的施放動作收掉
   currentAnimKey = key;
@@ -420,8 +871,12 @@ function drawAnimFrame() {
   if (!animCanvasCtx || !currentAnimKey) return;
   const frames = animFrameImages[currentAnimKey];
   if (!frames || !frames.length) return;
+  const idx = Math.min(animFrameIdx, frames.length - 1);
+  // 每一格都重新排一次版：倍率與對齊是逐格算的（見 sizeAnimCanvas）
+  sizeAnimCanvas(currentAnimKey, frames[idx], idx);
+  animCanvasCtx = animCanvas.getContext('2d');
   animCanvasCtx.clearRect(0, 0, animCanvas.width, animCanvas.height);
-  animCanvasCtx.drawImage(frames[animFrameIdx], 0, 0);
+  animCanvasCtx.drawImage(frames[idx], 0, 0);
 }
 
 async function loadAnimFrames(key) {
@@ -475,7 +930,10 @@ function stopAnim() {
 
    施放中再收到一次施放不重播：卡片與被動觸發的技能是「免費施放」，
    武僧那種連段一輪能觸發好幾次，每次都重播的話姿勢會一直卡在第一格抖動。 */
-const SKILL_ANIM_MS = 600;
+/* 施放姿勢的總播放時間。600ms 太長——攻速快的時候整段動作把普攻動畫吃光
+   （playAttackAnim 遇到 castingAnim 會直接 return），看起來像卡住。
+   使用者 2026-08-15 指定壓到 0.1~0.3 秒。 */
+const SKILL_ANIM_MS = 250;
 let castAnimTimer = null;
 let castingAnim = false;
 
@@ -492,10 +950,10 @@ function playSkillCastAnim() {
   animating = false;
   castingAnim = true;
   currentAnimKey = key;
-  animCanvas.width = frames[0].naturalWidth;
-  animCanvas.height = frames[0].naturalHeight;
+  sizeAnimCanvas(key, frames[0]);   // 照邊界框縮放，不要拉去填滿整個框
   animFrameIdx = 0;
   drawAnimFrame();
+  applySpriteScale();               // 施放姿勢有自己的倍率
 
   castAnimTimer = setInterval(() => {
     animFrameIdx++;
@@ -510,16 +968,18 @@ function restoreAfterCastAnim(backTo) {
   const frames = animFrameImages[backTo];
   if (!frames || !frames.length || !animCanvas) return;
   currentAnimKey = backTo;
-  animCanvas.width = frames[0].naturalWidth;
-  animCanvas.height = frames[0].naturalHeight;
+  sizeAnimCanvas(backTo, frames[0]);
   animFrameIdx = 0;
   drawAnimFrame();
+  applySpriteScale();               // 收掉施放姿勢的倍率
 }
 
 // 換職業／換武器時呼叫：不還原畫布（呼叫端馬上就要自己重設），只把計時器收乾淨
 function stopCastAnim() {
   if (castAnimTimer) { clearInterval(castAnimTimer); castAnimTimer = null; }
   castingAnim = false;
+  syncSkillScaleSlider();
+  applySpriteScale();
 }
 
 /* ---------------- 技能特效 ----------------
@@ -551,9 +1011,21 @@ function skillFxFor(skillId) {
 }
 
 /* 施放瞬間：在角色身上疊一張詠唱姿勢，播完自己移除。由 castSkill() 呼叫。 */
+/* 哪些技能會擺出「施放姿勢」（#100）。
+
+   物理傷害技能**不播** —— 那些立繪畫的是揮劍、突刺、踢擊，本來就是攻擊動作的一部分，
+   再切一次施放姿勢會變成「舉手唸咒然後才砍下去」，節奏整個斷掉。
+   魔法與輔助技才播：那些本來就該有一個唸咒／祈禱的動作。
+   使用者 2026-08-15 指定。 */
+const CAST_ANIM_SKIP_TYPES = ['damage', 'damage_multihit', 'damage_multi', 'damage_aoe',
+  'field_phys_aoe', 'dot', 'poison_proc', 'special_charge', 'passive'];
+function skillPlaysCastAnim(sk) {
+  return !!sk && !CAST_ANIM_SKIP_TYPES.includes(sk.type);
+}
+
 function showSkillCastEffect(sk) {
   if (!sk) return;
-  playSkillCastAnim();          // 職業共用的施放姿勢，不分技能
+  if (skillPlaysCastAnim(sk)) playSkillCastAnim();   // 職業共用的施放姿勢，不分技能
   const fx = skillFxFor(sk.id);
   if (!fx || !fx.sprite) return;
   const host = document.getElementById('player-sprite');
@@ -647,11 +1119,36 @@ const _sfxPools = {};
 const _sfxLastPlayed = {};
 
 function sfxVolume() { return state && state.sfxVolume != null ? state.sfxVolume : 0.5; }
+/* 隊友的音效走同一組音檔，但音量獨立（#87）。兩名隊友加上玩家一起打，
+   全部同音量會吵到聽不出自己在做什麼；預設壓到主音量的一半，可以調也可以關。
+
+   **設定要讀玩家那份 state**：這支是在換身期間被呼叫的，直接讀 `state`
+   拿到的是隊友快照——快照裡是雇傭當下拷貝的舊音量，而且面板改的設定
+   寫在玩家身上，隊友那份永遠不會變（實測不管怎麼調都固定 0.25）。 */
+function allyOwner() {
+  return (typeof allyOwnerState === 'function') ? allyOwnerState() : state;
+}
+function allySfxVolume() {
+  const s = allyOwner();
+  if (!s || s.allySfxOff) return 0;
+  const base = s.sfxVolume != null ? s.sfxVolume : 0.5;
+  const r = s.allySfxRatio != null ? s.allySfxRatio : 0.5;
+  return base * r;
+}
+function setAllySfxRatio(val) {
+  const s = allyOwner();
+  s.allySfxRatio = Math.max(0, Math.min(1, val / 100));
+  const t = document.getElementById('vol-ally-text');
+  if (t) t.textContent = Math.round(s.allySfxRatio * 100) + '%';
+  saveGame();
+}
+function setAllySfxOff(v) { allyOwner().allySfxOff = !!v; saveGame(); }
 
 /* url 直接播。minGapMs 是同一個音效的最短間隔，用來擋 AoE 的連珠炮。*/
 function playSfx(url, minGapMs) {
   if (!url) return;
   if (state && state.muted) return;
+  if (typeof _allyActing !== 'undefined' && _allyActing && allySfxVolume() <= 0) return;
   const now = Date.now();
   if (minGapMs && now - (_sfxLastPlayed[url] || 0) < minGapMs) return;
   _sfxLastPlayed[url] = now;
@@ -663,7 +1160,8 @@ function playSfx(url, minGapMs) {
   }
   const a = pool.list[pool.next];
   pool.next = (pool.next + 1) % SFX_POOL_SIZE;
-  a.volume = sfxVolume();
+  // 換身中（隊友在打）走隊友自己的音量
+  a.volume = (typeof _allyActing !== 'undefined' && _allyActing) ? allySfxVolume() : sfxVolume();
   try { a.currentTime = 0; } catch (e) { /* 還沒載完就不用倒帶 */ }
   a.play().catch(() => {});
 }
@@ -1012,11 +1510,17 @@ function triggerMonsterDie() {
 /* ---------------- 戰鬥日誌增強 ---------------- */
 // 傷害飄字邏輯已移至 engine.js 的 logMsg 函式中處理
 
+/* 三塊資訊欄各自畫自己的那條分流（分流規則見 engine.js 的 pushCombatLog）。
+   一律只取最後 30 則，畫完捲到底。 */
+const LOG_PANES = { main: 'log-main', skill: 'log-skill', ally: 'log-ally' };
 function renderLog() {
-  const el = document.getElementById('combat-log');
-  if (!el) return;
-  el.innerHTML = combatLogBuf.slice(-30).map(m => `<div class="log-line">${m}</div>`).join('');
-  el.scrollTop = el.scrollHeight;
+  Object.keys(LOG_PANES).forEach(lane => {
+    const el = document.getElementById(LOG_PANES[lane]);
+    if (!el) return;
+    const rows = (combatLogLanes[lane] || []).slice(-30);
+    el.innerHTML = rows.map(m => `<div class="log-line">${m}</div>`).join('');
+    el.scrollTop = el.scrollHeight;
+  });
 }
 
 /* ---------------- 地圖分頁 ---------------- */
@@ -1228,14 +1732,16 @@ function renderAutoBattleTab() {
     }
     return '卡片';
   };
-  const ATTACK_TYPES = ['damage', 'magic', 'dot', 'damage_multihit', 'damage_multi', 'damage_aoe', 'magic_aoe', 'poison_proc'];
-  // buff_flatstat（商人的大聲吶喊）原本漏在清單外，自動戰鬥頁面就勾不到
-  const SUPPORT_TYPES = ['buff_atk', 'buff_auraflat', 'buff_meltdown', 'buff_windwalk', 'buff_sight', 'buff_matk', 'buff_basilica', 'buff_assumptio', 'buff_reflect', 'buff_providence', 'buff_spearquicken', 'buff_block', 'buff_def', 'buff_aspd', 'buff_flee', 'buff_gold', 'buff_crit', 'buff_poison', 'buff_statpct', 'buff_flatstat', 'buff_maxroll', 'buff_blessing', 'buff_shield', 'buff_sprate', 'buff_lukflat', 'buff_holyweapon', 'debuff_def', 'debuff', 'heal', 'heal_over_time', 'field_heal', 'field_aoe_magic', 'stun_field', 'multi_dot_stun'];
+  /* 分類走引擎的 isAttackSkill()／isAutoSupportSkill()（#101）。
+     這裡本來自己抄了一份類型白名單，跟引擎那份各走各的——
+     結果新職業的技能類型沒補進來就整組勾不到：鍊金術士 8 個、
+     吟遊詩人與舞孃的歌謠、賢者的屬性附加與元素領域、教授、聖殿十字軍…
+     現在只維護「攻擊」那份，其餘非被動一律進輔助區。 */
   const attackSkills = [], supportSkills = [];
   usableSkillEntries().forEach(({ sk, lv }) => {
     const row = { ...sk, lv, jobName: jobNameOf(sk.id) };
-    if (ATTACK_TYPES.includes(sk.type)) attackSkills.push(row);
-    else if (SUPPORT_TYPES.includes(sk.type)) supportSkills.push(row);
+    if (isAttackSkill(sk)) attackSkills.push(row);
+    else if (isAutoSupportSkill(sk)) supportSkills.push(row);
   });
 
   // 藥水設定 - 兩個下拉選單
@@ -1347,11 +1853,11 @@ function renderAutoBattleTab() {
     <div class="ab-section">
       <h4 class="ab-section-title">⚔️ 遇怪模式</h4>
       <div class="ab-mode-btns">
-        <button class="btn-small ${(state.encounterMode || 'melee') === 'melee' ? 'active' : ''}" onclick="setEncounterMode('melee')">近戰模式（最多5隻）</button>
+        <button class="btn-small ${(state.encounterMode || 'melee') === 'melee' ? 'active' : ''}" onclick="setEncounterMode('melee')">近戰模式（最多3隻）</button>
         <button class="btn-small ${state.encounterMode === 'ranged' ? 'active' : ''}" onclick="setEncounterMode('ranged')">遠攻模式（1隻）</button>
       </div>
       <div class="ab-info-text">
-        ${state.encounterMode === 'ranged' ? '遠攻：怪物死後才會再生下一隻。' : '近戰：0隻時0.5秒一隻，1隻以上時3秒一隻，最多5隻。'}
+        ${state.encounterMode === 'ranged' ? '遠攻：怪物死後才會再生下一隻。' : '近戰：0隻時0.5秒一隻，1隻以上時3秒一隻，最多3隻。'}
       </div>
     </div>
 
@@ -1467,9 +1973,11 @@ function renderAutoBattleTab() {
       </div>
       <div class="ab-config-row">
         <label class="ab-config-label">SP 低於</label>
+        <!-- id 不能叫 sp-threshold-val：攻擊技能第一招的「SP 保留 %」已經佔了那個 id，
+             getElementById 只回傳第一個，拉這條滑桿會去改上面那格的數字（#102） -->
         <input type="range" class="ab-slider" min="10" max="90" value="${spThreshold}"
-          oninput="setAutoSpPotionThreshold(this.value);document.getElementById('sp-threshold-val').textContent=this.value+'%'">
-        <span id="sp-threshold-val" class="ab-slider-val">${spThreshold}%</span>
+          oninput="setAutoSpPotionThreshold(this.value);document.getElementById('sp-potion-threshold-val').textContent=this.value+'%'">
+        <span id="sp-potion-threshold-val" class="ab-slider-val">${spThreshold}%</span>
         <span class="ab-config-hint">時使用</span>
       </div>
       <div class="ab-config-row">
@@ -1572,22 +2080,42 @@ function renderSkillsTab() {
 
   let html = `<div class="skills-header">
     <h3 class="panel-title">技能點：${state.skillPoints}</h3>
-    <button class="btn-small btn-respec" onclick="if(confirm('確定要重置所有技能嗎？')){resetSkills();renderSkillsTab();renderSkillBar();}">重置技能</button>
+    <button class="btn-small btn-respec" onclick="if(confirm('確定要重置所有技能嗎？')){resetSkills();renderSkillsTab();}">重置技能</button>
   </div>`;
 
   for (const jobId of allJobs) {
     const job = JOB_TREE[jobId];
     if (!job || !job.skills.length) continue;
 
+    /* 借來的技能不在借用者底下再畫一次（#99）。武僧與祭司整份借了服事的技能，
+       而玩家本來就走過服事那一站——同一批技能會在兩個區塊各出現一次，
+       借用者那份還全部顯示 MAX，看起來像「一轉職就自動點滿」。
+
+       **來源職業沒有列在畫面上時要留著**：超級新手借的那六個一轉他一個都沒當過，
+       濾掉的話他的技能會整個消失。 */
+    const shown = job.skills.filter(sk => {
+      const src = job.borrowedFrom && job.borrowedFrom[sk.id];
+      return !(src && allJobs.includes(src));
+    });
+    if (!shown.length) continue;
+
     const isCurrentJob = jobId === state.jobId;
     const isExpanded = expandedJobs[jobId];
-    const jobPoints = state.jobSkillPoints[jobId] || 0;
+    /* 顯示的是**實際花得動的點數**，不是這個職業自己那格（#101）。
+       二轉與進階二轉共用一個池子，兩格各印各的話會出現
+       「武僧 技能點 0 ／ 武術宗師 技能點 18」——看起來像武僧的招點不動了，
+       但按下去其實扣的是共用池。 */
+    const poolJobs = typeof skillPointPoolJobs === 'function' ? skillPointPoolJobs(jobId) : [jobId];
+    const jobPoints = typeof skillPointsAvailable === 'function'
+      ? skillPointsAvailable(jobId) : (state.jobSkillPoints[jobId] || 0);
+    const sharedWith = poolJobs.filter(j => j !== jobId).map(j => (JOB_TREE[j] || {}).name).filter(Boolean);
 
     // 計算該職業已投入的技能點數
     let spentPoints = 0;
-    job.skills.forEach(sk => {
+    shown.forEach(sk => {
       const lv = state.learnedSkills[sk.id] || 0;
-      if (!sk.isQuest && lv > 0) spentPoints += lv;
+      // autoGrant 跟 isQuest 一樣是轉職白送的，沒花到點數就不該算進「已投入」
+      if (!sk.isQuest && !sk.autoGrant && lv > 0) spentPoints += lv;
     });
 
     html += `<div class="skill-job-section ${isCurrentJob ? 'current-job' : ''} ${isExpanded ? 'expanded' : 'collapsed'}">
@@ -1596,30 +2124,39 @@ function renderSkillsTab() {
         ${job.icon} ${job.name}
         <span class="skill-job-tier">Tier ${job.tier}</span>
         ${isCurrentJob ? '<span class="skill-job-current">目前</span>' : ''}
-        <span class="skill-job-points">技能點 ${jobPoints}</span>
+        <span class="skill-job-points">技能點 ${jobPoints}${sharedWith.length ? `<span class="skill-job-shared">與${sharedWith.join('、')}共用</span>` : ''}</span>
         <span class="skill-job-spent">已投入 ${spentPoints}</span>
       </div>`;
 
     if (isExpanded) {
       html += '<div class="skill-list">';
-      job.skills.forEach(sk => {
+      shown.forEach(sk => {
         const lv = state.learnedSkills[sk.id] || 0;
         const isQuest = sk.isQuest;
         const isMaxed = lv >= sk.maxLv;
-        const canLevelUp = !isQuest && !isMaxed && jobPoints > 0;
+        /* 加點按鈕要看**實際會被扣的那個池子**，不是這個區塊的職業（#99）。
+           借來的技能現在只畫在來源職業底下（例如服事的治癒術），但 `levelUpSkill()`
+           扣的是「現在這個職業」的點數——武僧照樣點得動治癒術，行為跟以前一樣。
+           照區塊的職業判的話，服事那格 0 點時按鈕會鎖住，但引擎其實放行。 */
+        const payJob = (typeof findSkillJob === 'function' && findSkillJob(sk.id)) || jobId;
+        const payPoints = typeof skillPointsAvailable === 'function'
+          ? skillPointsAvailable(payJob) : (state.jobSkillPoints[payJob] || 0);
+        const canLevelUp = !isQuest && !isMaxed && payPoints > 0;
 
         const spCost = Array.isArray(sk.spCost) ? sk.spCost[Math.max(0, lv - 1)] || sk.spCost[0] : sk.spCost;
         const cd = effectiveCooldownMs(sk.id, Array.isArray(sk.cooldown) ? sk.cooldown[Math.max(0, lv - 1)] || sk.cooldown[0] : sk.cooldown) / 1000;
 
+        /* 等級一律印成「目前/上限」（#102）。以前「未習得」與「MAX」都只有字、
+           沒有數字，玩家看不出這招總共幾級——要點的時候得先點下去才知道還有幾格。 */
         let statusTag = '';
         if (isQuest) {
-          statusTag = '<span class="skill-tag quest">任務技能</span>';
+          statusTag = `<span class="skill-tag quest">任務技能</span> <span class="skill-tag">Lv${lv}/${sk.maxLv}</span>`;
         } else if (isMaxed) {
-          statusTag = '<span class="skill-tag maxed">MAX</span>';
+          statusTag = `<span class="skill-tag maxed">MAX</span> <span class="skill-tag">Lv${lv}/${sk.maxLv}</span>`;
         } else if (lv > 0) {
           statusTag = `<span class="skill-tag">Lv${lv}/${sk.maxLv}</span>`;
         } else {
-          statusTag = '<span class="skill-tag unlearned">未習得</span>';
+          statusTag = `<span class="skill-tag unlearned">未習得</span> <span class="skill-tag">Lv0/${sk.maxLv}</span>`;
         }
 
         let typeTag = '';
@@ -1643,7 +2180,7 @@ function renderSkillsTab() {
           </div>
           ${isQuest ? '' : `<div class="skill-actions">
             <button class="btn-small btn-levelup" ${canLevelUp ? '' : 'disabled'}
-              onclick="levelUpSkill('${sk.id}');renderSkillsTab();renderSkillBar();">+</button>
+              onclick="levelUpSkill('${sk.id}');renderSkillsTab();renderAutoBattleTab();">+</button>
           </div>`}
         </div>`;
       });
@@ -1808,28 +2345,10 @@ function toggleJobSection(jobId) {
   renderSkillsTab();
 }
 
-function renderSkillBar() {
-  const bar = document.getElementById('skill-bar');
-  // 任務技能只是不能加點，主動技能一樣要能手動放；卡片賦予的技能也走同一份清單
-  const learned = usableSkillEntries().filter(e => e.sk.type !== 'passive');
-  if (!learned.length) { bar.innerHTML = ''; return; }
-  bar.innerHTML = learned.map(({ sk, lv, fromCard }) => {
-    const ready = skillReady(sk.id);
-    const spCost = Array.isArray(sk.spCost) ? sk.spCost[lv - 1] : sk.spCost;
-    const enoughSp = state.sp >= spCost;
-    const cdSec = state.cooldowns[sk.id] ? Math.ceil(state.cooldowns[sk.id] / 1000) : 0;
-    // 武器限定技能：拿錯武器就把按鈕鎖起來，並在 tooltip 說明原因（免得只是灰掉不知道為什麼）
-    const weaponOk = weaponReqMet(sk.requiresWeapon);
-    let tip = weaponOk ? sk.desc : `${sk.desc}\n⚠️ 目前武器不符：需要${weaponReqName(sk.requiresWeapon)}`;
-    if (fromCard) tip += '\n🃏 由卡片賦予，脫下裝備就會消失';
-    return `<button class="skill-btn${fromCard ? ' from-card' : ''}" title="${tip}" ${(!ready || !enoughSp || !weaponOk) ? 'disabled' : ''} onclick="castSkill('${sk.id}')">
-      <span class="skill-btn-name">${fromCard ? '🃏' : ''}${sk.name}</span>
-      <span class="skill-btn-lv">Lv${lv}</span>
-      <span class="skill-btn-cost">${spCost} SP</span>
-      ${cdSec > 0 ? `<span class="skill-btn-cd">${cdSec}</span>` : ''}
-    </button>`;
-  }).join('');
-}
+/* 畫面上的技能按鈕列已移除（#101，使用者 2026-08-15 指定
+   「將畫面上的各種技能取消 只在自動戰鬥畫面設定就好」）。
+   技能全部改由自動戰鬥分頁設定：攻擊技能兩個下拉、輔助技能各自的勾選框。
+   castSkill() 本身沒有動，卡片自動念咒、技能連段那些內部呼叫照舊。 */
 
 /* ---------------- 成就分頁 ---------------- */
 let acvCat = 'all';
@@ -1940,17 +2459,47 @@ let codexOpenId = null;
 function setCodexView(v) { codexView = v; codexPage = 0; codexOpenId = null; renderCodexTab(); }
 function setCodexFilter(f) { codexFilter = f; codexPage = 0; renderCodexTab(); }
 function setCodexPage(p) { codexPage = p; renderCodexTab(); }
-function onCodexSearch(v) {
+/* ---------------- 搜尋框與注音輸入 ----------------
+
+   三個搜尋框（圖鑑／背包／倉庫）都是「打一個字 → 整個分頁 innerHTML 重畫」，
+   而重畫會把 <input> 本身換成新的元素。**中文輸入法組字到一半被換掉就會斷**：
+   打「ㄨㄛˇ」時每按一鍵都觸發 input 事件，輸入框被換掉，組字狀態跟著沒了，
+   畫面上只留下已經送出的注音符號（使用者回報的「只能出現 ㄨㄧㄛㄟ」）。
+
+   解法是組字期間不重畫：input 事件帶 `isComposing`，為 true 就直接跳過；
+   等 compositionend（選完字送出）再重畫一次。英數輸入不受影響——那條路
+   從頭到尾 isComposing 都是 false。 */
+function imeComposing(ev) {
+  return !!(ev && (ev.isComposing || (ev.nativeEvent && ev.nativeEvent.isComposing)));
+}
+// 重畫之後把游標接回輸入框，不然每打一個字都要重點一次
+function refocusSearch(id) {
+  const box = document.getElementById(id);
+  if (box) { box.focus(); box.setSelectionRange(box.value.length, box.value.length); }
+}
+
+function onCodexSearch(v, ev) {
+  if (imeComposing(ev)) return;
   codexSearch = (v || '').trim().toLowerCase();
   codexPage = 0;
   renderCodexTab();
-  // 重繪會讓輸入框失焦，手動把游標接回去，不然每打一個字就要重點一次
-  const box = document.getElementById('codex-search');
-  if (box) { box.focus(); box.setSelectionRange(box.value.length, box.value.length); }
+  refocusSearch('codex-search');
 }
 function toggleCodexDetail(id) {
-  codexOpenId = (codexOpenId === id) ? null : id;
+  const opening = codexOpenId !== id;
+  codexOpenId = opening ? id : null;
   renderCodexTab();
+  /* 詳情面板插在格子牆的**上方**，所以在清單下半部點一個道具，
+     展開的內容會落在畫面外，要自己往上捲才看得到。點完直接帶過去。
+
+     **不用 scrollIntoView()**：捲動容器是 .tab-content，實測那支在這個版面上
+     不會動（詳情停在容器上方 1,075px），改成直接算位移設 scrollTop。 */
+  if (opening) {
+    const pane = document.querySelector('.tab-content');
+    const el = document.querySelector('#tab-codex .codex-detail');
+    // 直接指定 scrollTop，不用 scrollTo({behavior:'smooth'})——那支在這個版面上同樣不動
+    if (pane && el) pane.scrollTop = Math.max(0, el.offsetTop - pane.offsetTop);
+  }
 }
 
 function codexBar(label, found, total) {
@@ -1980,8 +2529,10 @@ function renderCodexTab() {
   }
   if (codexFilter === 'found') rows = rows.filter(r => r.found);
   else if (codexFilter === 'missing') rows = rows.filter(r => !r.found);
-  // 未發現的東西不給搜尋，不然可以直接用搜尋框把還沒發現的內容查出來
-  if (codexSearch) rows = rows.filter(r => r.found && (r.name || '').toLowerCase().includes(codexSearch));
+  /* 搜尋不再限制「已發現」（使用者 2026-08-15 指定全開放）。
+     舊規則是為了不讓玩家用搜尋框偷看還沒遇到的內容，但圖鑑的定位已經
+     從「收集紀錄」改成「查東西在哪打」——查不到還沒發現的東西就等於沒用。 */
+  if (codexSearch) rows = rows.filter(r => (r.name || '').toLowerCase().includes(codexSearch));
 
   const totalPages = Math.max(1, Math.ceil(rows.length / CODEX_PAGE_SIZE));
   if (codexPage >= totalPages) codexPage = totalPages - 1;
@@ -1999,8 +2550,8 @@ function renderCodexTab() {
       <button class="btn-small ${codexView === 'item' ? 'active' : ''}" onclick="setCodexView('item')">🎒 道具</button>
     </div>
     <div class="codex-controls">
-      <input id="codex-search" class="codex-search" type="text" placeholder="搜尋已發現的名稱…"
-        value="${codexSearch.replace(/"/g, '&quot;')}" oninput="onCodexSearch(this.value)">
+      <input id="codex-search" class="codex-search" type="text" placeholder="搜尋名稱，找到就能看到去哪裡打…"
+        value="${codexSearch.replace(/"/g, '&quot;')}" oninput="onCodexSearch(this.value, event)">
       <div class="codex-filters">
         <button class="btn-small ${codexFilter === 'all' ? 'active' : ''}" onclick="setCodexFilter('all')">全部</button>
         <button class="btn-small ${codexFilter === 'found' ? 'active' : ''}" onclick="setCodexFilter('found')">已發現</button>
@@ -2031,42 +2582,58 @@ function renderCodexTab() {
   el.innerHTML = html;
 }
 
+/* 圖鑑全開放（使用者 2026-08-15 指定）：樣子、出沒地、掉寶一律看得到，
+   `found` 只剩下「已收藏」的標記與進度條的分子，不再遮蔽任何內容。
+   舊版沒發現的格子是剪影 + ？？？，那讓圖鑑沒辦法拿來找東西。 */
 function codexMonCell(r, book) {
   const d = MONSTERS[r.id];
   const kills = book.mon[r.id] || 0;
-  if (!r.found) {
-    return `<div class="codex-cell locked" title="尚未發現">
-      <img class="codex-icon silhouette" src="${monsterImgSrc(r.id)}" alt="" onerror="this.style.visibility='hidden'">
-      <div class="codex-cell-name">？？？</div>
-      <div class="codex-cell-sub">Lv.${d.level || '?'}</div>
-    </div>`;
-  }
   const elemIcon = ELEMENT_ICONS[d.element] || '⚪';
-  return `<div class="codex-cell ${codexOpenId === r.id ? 'open' : ''}" onclick="toggleCodexDetail('${r.id}')">
+  return `<div class="codex-cell ${codexOpenId === r.id ? 'open' : ''} ${r.found ? '' : 'unfound'}" onclick="toggleCodexDetail('${r.id}')">
     <img class="codex-icon" src="${monsterImgSrc(r.id)}" alt="${d.name}" onerror="this.onerror=null;this.src='${placeholderImgSrc('monster')}'">
     <div class="codex-cell-name">${d.name}</div>
     <div class="codex-cell-sub">Lv.${d.level || '?'} ${elemIcon}</div>
-    <div class="codex-cell-count ${kills ? '' : 'zero'}">☠ ${kills}</div>
+    <div class="codex-cell-count ${kills ? '' : 'zero'}">${kills ? '☠ ' + kills : '未遇過'}</div>
   </div>`;
 }
 
 function codexItemCell(r, book) {
   const d = ITEMS[r.id];
   const got = book.item[r.id] || 0;
-  if (!r.found) {
-    return `<div class="codex-cell locked" title="尚未取得">
-      <div class="codex-icon silhouette-box">？</div>
-      <div class="codex-cell-name">？？？</div>
-      <div class="codex-cell-sub">未取得</div>
-    </div>`;
-  }
   const sub = CARDS[r.id] ? (CARDS[r.id].slot === 'weapon' ? '武器卡' : CARDS[r.id].slot === 'armor' ? '防具卡' : '卡片')
                           : (ITEM_TYPE_LABELS[d.type] || d.type || '');
-  return `<div class="codex-cell ${codexOpenId === r.id ? 'open' : ''}" onclick="toggleCodexDetail('${r.id}')">
+  return `<div class="codex-cell ${codexOpenId === r.id ? 'open' : ''} ${got ? '' : 'unfound'}" onclick="toggleCodexDetail('${r.id}')">
     <img class="codex-icon" src="${itemImgSrc(r.id)}" alt="${d.name}" onerror="this.onerror=null;this.src='${placeholderImgSrc(itemPlaceholderKind(d))}'">
-    <div class="codex-cell-name">${d.name}</div>
+    <div class="codex-cell-name">${getItemDisplayName(r.id)}</div>
     <div class="codex-cell-sub">${sub}</div>
-    <div class="codex-cell-count">×${got}</div>
+    <div class="codex-cell-count ${got ? '' : 'zero'}">${got ? '×' + got : '未取得'}</div>
+  </div>`;
+}
+
+/* 圖鑑上點「前往」直接換圖並切到地圖分頁——這是整個改造的重點，
+   不然玩家查到「這東西在比芙羅斯特原野」還得自己回地圖分頁翻王國→區域→地圖三層下拉。 */
+function codexGoToMap(mapId) {
+  const m = MAPS.find(x => x.id === mapId);
+  if (!m) return;
+  changeMap(mapId);
+  // 地圖分頁的三層下拉要跟著跳到正確的王國／區域，不然畫面停在原本那一區
+  const region = (typeof regionOf === 'function') ? regionOf(mapId) : null;
+  if (region) {
+    selectedRegionId = region.id;
+    const k = KINGDOMS.find(x => x.regions.includes(region.id));
+    if (k) selectedKingdomId = k.id;
+  }
+  switchTab('map');
+  renderAll();
+}
+
+// 一行「哪張圖、出現率多少、可以直接去」
+function codexMapRow(m, extra) {
+  return `<div class="codex-spot">
+    <span class="codex-spot-name">${m.name}</span>
+    <span class="codex-spot-pct" title="這張圖抽到牠的機率">${m.pct.toFixed(0)}%</span>
+    ${extra || ''}
+    <button class="codex-go" onclick="event.stopPropagation();codexGoToMap('${m.id}')">前往</button>
   </div>`;
 }
 
@@ -2121,8 +2688,10 @@ function renderCodexDetail(id) {
         <span>HP ${d.hp}</span><span title="官方 renewal：傷害 = ATK×(0.8~1.2) + STR + 等級">ATK ${Math.round(d.atk * 0.8 + (d.mobStr || 0) + (d.level || 0))}~${Math.round(d.atk * 1.2 + (d.mobStr || 0) + (d.level || 0))}</span><span title="硬防（比例減傷）＋軟防（固定扣血）">DEF ${d.def}${d.defSoft ? '+' + d.defSoft : ''}</span><span title="魔防：魔法傷害看的是這個，硬魔防比例減傷、軟魔防固定扣血">MDEF ${d.mdef || 0}${d.mdefSoft ? '+' + d.mdefSoft : ''}</span>
         <span>EXP ${d.exp}</span><span>JOB ${d.jobExp}</span>
       </div>
-      <div class="codex-detail-sec">出沒地圖</div>
-      <div class="codex-maps">${maps.length ? maps.map(m => `<span>${m}</span>`).join('') : `<span class="dim">無（${d.isBoss ? '需開啟 BOSS 模式' : '目前無地圖配置'}）</span>`}</div>
+      <div class="codex-detail-sec">出沒地圖<span class="codex-sec-hint">照出現率排序，點「前往」直接過去</span></div>
+      <div class="codex-spots">${maps.length
+        ? maps.map(m => codexMapRow(m)).join('')
+        : `<div class="dim">無（${d.isBoss ? '需開啟 BOSS 模式' : '目前無地圖配置'}）</div>`}</div>
       <div class="codex-detail-sec">掉落物</div>
       <div class="codex-drops">${cardRow}${dropRows || (cardRow ? '' : '<div class="dim">沒有掉落物</div>')}</div>
     </div>`;
@@ -2133,18 +2702,25 @@ function renderCodexDetail(id) {
   if (!d) return '';
   const card = CARDS[id];
   const got = book.item[id] || 0;
-  const sources = getItemSources(id).slice(0, 12);
-  const srcRows = sources.map(s => {
+  /* 來源改成「一行一個去處」：哪隻怪掉、掉落率多少、在哪張圖、出現率多少、直接去。
+     以前只列到怪物就停了，玩家還得自己再查那隻怪在哪——而一隻怪平均出現在 3.4 張圖。 */
+  const spots = getItemFarmSpots(id).slice(0, 15);
+  const srcRows = spots.map(s => {
     const m = MONSTERS[s.mon];
     if (!m) return '';
-    const seen = book.seen[s.mon];
-    return `<div class="codex-src">
-      <img src="${monsterImgSrc(s.mon)}" onerror="this.onerror=null;this.src='${placeholderImgSrc('monster')}'">
-      <span class="codex-src-name">${seen ? m.name : '？？？'}</span>
-      <span class="codex-src-lv">Lv.${m.level || '?'}</span>
-      <span class="codex-drop-rate">${(s.chance * 100).toFixed(2)}%</span>
+    return `<div class="codex-spot ${s.mvp ? 'mvp' : ''}">
+      <img class="codex-spot-icon" src="${monsterImgSrc(s.mon)}" onerror="this.onerror=null;this.src='${placeholderImgSrc('monster')}'">
+      <span class="codex-spot-mon">${s.mvp ? '👑' : ''}${m.name}<span class="codex-src-lv">Lv.${m.level || '?'}</span></span>
+      <span class="codex-drop-rate" title="掉落率">${(s.dropChance * 100).toFixed(2)}%</span>
+      <span class="codex-spot-name">${s.mapName}</span>
+      <span class="codex-spot-pct" title="${s.mvp ? '需開啟 MVP 模式，開著時 20% 從該圖的 MVP 名單裡抽' : '這張圖抽到牠的機率'}">${s.spawnPct < 1 ? s.spawnPct.toFixed(1) : s.spawnPct.toFixed(0)}%</span>
+      <button class="codex-go" onclick="event.stopPropagation();codexGoToMap('${s.mapId}')">前往</button>
     </div>`;
   }).join('');
+  const shopRows = Object.values(NPC_SHOPS)
+    .filter(sh => (sh.items || []).includes(id))
+    .map(sh => `<div class="codex-spot shop"><span class="codex-spot-mon">🏪 ${sh.name || '商店'}</span>
+      <span class="codex-spot-name">${d.buyPrice ? d.buyPrice.toLocaleString() + ' 鋅幣' : '商店販售'}</span></div>`).join('');
   const statBits = [];
   ['atk', 'matk', 'def', 'hp', 'sp', 'str', 'agi', 'vit', 'int', 'dex', 'luk', 'hit', 'flee', 'critRate'].forEach(k => {
     if (typeof d[k] === 'number' && d[k] !== 0) statBits.push(`${k.toUpperCase()} ${d[k] > 0 ? '+' : ''}${d[k]}`);
@@ -2175,7 +2751,7 @@ function renderCodexDetail(id) {
     <div class="codex-detail-head">
       <img class="codex-detail-icon" src="${itemImgSrc(id)}" onerror="this.onerror=null;this.src='${placeholderImgSrc(itemPlaceholderKind(d))}'">
       <div>
-        <div class="codex-detail-name">${d.name}</div>
+        <div class="codex-detail-name">${getItemDisplayName(id)}</div>
         <div class="codex-detail-tags">
           <span>${card ? '卡片' : (ITEM_TYPE_LABELS[d.type] || d.type || '')}</span>
           ${card ? `<span>${CARD_SLOT_LABELS[card.slot] || card.slot}</span>` : ''}
@@ -2189,8 +2765,8 @@ function renderCodexDetail(id) {
     ${!card && statBits.length ? `<div class="codex-detail-stats">${statBits.map(s => `<span>${s}</span>`).join('')}</div>` : ''}
     ${(card && card.desc) || d.desc ? `<div class="codex-detail-desc">${(card && card.desc) || d.desc}</div>` : ''}
     ${unimpl}
-    <div class="codex-detail-sec">取得來源</div>
-    <div class="codex-srcs">${srcRows || '<div class="dim">商店販售或任務取得</div>'}</div>
+    <div class="codex-detail-sec">去哪裡打<span class="codex-sec-hint">照出現率排序，點「前往」直接過去</span></div>
+    <div class="codex-spots">${shopRows}${srcRows || (shopRows ? '' : '<div class="dim">沒有怪物會掉，也不在商店販售</div>')}</div>
   </div>`;
 }
 
@@ -2508,12 +3084,11 @@ function setInvCategory(c) {
 }
 function setInvSub(s) { invSub = s; renderInventoryTab(); }
 function setInvSort(s) { invSort = s; renderInventoryTab(); }
-function onInvSearch(v) {
+function onInvSearch(v, ev) {
+  if (imeComposing(ev)) return;          // 注音組字中不重畫，見 imeComposing()
   invSearch = (v || '').trim().toLowerCase();
   renderInventoryTab();
-  // 重繪會讓輸入框失焦，把游標接回去，不然每打一個字都要重點一次
-  const box = document.getElementById('inv-search');
-  if (box) { box.focus(); box.setSelectionRange(box.value.length, box.value.length); }
+  refocusSearch('inv-search');
 }
 
 /* 10 格裝備視窗的 HTML；背包分頁已不再顯示它，改由「裝備」分頁使用 */
@@ -3005,7 +3580,7 @@ function renderInventoryTab() {
       <div class="inv-cats">${catTabs}</div>
       <div class="inv-toolbar">
         <input id="inv-search" class="codex-search" type="text" placeholder="🔍 搜尋名稱…（四類共用）"
-          value="${invSearch.replace(/"/g, '&quot;')}" oninput="onInvSearch(this.value)">
+          value="${invSearch.replace(/"/g, '&quot;')}" oninput="onInvSearch(this.value, event)">
         <select class="ab-select inv-sort" onchange="setInvSort(this.value)">
           <option value="name" ${invSort === 'name' ? 'selected' : ''}>依名稱</option>
           <option value="qty" ${invSort === 'qty' ? 'selected' : ''}>依數量</option>
@@ -3030,15 +3605,10 @@ function renderInventoryTab() {
       </div>`;
     }
 
-    // 鐵匠鍛造（僅鐵匠職業且已學會至少一種鍛造技能時顯示）
-    let craftingHtml = '';
-    if (state.jobId === 'blacksmith' && state.unlockedCraftCategories && state.unlockedCraftCategories.length > 0) {
-      craftingHtml = `<div class="crafting-panel">
-        <h3 class="panel-title">🔨 鍛造</h3>
-        <div class="empty-hint">已解鎖：${state.unlockedCraftCategories.map(c => CRAFT_CATEGORY_NAMES[c] || c).join('、')}　鍛造成功率：${getCraftingSuccessChance().toFixed(1)}%</div>
-        <button class="btn-small" onclick="showCraftingPanel()">開始鍛造</button>
-      </div>`;
-    }
+    /* 鍛造的入口搬到分頁列上那顆「🔨 鍛造」（#103），這裡不再放一份。
+       舊版還把入口鎖在 `state.jobId === 'blacksmith'`——轉成神匠之後 jobId 就變了，
+       同一個角色會突然找不到鍛造；現在走 `isBlacksmithLine()`，整條鐵匠線都留得住。 */
+    const craftingHtml = '';
 
     // 跨角色倉庫（任何職業都可使用）
     const warehouseHtml = `<div class="warehouse-panel">
@@ -3314,6 +3884,25 @@ function renderCharacterTab() {
       ${state.playerElement && state.playerElement !== 'none'
         ? `<div title="鎧甲屬性（#17）：被攻擊時吃屬性相剋。免疫同屬性，但也會被剋星打雙倍">鎧甲屬性：<span class="set-tag">${ELEMENT_ICONS[state.playerElement] || ''}${ELEMENT_NAMES[state.playerElement] || state.playerElement}屬性</span></div>` : ''}
       ${state.cardMagicReflectChance ? `<div title="成功時完全不受傷，法術原樣彈回施法者">魔法反射：${state.cardMagicReflectChance}%</div>` : ''}
+      ${(() => {
+        /* 自然回復（#102）。禪心／快速恢復／運氣調息／聖母之頌歌只動這個數字，
+           不動 HP/SP 上限——畫面上沒有這一行的話，點下去看起來就像沒有效果。
+           數字直接跟 passiveRegen() 讀同一支 regenPerSecond()。 */
+        if (typeof regenPerSecond !== 'function') return '';
+        const r = regenPerSecond();
+        const noRegen = typeof playerNoRegen === 'function' && playerNoRegen();
+        const tag = noRegen ? ' <span class="dim">（出血中，暫停回復）</span>'
+          : (state.buffs.some(b => b.type === 'sprate') ? ' <span class="buff-active">BUFF</span>' : '');
+        /* 禪心那兩項拆開寫進 tooltip（#103）。使用者實測「830 SP 點到 5 級沒有增加 SP」——
+           官方那張表的 `+15 +1.0%` 是**每次恢復的量**，不是 SP 上限，
+           但畫面上只看得到一個總數的話，這件事沒辦法自己驗證。 */
+        let zen = '';
+        if (state.zenSpFlatBonus || state.zenSpPctBonus) {
+          const pctAmt = Math.round(state.maxSp * (state.zenSpPctBonus || 0) / 100 * 10) / 10;
+          zen = `\n禪心：每次恢復 +${state.zenSpFlatBonus} 與 +${state.zenSpPctBonus}% 最大SP（${pctAmt} 點）`;
+        }
+        return `<div title="每秒回復量。禪心、快速恢復、運氣調息等被動加的是這個，不是 HP/SP 上限。${zen}">自然回復：${r.hp} HP／${r.sp} SP 每秒${tag}</div>`;
+      })()}
       <div>攻擊速度 ASPD：${state.aspd}${state.buffs.some(b => b.type === 'aspd') ? ' <span class="buff-active">BUFF</span>' : ''}</div>
       <div>攻擊間隔：${(state.attackInterval / 1000).toFixed(2)} 秒</div>
       <div>命中 HIT：${effectiveHit}${effectiveHit > state.hit ? ` <span class="buff-active">(+${effectiveHit - state.hit})</span>` : ''}</div>
@@ -3350,6 +3939,28 @@ function renderJobTree() {
                   'whitesmith', 'creator', 'assassincross', 'stalker', 'highpriest', 'champion']);
     }
   }
+  /* 選定一轉之後，另外五條線就永遠走不到了——`canJobChange()` 只放行 `job.next`，
+     而 `pruneOtherJobLines()` 轉職當下就把別條線的技能清掉了。
+     還把它們攤在畫面上只會讓人以為有得選（使用者 2026-08-15 指定拿掉）。
+
+     以前只有**轉生後**才收（走 `rebirthLine()`），所以一轉完的角色照樣看到整棵樹；
+     而且 `rebirthLine()` 要有 `rebirthPath` 才回得出東西，舊存檔沒有那個欄位的話
+     轉生完也還是整棵樹。改成一律照現在這條線過濾，兩種情況一起收掉。
+     還在新手時 `jobLineRoot()` 回 null，整棵樹照舊全開。 */
+  /* 還在新手時只畫到一轉那一列（#97）。二轉還隔著一次轉職與 30 級，
+     現在攤開來是 20 格，玩家要在裡面找那六個點得動的格子。 */
+  if (state.jobId === 'novice') tiers = tiers.slice(0, 2);
+
+  const lineRoot = typeof jobLineRoot === 'function' ? jobLineRoot(state.jobId) : null;
+  /* 只在**現在這個職業畫得出來**的時候才收。上面那三列是寫死的名單，
+     漏掉的職業（目前是超級新手，它不在任何一列裡）收完會只剩「新手」一格，
+     等於整頁空白。名單以後補了新職業忘記加進來時，這條保險絲會讓它退回全開。 */
+  if (lineRoot && tiers.some(row => row.includes(state.jobId))) {
+    tiers = tiers
+      .map(row => row.filter(j => j === 'novice' || jobLineHas(j, lineRoot)))
+      .filter(row => row.length);
+  }
+
   const nodeW = 108, nodeH = 64, gapX = 20, tierGapY = 130;
   // 轉生後只剩單欄，寬度要看最寬的那一層（原本寫死 tiers[1]，單欄時會擠成一條）
   const widest = Math.max(...tiers.map(t => t.length));
@@ -3391,7 +4002,7 @@ function renderJobTree() {
 
       /* 腳註優先序：能轉 → 轉不了的**具體理由** → 技能還沒做。
          以前不能轉的時候整格是空的，玩家看到的是「按了沒反應」（#61）。 */
-      const noSkills = jd.tier === 3 && (jd.skills || []).length === 0;
+      const noSkills = jd.tier === 2.5 && (jd.skills || []).length === 0;
       let foot = '';
       if (canChange) foot = '點擊轉職';
       else if (tIdx > 0 && !isCurrent) {
@@ -3428,7 +4039,7 @@ function renderJobTree() {
 function confirmJobChange(jobId) {
   const jd = JOB_TREE[jobId];
   const p = jobPrunePreview(jobId);
-  const noSkills = jd.tier === 3 && (jd.skills || []).length === 0;
+  const noSkills = jd.tier === 2.5 && (jd.skills || []).length === 0;
   if (p.skills.length || p.points || p.jobs.length || noSkills) {
     const names = p.skills.map(id => { const sk = SKILLS[id]; return sk ? sk.name.split(' ')[0] : id; });
     const shown = names.slice(0, 12).join('、') + (names.length > 12 ? ` …等 ${names.length} 個` : '');
@@ -3589,6 +4200,9 @@ function initVolumeSliders() {
   const sfxSlider = document.getElementById('vol-sfx');
   if (bgmSlider) { bgmSlider.value = bgmVal; document.getElementById('vol-bgm-text').textContent = bgmVal + '%'; }
   if (sfxSlider) { sfxSlider.value = sfxVal; document.getElementById('vol-sfx-text').textContent = sfxVal + '%'; }
+  const spr = document.getElementById('sprite-scale');
+  if (spr) { spr.value = spriteScalePct(); document.getElementById('sprite-scale-text').textContent = spriteScalePct() + '%'; }
+  applySpriteScale();
 }
 
 /* ---------------- 選擇地圖（含背景圖/音樂切換） ---------------- */
@@ -3849,17 +4463,78 @@ function confirmVendingSelect() {
   renderInventoryTab();
 }
 
-/* ---------------- 鐵匠鍛造 UI ---------------- */
+/* ---------------- 鐵匠鍛造 UI（#103）----------------
+
+   使用者 2026-08-16：「鐵匠的鍛造頁面 新增在裝備分頁右邊 點開跳出不影響掛機的視窗」。
+
+   以前鍛造是把 `#tab-inventory` 的內容整個換掉：入口埋在背包裡、開著就看不到背包，
+   而且要按「← 返回」才回得去。改成跟倉庫同一套**非阻斷浮動視窗**——
+   外層鋪滿畫面但 `pointer-events:none`，只有中間的 frame 收事件，
+   所以打怪照跑、旁邊的分頁照樣點得到，標題列可拖走。CSS 直接共用 `.wh-*`。 */
+function forgeAvailable() {
+  return typeof isBlacksmithLine === 'function' && isBlacksmithLine(state.jobId)
+    && ((state.unlockedCraftCategories || []).length > 0
+      || (state.unlockedMaterialCrafts || []).length > 0);
+}
+
+// 分頁列上那顆「🔨 鍛造」：只有鐵匠系而且真的學會了鍛造技能才出現
+function syncForgeTabBtn() {
+  const btn = document.getElementById('tab-btn-forge');
+  if (!btn) return;
+  btn.classList.toggle('hidden', !forgeAvailable());
+}
+
+function openForge() {
+  let win = document.getElementById('forge-window');
+  if (!win) {
+    win = document.createElement('div');
+    win.id = 'forge-window';
+    win.className = 'wh-window';
+    win.innerHTML = `<div id="forge-frame" class="wh-frame">
+        <header id="forge-drag" class="wh-header">
+          <div><h3>🔨 鍛造</h3><span class="wh-sub">開著也不影響掛機，標題列可拖曳</span></div>
+          <button class="btn-small ghost" onclick="closeForge()">✕ 關閉</button>
+        </header>
+        <div id="forge-body" class="wh-body"></div>
+      </div>`;
+    document.body.appendChild(win);
+    makeDraggable(document.getElementById('forge-drag'), document.getElementById('forge-frame'));
+  }
+  win.classList.remove('hidden');
+  _forgeSig = '';
+  showCraftingPanel();
+}
+function closeForge() {
+  const win = document.getElementById('forge-window');
+  if (win) win.classList.add('hidden');
+}
+function forgeIsOpen() {
+  const win = document.getElementById('forge-window');
+  return !!win && !win.classList.contains('hidden');
+}
+
+/* 開著的時候材料與鋅幣會一直變（掛機照跑），數字不能停在打開的那一刻。
+   但每秒無條件重畫會把捲動位置洗掉，所以先比一個簽章：**只有真的變了才重畫**。
+   簽章收的就是面板上會印出來的那幾個數字。 */
+let _forgeSig = '';
+function refreshForgeIfChanged() {
+  const parts = [state.gold, getItemQty('iron'), getItemQty('steel')];
+  Object.values(CRAFT_ELEMENT_STONE).forEach(id => parts.push(getItemQty(id)));
+  Object.values(MATERIAL_CRAFT_RECIPES).forEach(r => r.consume.forEach(c => parts.push(getItemQty(c.item))));
+  const sig = parts.join(',');
+  if (sig === _forgeSig) return;
+  _forgeSig = sig;
+  showCraftingPanel();
+}
+
 function showCraftingPanel() {
-  const el = document.getElementById('tab-inventory');
+  const el = document.getElementById('forge-body');
   if (!el) return;
   const chance = getCraftingSuccessChance();
   const ironQty = getItemQty('iron');
   const steelQty = getItemQty('steel');
 
-  let html = `<h3 class="panel-title">🔨 鍛造</h3>`;
-  html += `<button class="btn-small" onclick="renderInventoryTab()">← 返回</button>`;
-  html += `<div class="empty-hint">成功率 ${chance.toFixed(1)}%（失敗材料照樣消耗）。目前持有：鐵x${ironQty}、鋼鐵x${steelQty}、鋅幣${state.gold}</div>`;
+  let html = `<div class="wh-hint">成功率 ${chance.toFixed(1)}%（失敗材料照樣消耗）。目前持有：鐵x${ironQty}、鋼鐵x${steelQty}、鋅幣${state.gold.toLocaleString()}</div>`;
 
   if (state.unlockedMaterialCrafts && state.unlockedMaterialCrafts.length > 0) {
     html += `<h3 class="panel-title">原料鍛造</h3>`;
@@ -3886,6 +4561,15 @@ function showCraftingPanel() {
       </div>`;
     });
     html += '</div>';
+  }
+
+  // 武器鍛造要學會對應的鍛造技能才有東西可列；只點了原料鍛造時不要留一個空標題
+  if (!(state.unlockedCraftCategories || []).length) {
+    if (!(state.unlockedMaterialCrafts || []).length) {
+      html += '<div class="empty-hint">還沒學會任何鍛造技能。到技能分頁點鐵匠的鍛造系技能就會出現在這裡。</div>';
+    }
+    el.innerHTML = html;
+    return;
   }
 
   html += `<h3 class="panel-title">武器鍛造</h3>`;
@@ -3941,11 +4625,11 @@ let whQty = '';          // 空字串＝整疊
 function setWhCategory(c) { whCategory = c; whSub = 'all'; renderWarehouse(); }
 function setWhSub(s) { whSub = s; renderWarehouse(); }
 function setWhQty(v) { whQty = (v || '').trim(); }
-function onWhSearch(v) {
+function onWhSearch(v, ev) {
+  if (imeComposing(ev)) return;          // 注音組字中不重畫，見 imeComposing()
   whSearch = (v || '').trim().toLowerCase();
   renderWarehouse();
-  const box = document.getElementById('wh-search');
-  if (box) { box.focus(); box.setSelectionRange(box.value.length, box.value.length); }
+  refocusSearch('wh-search');
 }
 // 數量欄留空＝整疊，否則取指定數量（夾在 1~持有數之間）
 function whAmount(have) {
@@ -4080,7 +4764,7 @@ function renderWarehouse() {
 
     <div class="wh-toolbar">
       <input id="wh-search" class="codex-search" type="text" placeholder="🔍 搜尋名稱…（存入取出共用）"
-        value="${whSearch.replace(/"/g, '&quot;')}" oninput="onWhSearch(this.value)">
+        value="${whSearch.replace(/"/g, '&quot;')}" oninput="onWhSearch(this.value, event)">
       <label class="wh-qty-label">數量 <input type="number" min="1" class="wh-qty" value="${whQty}" placeholder="全部" oninput="setWhQty(this.value)"></label>
     </div>
 

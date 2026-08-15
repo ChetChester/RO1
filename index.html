@@ -120,6 +120,8 @@
         <div class="volume-controls">
           <label class="volume-label">🎵 <input type="range" id="vol-bgm" min="0" max="100" value="50" oninput="setBgmVolume(this.value)"><span id="vol-bgm-text">50%</span></label>
           <label class="volume-label">🔊 <input type="range" id="vol-sfx" min="0" max="100" value="50" oninput="setSfxVolume(this.value)"><span id="vol-sfx-text">50%</span></label>
+          <label class="volume-label" title="玩家立繪的大小">🧍 <input type="range" id="sprite-scale" min="50" max="150" step="5" value="100" oninput="setSpriteScalePct(this.value)"><span id="sprite-scale-text">100%</span></label>
+          <label class="volume-label" title="施放技能時的立繪大小（相對於上面那支）。每個職業各記一份">✨ <input type="range" id="skill-scale" min="50" max="150" step="5" value="85" oninput="setSkillSpriteScalePct(this.value)"><span id="skill-scale-text">85%</span></label>
         </div>
         <button id="btn-jobchange-alert" class="btn-jobchange hidden" onclick="switchTab('jobtree')">🔔 可以轉職了！</button>
       </div>
@@ -130,17 +132,42 @@
       <section class="battle-panel">
         <div class="map-bg-layer"><img id="map-bg-img" alt="" onerror="this.onerror=null;this.src='images/_placeholder_map.png';"></div>
         <button id="btn-mute" class="btn-mute" onclick="toggleMute()" title="靜音/取消靜音">🔊</button>
+        <!-- GM 測試面板：只在安全區顯示（顯示/隱藏由 renderGmPanel() 控制） -->
+        <div id="gm-panel" class="gm-panel hidden">
+          <div class="gm-title">GM 測試</div>
+          <button class="gm-btn" onclick="gmAddLevels()" title="基礎等級 +50（按兩下到 99）">⬆️ 等級 +50</button>
+          <button class="gm-btn" onclick="gmMaxJobLevel()" title="目前職業的職業等級直接拉滿，技能點照發">🎓 職業等級滿</button>
+          <button class="gm-btn" onclick="gmAddGold()" title="鋅幣 +1,000,000">💰 鋅幣 +100萬</button>
+        </div>
+        <!-- 隊友：戰鬥地圖也開得起來（浮動視窗，不會擋住掛機） -->
+        <button id="btn-ally" class="btn-ally" onclick="toggleAllyPanel()" title="隊友：雇傭、喝水、復活">🤝 隊友</button>
+        <!-- 浮動式隊友面板：疊在戰鬥區上，遊戲照跑 -->
+        <div id="ally-panel" class="ally-panel hidden">
+          <div class="ally-panel-head">
+            <span>🤝 隊友</span>
+            <button class="ally-panel-close" onclick="toggleAllyPanel()">✕</button>
+          </div>
+          <div id="ally-panel-body"></div>
+        </div>
         <div class="battle-scene" id="battle-scene">
           <div class="player-area">
+            <!-- 隊友站在玩家的上下方、往後靠（left 較小）；有沒有人由 renderAllySprites() 決定 -->
+            <div class="ally-sprite" id="ally-sprite-0"></div>
             <div class="player-sprite" id="player-sprite">
               <img id="player-img" src="images/player_swordsman.svg" alt="玩家" onerror="this.onerror=null;this.src='images/_placeholder_item.png';">
             </div>
+            <div class="ally-sprite" id="ally-sprite-1"></div>
           </div>
           <div class="monster-area-right" id="monster-area"></div>
           <div id="damage-container" class="damage-container"></div>
         </div>
-        <div id="skill-bar" class="skill-bar"></div>
-        <div id="combat-log" class="combat-log"></div>
+        <!-- 畫面上的技能按鈕列已移除（#101）：技能一律在自動戰鬥分頁設定 -->
+        <!-- 資訊欄三塊：一般戰鬥／技能（雙方）／隊友 -->
+        <div class="combat-log">
+          <div class="log-pane"><div class="log-pane-head">戰鬥</div><div id="log-main" class="log-pane-body"></div></div>
+          <div class="log-pane"><div class="log-pane-head">技能</div><div id="log-skill" class="log-pane-body"></div></div>
+          <div class="log-pane"><div class="log-pane-head">隊友</div><div id="log-ally" class="log-pane-body"></div></div>
+        </div>
       </section>
 
       <section class="side-panel">
@@ -151,6 +178,8 @@
           <button class="tab-btn" data-tab="skills" onclick="switchTab('skills')">📖 技能</button>
           <button class="tab-btn" data-tab="inventory" onclick="switchTab('inventory')">🎒 背包</button>
           <button class="tab-btn" data-tab="equip" onclick="switchTab('equip')">🎽 裝備</button>
+          <!-- 鍛造不是分頁，是開一個不擋掛機的浮動視窗；只有鐵匠系看得到（#103） -->
+          <button class="tab-btn hidden" id="tab-btn-forge" onclick="openForge()">🔨 鍛造</button>
           <button class="tab-btn" data-tab="jobtree" onclick="switchTab('jobtree')">🌳 轉職樹</button>
           <button class="tab-btn" data-tab="codex" onclick="switchTab('codex')">📕 圖鑑</button>
           <button class="tab-btn" data-tab="achievements" onclick="switchTab('achievements')">🏆 成就</button>

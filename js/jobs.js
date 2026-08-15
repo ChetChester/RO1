@@ -15,7 +15,7 @@ const JOB_TREE = {
   novice: {
     id: 'novice', name: '新手', tier: 0, icon: '🌱',
     baseLevelReq: 1, jobLevelReq: 1, jobLevelMax: 10,
-    hpMod: 1.0, spMod: 1.0, atkMod: 1.0, matkMod: 1.0,
+    atkMod: 1.0, matkMod: 1.0,
     baseAspd: {"dagger":138,"sword":137,"tsword":null,"bow":null,"rod":129,"mace":144,"katar":null,"spear":null,"knuckle":null}, shieldPenalty: -6,
     next: ['swordsman', 'mage', 'archer', 'merchant', 'thief', 'acolyte', 'supernovice'],
     bonusLevels: { str:[8], agi:[5], vit:[6], int:[9], dex:[3], luk:[2] },
@@ -29,18 +29,15 @@ const JOB_TREE = {
      官方的特殊路線：不轉一轉，直接留在新手系但能使用「全部六個一轉職業」的技能。
      這裡靠 borrowSkillsFrom 一次借齊，不複製任何技能定義——這也是把技能表獨立出來的主因。
 
-     幾個數值是本作自訂的（官方沒有可直接對應的欄位），全部以「同等級劍士」為基準校準：
-       hpMod 0.37  HP 約劍士的 70%——技能雜是它的長處，體質就是它的代價。
-                   （JOB_BASE_HP 沒有 supernovice，會自動 fallback 到 novice 的成長表，
-                     而本作的 novice 表在高等反而比劍士高，所以係數要壓得比直覺低）
-       spMod 12.0  SP 約見習修女的 55%。六系技能都要放，SP 不能太寒酸；
-                   novice 的 SP 基礎表數字很小，係數看起來大是這個緣故
+     HP/SP 走 `JOB_BASE_HP.supernovice` / `JOB_BASE_SP.supernovice`（#92 補的表，
+     官方參數 HpFactor 70 / SpIncrease 600）——HP 與劍士同級、SP 與法師同級，
+     正好對上「六系技能都要放、但只有一條命」的設計。
        atk/matk    兩邊都給 1.0，物理魔法都能打但都不專精，正是這個職業的性格
      轉職條件依官方：新手職業等級滿 10、基本等級 45。轉了就不能再轉（next 為空）。 */
   supernovice: {
     id: 'supernovice', name: '超級新手', tier: 1, icon: '⭐', parent: 'novice',
     baseLevelReq: 45, jobLevelReq: 10, jobLevelMax: 99,
-    hpMod: 0.37, spMod: 12.0, atkMod: 1.0, matkMod: 1.0,
+    atkMod: 1.0, matkMod: 1.0,
     baseAspd: {"dagger":138,"sword":137,"tsword":null,"bow":null,"rod":129,"mace":144,"katar":null,"spear":null,"knuckle":null}, shieldPenalty: -6,
     /* #75 修：以前沒寫 aspdFrom，而 `ASPD_WEAPON_BASE` 裡沒有 supernovice 這個 key
        （官方那列叫 `x_超級初心者`），所以攻速一路退回空手值 154，
@@ -58,7 +55,7 @@ const JOB_TREE = {
   swordsman: {
     id: 'swordsman', name: '劍士', tier: 1, icon: '⚔️', parent: 'novice',
     baseLevelReq: 10, jobLevelReq: 10, jobLevelMax: 50,
-    hpMod: 0.7, spMod: 2.0, atkMod: 1.25, matkMod: 0.7,
+    atkMod: 1.25, matkMod: 0.7,
     // 劍士是第一個做出兩條分支的一轉（2026-08-09），其餘五個一轉的分支還在 JOBS_TIER2_PENDING
     next: ['knight', 'crusader'],
     nextLocked: [],
@@ -73,7 +70,7 @@ const JOB_TREE = {
   mage: {
     id: 'mage', name: '法師', tier: 1, icon: '🔮', parent: 'novice',
     baseLevelReq: 10, jobLevelReq: 10, jobLevelMax: 50,
-    hpMod: 0.3, spMod: 6.0, atkMod: 0.55, matkMod: 1.35,
+    atkMod: 0.55, matkMod: 1.35,
     // 法師是第五個做出分支的一轉（#71）
     next: ['wizard', 'sage'],
     nextLocked: [],
@@ -89,7 +86,7 @@ const JOB_TREE = {
   archer: {
     id: 'archer', name: '弓箭手', tier: 1, icon: '🏹', parent: 'novice',
     baseLevelReq: 10, jobLevelReq: 10, jobLevelMax: 50,
-    hpMod: 0.5, spMod: 2.0, atkMod: 1.3, matkMod: 0.6,
+    atkMod: 1.3, matkMod: 0.6,
     /* 弓箭手是第二個做出分支的一轉（#68）。詩人／舞孃官方依性別二選一
        （男→詩人、女→舞孃），兩個都掛在 next 上，由 `genderLock` 過濾。 */
     next: ['hunter', 'bard', 'dancer'],
@@ -104,7 +101,7 @@ const JOB_TREE = {
   merchant: {
     id: 'merchant', name: '商人', tier: 1, icon: '💰', parent: 'novice',
     baseLevelReq: 10, jobLevelReq: 10, jobLevelMax: 50,
-    hpMod: 0.4, spMod: 3.0, atkMod: 1.05, matkMod: 0.6,
+    atkMod: 1.05, matkMod: 0.6,
     // 商人是最後一個做出分支的一轉（#72），六條分支到此全部完成
     next: ['blacksmith', 'alchemist'],
     nextLocked: [],
@@ -119,7 +116,7 @@ const JOB_TREE = {
   thief: {
     id: 'thief', name: '盜賊', tier: 1, icon: '🗡️', parent: 'novice',
     baseLevelReq: 10, jobLevelReq: 10, jobLevelMax: 50,
-    hpMod: 0.5, spMod: 2.0, atkMod: 1.2, matkMod: 0.55,
+    atkMod: 1.2, matkMod: 0.55,
     // 盜賊是第三個做出分支的一轉（#69）
     next: ['assassin', 'rogue'],
     nextLocked: [],
@@ -131,18 +128,20 @@ const JOB_TREE = {
     desc: '身法敏捷、擅長暗殺的邊緣行走者。'
   },
   acolyte: {
-    id: 'acolyte', name: '見習修女', tier: 1, icon: '🙏', parent: 'novice',
+    id: 'acolyte', name: '服事', tier: 1, icon: '🙏', parent: 'novice',
     baseLevelReq: 10, jobLevelReq: 10, jobLevelMax: 50,
-    hpMod: 0.4, spMod: 5.0, atkMod: 0.7, matkMod: 1.1,
-    // 見習修女是第四個做出分支的一轉（#70）
+    atkMod: 0.7, matkMod: 1.1,
+    // 服事是第四個做出分支的一轉（#70）
     next: ['priest', 'monk'],
     nextLocked: [],
     bonusLevels: { str:[26,42,49], agi:[22,40], vit:[6,30,44], int:[10,33,46], dex:[14,36,47], luk:[2,18,38,50] },
     skills: [
-      'teleport', 'warpportal', 'ruwach', 'pneuma',
-      'divineprotection', 'heal', 'blessing', 'decreaseagi',
-      'angelic', 'aquabenedicta', 'signumcrusis', 'cure',
-      'holylight',
+    /* 官方 15 支，順序照 `ro_skill_data/js_data/sk_pr.js` 的 AL_*。
+       只有神聖之光是 `maxLv: 0`＝不靠加點拿的，本作用 `isQuest` 對應。 */
+      'heal', 'cure', 'increaseagi', 'decreaseagi',
+      'divineprotection', 'angelic', 'angelusbarrier', 'blessing',
+      'signumcrusis', 'holywater', 'ruwach', 'teleport',
+      'warpportal', 'pneuma', 'holylight',
     ],
     desc: '侍奉光明神的治療者，慈悲亦堅定。'
   },
@@ -151,7 +150,7 @@ const JOB_TREE = {
   knight: {
     id: 'knight', name: '騎士', tier: 2, icon: '🐎', parent: 'swordsman',
     baseLevelReq: 40, jobLevelReq: 40, jobLevelMax: 50,
-    hpMod: 1.5, spMod: 3.0, atkMod: 1.7, matkMod: 0.7,
+    atkMod: 1.7, matkMod: 0.7,
     next: [], nextLocked: ['lordknight'],
     bonusLevels: { str:[4,10,15,21,27,33,46,47], agi:[13,38], vit:[1,3,8,12,17,18,23,29,36,43], int:[], dex:[11,19,31,40,48,49], luk:[5,20,28,37] },
     skills: [
@@ -164,7 +163,7 @@ const JOB_TREE = {
   wizard: {
     id: 'wizard', name: '巫師', tier: 2, icon: '🧙', parent: 'mage',
     baseLevelReq: 40, jobLevelReq: 40, jobLevelMax: 50,
-    hpMod: 0.55, spMod: 9.0, atkMod: 0.5, matkMod: 1.9,
+    atkMod: 0.5, matkMod: 1.9,
     baseAspd: 150,
     next: [], nextLocked: ['highwizard'],
     bonusLevels: { str:[12], agi:[6,10,24,34,41,43,46,47], vit:[38], int:[1,4,9,18,22,29,31,33,40,45,48,50], dex:[2,5,13,26,32,39], luk:[15,36] },
@@ -179,7 +178,7 @@ const JOB_TREE = {
   hunter: {
     id: 'hunter', name: '獵人', tier: 2, icon: '🎯', parent: 'archer',
     baseLevelReq: 40, jobLevelReq: 40, jobLevelMax: 50,
-    hpMod: 0.85, spMod: 4.0, atkMod: 1.75, matkMod: 0.6,
+    atkMod: 1.75, matkMod: 0.6,
     baseAspd: 150,
     next: [], nextLocked: ['sniper'],
     bonusLevels: { str:[6,10,11,44], agi:[12,19,20,31,39,47], vit:[17,23], int:[3,34,41,46], dex:[1,4,8,14,21,27,33,38,43,49], luk:[5,15,29,42] },
@@ -194,7 +193,7 @@ const JOB_TREE = {
   blacksmith: {
     id: 'blacksmith', name: '鐵匠', tier: 2, icon: '🔨', parent: 'merchant',
     baseLevelReq: 40, jobLevelReq: 40, jobLevelMax: 50,
-    hpMod: 0.9, spMod: 4.0, atkMod: 1.8, matkMod: 0.6,
+    atkMod: 1.8, matkMod: 0.6,
     baseAspd: 145,
     next: [], nextLocked: ['whitesmith'],
     bonusLevels: { str:[3,8,16,23,31,44], agi:[29,38], vit:[7,13,20,32,37,49], int:[21,34], dex:[1,4,5,9,12,19,26,28,36,39,40,47], luk:[11,46] },
@@ -211,7 +210,7 @@ const JOB_TREE = {
   assassin: {
     id: 'assassin', name: '刺客', tier: 2, icon: '🥷', parent: 'thief',
     baseLevelReq: 40, jobLevelReq: 40, jobLevelMax: 50,
-    hpMod: 1.1, spMod: 4.0, atkMod: 1.85, matkMod: 0.5,
+    atkMod: 1.85, matkMod: 0.5,
     baseAspd: 140,
     next: [], nextLocked: ['assassincross'],
     bonusLevels: { str:[11,25,27,32,45,48], agi:[1,2,3,15,16,17,18,19,20,21], vit:[6,8], int:[4,14,38,42], dex:[9,24,30,31,40,41,46,50], luk:[] },
@@ -225,15 +224,19 @@ const JOB_TREE = {
   priest: {
     id: 'priest', name: '祭司', tier: 2, icon: '✨', parent: 'acolyte',
     baseLevelReq: 40, jobLevelReq: 40, jobLevelMax: 50,
-    hpMod: 0.75, spMod: 8.0, atkMod: 0.6, matkMod: 1.3,
+    atkMod: 0.6, matkMod: 1.3,
     baseAspd: 150,
     next: [], nextLocked: ['highpriest'],
     bonusLevels: { str:[4,11,17,27,35], agi:[6,29,37,48], vit:[7,14,34,36,45], int:[8,9,22,42,43], dex:[16,20,25,32], luk:[1,3,10,21,31,39,50] },
+    /* 官方 19 支，順序照 ro.ntome.com/skill/pr（＝ `ro_skill_data/js_data/sk_pr.js`）。
+       `safetywall` 是**跟法師共用的同一支**——官方就是 `MG_SAFETYWALL`，
+       兩個職業都學得到。以前祭司自己複製了一份叫 `darkbarrier`（#95 刪掉）。 */
     skills: [
       'maceMastery', 'zenrecovery', 'sanctuary', 'magnificat',
-      'gloria', 'kyrie', 'assumptio', 'sanctuary_holy',
-      'resurrection', 'impositio', 'turnundead', 'angelus',
-      'asperio', 'suffragium', 'darkbarrier',
+      'gloria', 'kyrie', 'impositio_manus', 'assumptio',
+      'aspersio', 'sanctuary_holy', 'safetywall', 'slowpoison',
+      'strecovery', 'resurrection', 'impositio', 'turnundead',
+      'angelus', 'asperio', 'suffragium',
     ],
     desc: '光輝籠罩之地，皆為信徒的庇護所。'
   },
@@ -251,7 +254,7 @@ const JOB_TREE = {
   crusader: {
     id: 'crusader', name: '十字軍', tier: 2, icon: '🛡️', parent: 'swordsman',
     baseLevelReq: 40, jobLevelReq: 40, jobLevelMax: 50,
-    hpMod: 1.5, spMod: 3.0, atkMod: 1.6, matkMod: 1.0,
+    atkMod: 1.6, matkMod: 1.0,
     aspdFrom: 'x_十字軍_聖殿十字軍',
     next: [], nextLocked: ['paladin'],
     bonusLevels: { str:[7,11,17,23,25,32,48], agi:[30,36], vit:[12,15,22,40,41,46,50], int:[9,20,21,35,38,44], dex:[14,28,34], luk:[1,2,3,4,5] },
@@ -263,7 +266,7 @@ const JOB_TREE = {
       'cr_reflectshield', 'cr_trust', 'cr_holycross', 'grandcross',
       'cr_providence', 'cr_spearquicken', 'cr_shrink',
       // 官方借用：服事的治癒術／天使之護／天使之擊／治療術
-      'heal', 'divineprotection', 'angelic', 'cure',
+      'heal', 'divineprotection', 'angelic', 'holywater',
       // 官方借用：騎士的長矛熟練度／騎乘術／騎兵修練
       'spearmastery', 'riding', 'cavaliermastery',
     ],
@@ -279,7 +282,7 @@ const JOB_TREE = {
   bard: {
     id: 'bard', name: '詩人', tier: 2, icon: '🎻', parent: 'archer', genderLock: 'male',
     baseLevelReq: 40, jobLevelReq: 40, jobLevelMax: 50,
-    hpMod: 0.85, spMod: 4.5, atkMod: 1.6, matkMod: 0.9,
+    atkMod: 1.6, matkMod: 0.9,
     // 攻速表由 x_詩人_舞孃 派生（見 js/data.js 的 splitBardDancerAspd）
     baseAspd: 150,
     next: [], nextLocked: ['clown'],
@@ -300,7 +303,7 @@ const JOB_TREE = {
   dancer: {
     id: 'dancer', name: '舞孃', tier: 2, icon: '💃', parent: 'archer', genderLock: 'female',
     baseLevelReq: 40, jobLevelReq: 40, jobLevelMax: 50,
-    hpMod: 0.85, spMod: 4.5, atkMod: 1.6, matkMod: 0.9,
+    atkMod: 1.6, matkMod: 0.9,
     // 攻速表由 x_詩人_舞孃 派生，樂器換成鞭子（見 js/data.js 的 splitBardDancerAspd）
     baseAspd: 150,
     next: [], nextLocked: ['gypsy'],
@@ -324,7 +327,7 @@ const JOB_TREE = {
   rogue: {
     id: 'rogue', name: '流氓', tier: 2, icon: '🎭', parent: 'thief',
     baseLevelReq: 40, jobLevelReq: 40, jobLevelMax: 50,
-    hpMod: 1.0, spMod: 4.0, atkMod: 1.7, matkMod: 0.7,
+    atkMod: 1.7, matkMod: 0.7,
     baseAspd: 150,
     next: [], nextLocked: ['stalker'],
     bonusLevels: { str:[5,25,27,30,36,42], agi:[1,7,16,23,29,39,45], vit:[2,6,9,14,15,26], int:[38,43,47,48], dex:[3,11,18,20,33,34,50], luk:[] },
@@ -338,15 +341,12 @@ const JOB_TREE = {
     desc: '不擇手段，也不留下名字。'
   },
 
-  /* 武僧（#70）。見習修女的另一條分支——祭司往後站，武僧往前衝。
+  /* 武僧（#70）。服事的另一條分支——祭司往後站，武僧往前衝。
 
-     四個係數是本作自訂的（官方沒有職業 ATK 倍率這種東西，ATK 全部來自 STR 與武器），
-     以同為近戰二轉的流氓 1.0/4.0/1.7/0.7 與十字軍 1.5/3.0/1.6/1.0 為基準：
-       hpMod 1.3   官方 HpFactor 90 已經比流氓的 85 高，係數再往上一格，但不到十字軍
-       spMod 5.0   **武僧是全遊戲最吃 SP 的近戰**——阿修羅霸凰拳消耗的是全部 SP，
-                   SP 上限直接等於那一發的傷害，所以給得比其他近戰二轉高
+     兩個係數是本作自訂的（官方沒有職業 ATK 倍率這種東西，ATK 全部來自 STR 與武器），
+     以同為近戰二轉的流氓 1.7/0.7 與十字軍 1.6/1.0 為基準：
        atkMod 1.75 拳頭流的傷害幾乎全在被動 proc 上，基礎 ATK 要撐得住那些倍率
-       matkMod 0.8 從見習修女繼承一點魔法底子，但用不到
+       matkMod 0.8 從服事繼承一點魔法底子，但用不到
 
      `bonusLevels` 出自 rAthena `db/pre-re/job_stats.yml` 的 BonusStats（Monk），
      跟 HP/SP 表同一份來源檔，30 點與其他二轉一致。
@@ -355,7 +355,7 @@ const JOB_TREE = {
   monk: {
     id: 'monk', name: '武僧', tier: 2, icon: '👊', parent: 'acolyte',
     baseLevelReq: 40, jobLevelReq: 40, jobLevelMax: 50,
-    hpMod: 1.3, spMod: 5.0, atkMod: 1.75, matkMod: 0.8,
+    atkMod: 1.75, matkMod: 0.8,
     aspdFrom: 'x_武僧_武宗術師',
     next: [], nextLocked: ['champion'],
     bonusLevels: { str:[1,2,12,13,26,27,49,50], agi:[5,10,18,21,23,35,44], vit:[7,20,25,33,41,46], int:[16,38], dex:[4,22,30,43], luk:[15,32,40] },
@@ -366,17 +366,14 @@ const JOB_TREE = {
       'mo_fingeroffensive', 'mo_extremityfist', 'mo_bodyrelocation',
       'mo_balkyoung', 'mo_kitranslation',
     ],
-    // 官方武僧與祭司共用見習修女的技能樹，整份借過來
+    // 官方武僧與祭司共用服事的技能樹，整份借過來
     borrowSkillsFrom: ['acolyte'],
     desc: '不拿武器，因為拳頭比武器更誠實。'
   },
 
   /* 賢者（#71）。法師的另一條分支——巫師把傷害推到極限，賢者把場面握在手裡。
 
-     四個係數是本作自訂的（官方沒有職業 ATK 倍率），以巫師 0.55/9.0/0.5/1.9 與
-     祭司 0.75/8.0/0.6/1.3 為基準：
-       hpMod 0.7   官方 HpFactor 75 就比巫師的 55 高，賢者本來就是耐打的那一邊
-       spMod 7.0   SpIncrease 700 介於巫師 900 與騎士之間，係數照著擺
+     兩個係數是本作自訂的（官方沒有職業 ATK 倍率），以巫師 0.5/1.9 與祭司 0.6/1.3 為基準：
        atkMod 1.0  **拿得動書本（全庫 94 把）並吃進化之書的 ATK 加成**，所以不能給巫師那種 0.5
        matkMod 1.5 魔法還是主力，但不到巫師的 1.9
 
@@ -385,7 +382,7 @@ const JOB_TREE = {
   sage: {
     id: 'sage', name: '賢者', tier: 2, icon: '📖', parent: 'mage',
     baseLevelReq: 40, jobLevelReq: 40, jobLevelMax: 50,
-    hpMod: 0.7, spMod: 7.0, atkMod: 1.0, matkMod: 1.5,
+    atkMod: 1.0, matkMod: 1.5,
     aspdFrom: 'x_賢者_智者',
     next: [], nextLocked: ['professor'],
     bonusLevels: { str:[42,44,46,47,48], agi:[3,6,13,22,33], vit:[4,11,18], int:[1,8,15,24,30,37,38,45,50], dex:[20,25,27,32,39], luk:[17,35,40] },
@@ -405,9 +402,8 @@ const JOB_TREE = {
   /* 鍊金術士（#72）。商人的另一條分支，也是六條分支的最後一個。
 
      官方 HP/SP 參數（HpFactor 90／HpIncrease 500／SpIncrease 400）**跟神匠一模一樣**，
-     所以兩者的差別全放在後面四個係數上：
-       hpMod 0.9   跟神匠同級，官方參數相同就沒有理由分開
-       spMod 4.5   比神匠高半格——技能全是要維持的場域效果，SP 要撐得住
+     HP/SP 因此也完全相同（#92 之後照官方表算，沒有本作自己的係數），
+     兩者的差別全放在後面兩個係數上：
        atkMod 1.5  神匠是 1.8。鍊金術士的傷害大半來自技能倍率（生命體召喚 ATK 3000%），
                    基礎 ATK 給太高會讓那些倍率直接失控
        matkMod 0.9 官方沒有魔法路線，但藥劑師總不至於完全不懂
@@ -418,7 +414,7 @@ const JOB_TREE = {
   alchemist: {
     id: 'alchemist', name: '鍊金術士', tier: 2, icon: '⚗️', parent: 'merchant',
     baseLevelReq: 40, jobLevelReq: 40, jobLevelMax: 50,
-    hpMod: 0.9, spMod: 4.5, atkMod: 1.5, matkMod: 0.9,
+    atkMod: 1.5, matkMod: 0.9,
     aspdFrom: 'x_煉金術師_創造者',
     next: [], nextLocked: ['creator'],
     bonusLevels: { str:[6,15,26,34,43], agi:[11,14,40,45,49,50], vit:[20,31,36], int:[1,9,17,23,24,29,38], dex:[2,3,8,13,19,21,25,28,32], luk:[] },
@@ -452,19 +448,18 @@ const JOB_TREE = {
                         一轉 10 / 二轉 40 / 進階二轉 70，間距一致。
 
      `hpSpFrom` / `aspdFrom`  一律指回本職。官方轉生職**用的就是同一張 HP/SP 表與攻速表**，
-                        差別在轉生職身上那個固定加成——本作把那份加成折進 hpMod / spMod，
-                        所以不複製 100 格陣列，也不新增攻速表。
-
-     `hpMod` / `spMod`  本職 ×1.25。官方轉生職的體質加成就是這個量級，
-                        六個職業一致，之後要調平衡只要動這個係數。
+                        差別只在那個固定的 +25%，而那 25% 掛在 `state.rebirthCount` 上
+                        （見 engine.js 的 TRANSCENDENT_HPSP_MULT），不是掛在職業資料裡——
+                        官方是「轉生過」就有，轉生後那段高等一轉同樣吃得到。
+                        所以這裡不複製 100 格陣列，也不新增攻速表。
 
      `bonusLevels` 沿用本職的表（職業加成是累計繼承的，見 computeJobBonuses），
      51~70 那段再補一輪，讓多出來的 20 級不是白練。 */
 
   lordknight: {
-    id: 'lordknight', name: '領主騎士', tier: 3, icon: '⚔️', parent: 'knight',
+    id: 'lordknight', name: '領主騎士', tier: 2.5, icon: '⚔️', parent: 'knight',
     baseLevelReq: 70, jobLevelReq: 50, jobLevelMax: 70,
-    hpMod: 1.875, spMod: 3.75, atkMod: 1.8, matkMod: 0.7,
+    atkMod: 1.8, matkMod: 0.7,
     hpSpFrom: 'knight', aspdFrom: 'knight',
     // 進階二轉「取代」二轉（不再經過騎士那一站），所以二轉的技能整份借過來
     borrowSkillsFrom: ['knight'],
@@ -478,9 +473,9 @@ const JOB_TREE = {
     desc: '騎士之上的騎士。戰場上的旗幟只為他而立。'
   },
   highwizard: {
-    id: 'highwizard', name: '高等巫師', tier: 3, icon: '🔮', parent: 'wizard',
+    id: 'highwizard', name: '高等巫師', tier: 2.5, icon: '🔮', parent: 'wizard',
     baseLevelReq: 70, jobLevelReq: 50, jobLevelMax: 70,
-    hpMod: 0.6875, spMod: 11.25, atkMod: 0.5, matkMod: 2.0,
+    atkMod: 0.5, matkMod: 2.0,
     hpSpFrom: 'wizard', aspdFrom: 'wizard', baseAspd: 150,
     // 進階二轉「取代」二轉（不再經過騎士那一站），所以二轉的技能整份借過來
     borrowSkillsFrom: ['wizard'],
@@ -490,9 +485,9 @@ const JOB_TREE = {
     desc: '把咒文推到極限的人，最後連自己都成了咒文的一部分。'
   },
   sniper: {
-    id: 'sniper', name: '狙擊之王', tier: 3, icon: '🏹', parent: 'hunter',
+    id: 'sniper', name: '狙擊之王', tier: 2.5, icon: '🏹', parent: 'hunter',
     baseLevelReq: 70, jobLevelReq: 50, jobLevelMax: 70,
-    hpMod: 1.0625, spMod: 5.0, atkMod: 1.6, matkMod: 0.8,
+    atkMod: 1.6, matkMod: 0.8,
     hpSpFrom: 'hunter', aspdFrom: 'hunter',
     // 進階二轉「取代」二轉（不再經過騎士那一站），所以二轉的技能整份借過來
     borrowSkillsFrom: ['hunter'],
@@ -502,9 +497,9 @@ const JOB_TREE = {
     desc: '一箭，一命。距離只是他與獵物之間的一個數字。'
   },
   whitesmith: {
-    id: 'whitesmith', name: '神匠', tier: 3, icon: '🔨', parent: 'blacksmith',
+    id: 'whitesmith', name: '神匠', tier: 2.5, icon: '🔨', parent: 'blacksmith',
     baseLevelReq: 70, jobLevelReq: 50, jobLevelMax: 70,
-    hpMod: 1.125, spMod: 5.0, atkMod: 1.75, matkMod: 0.7,
+    atkMod: 1.75, matkMod: 0.7,
     hpSpFrom: 'blacksmith', aspdFrom: 'blacksmith',
     // 進階二轉「取代」二轉（不再經過騎士那一站），所以二轉的技能整份借過來
     borrowSkillsFrom: ['blacksmith'],
@@ -515,9 +510,9 @@ const JOB_TREE = {
     desc: '鐵砧上敲出來的不只是武器，還有一整個時代的重量。'
   },
   assassincross: {
-    id: 'assassincross', name: '十字刺客', tier: 3, icon: '🗡️', parent: 'assassin',
+    id: 'assassincross', name: '十字刺客', tier: 2.5, icon: '🗡️', parent: 'assassin',
     baseLevelReq: 70, jobLevelReq: 50, jobLevelMax: 70,
-    hpMod: 1.375, spMod: 5.0, atkMod: 1.75, matkMod: 0.7,
+    atkMod: 1.75, matkMod: 0.7,
     hpSpFrom: 'assassin', aspdFrom: 'assassin',
     // 進階二轉「取代」二轉（不再經過騎士那一站），所以二轉的技能整份借過來
     borrowSkillsFrom: ['assassin'],
@@ -528,9 +523,9 @@ const JOB_TREE = {
     desc: '影子裡的影子。你察覺的那一刻，已經是他允許的。'
   },
   highpriest: {
-    id: 'highpriest', name: '高階祭司', tier: 3, icon: '🕊️', parent: 'priest',
+    id: 'highpriest', name: '高階祭司', tier: 2.5, icon: '🕊️', parent: 'priest',
     baseLevelReq: 70, jobLevelReq: 50, jobLevelMax: 70,
-    hpMod: 0.9375, spMod: 10.0, atkMod: 0.6, matkMod: 1.4,
+    atkMod: 0.6, matkMod: 1.4,
     hpSpFrom: 'priest', aspdFrom: 'priest', baseAspd: 150,
     // 進階二轉「取代」二轉（不再經過騎士那一站），所以二轉的技能整份借過來
     borrowSkillsFrom: ['priest'],
@@ -550,8 +545,7 @@ const JOB_TREE = {
      這七個一補進來，六條分支線的轉生斷層（BUGS #67-續）同時消失，不必改 engine。
 
      四個共通設定沿用上面那批（理由寫在 highpriest 上方那段，不重複）：
-     jobLevelMax 70 / baseLevelReq 70 / hpSpFrom 與 aspdFrom 指回本職 /
-     hpMod 與 spMod 是本職 ×1.25。
+     jobLevelMax 70 / baseLevelReq 70 / hpSpFrom 與 aspdFrom 指回本職。
 
      `aspdFrom` 一律寫**本職的職業 id**。`aspdJobKey()` 會沿著 aspdFrom 一路跟到終點
      （#75 改的；以前只解析一層，寫 'crusader' 會停在那裡、查不到表就整個退回空手值 154），
@@ -565,9 +559,9 @@ const JOB_TREE = {
      （上面那六個代表分支當初是用「本職的表 + 自己補 51~70」做的，跟官方對不上，
      #75 已經連同超級新手一起校正成官方表——現在 34 個職業全部對得上 job_stats.yml。） */
   paladin: {
-    id: 'paladin', name: '聖殿十字軍', tier: 3, icon: '🛡️', parent: 'crusader',
+    id: 'paladin', name: '聖殿十字軍', tier: 2.5, icon: '🛡️', parent: 'crusader',
     baseLevelReq: 70, jobLevelReq: 50, jobLevelMax: 70,
-    hpMod: 1.875, spMod: 3.75, atkMod: 1.65, matkMod: 1.0,
+    atkMod: 1.65, matkMod: 1.0,
     hpSpFrom: 'crusader', aspdFrom: 'crusader',
     /* matkMod 維持十字軍的 1.0 沒有加。神之威壓雖然是魔法技能，但使用者 2026-08-14
        指定「照官方，不一定要強勢」——想讓那招痛就自己堆 INT 與魔攻裝，不靠職業係數補。 */
@@ -580,9 +574,9 @@ const JOB_TREE = {
   },
   professor: {
     // 名稱用「智者」：官方攻速表那一列就叫 `x_賢者_智者`，跟資料對齊（使用者 2026-08-14 指定）
-    id: 'professor', name: '智者', tier: 3, icon: '📚', parent: 'sage',
+    id: 'professor', name: '智者', tier: 2.5, icon: '📚', parent: 'sage',
     baseLevelReq: 70, jobLevelReq: 50, jobLevelMax: 70,
-    hpMod: 0.875, spMod: 8.75, atkMod: 1.0, matkMod: 1.6,
+    atkMod: 1.0, matkMod: 1.6,
     hpSpFrom: 'sage', aspdFrom: 'sage',
     borrowSkillsFrom: ['sage'],
     next: [], nextLocked: ['sorcerer'],
@@ -595,9 +589,9 @@ const JOB_TREE = {
     desc: '知識本身就是一種暴力，只是他習慣先說明。'
   },
   clown: {
-    id: 'clown', name: '搞笑藝人', tier: 3, icon: '🎺', parent: 'bard', genderLock: 'male',
+    id: 'clown', name: '搞笑藝人', tier: 2.5, icon: '🎺', parent: 'bard', genderLock: 'male',
     baseLevelReq: 70, jobLevelReq: 50, jobLevelMax: 70,
-    hpMod: 1.0625, spMod: 5.625, atkMod: 1.65, matkMod: 0.9,
+    atkMod: 1.65, matkMod: 0.9,
     hpSpFrom: 'bard', aspdFrom: 'bard', baseAspd: 150,
     borrowSkillsFrom: ['bard'],
     next: [], nextLocked: ['minstrel'],
@@ -607,9 +601,9 @@ const JOB_TREE = {
     desc: '掌聲響起的時候，戰場已經結束了。'
   },
   gypsy: {
-    id: 'gypsy', name: '冷豔舞姬', tier: 3, icon: '🌹', parent: 'dancer', genderLock: 'female',
+    id: 'gypsy', name: '冷豔舞姬', tier: 2.5, icon: '🌹', parent: 'dancer', genderLock: 'female',
     baseLevelReq: 70, jobLevelReq: 50, jobLevelMax: 70,
-    hpMod: 1.0625, spMod: 5.625, atkMod: 1.65, matkMod: 0.9,
+    atkMod: 1.65, matkMod: 0.9,
     hpSpFrom: 'dancer', aspdFrom: 'dancer', baseAspd: 150,
     borrowSkillsFrom: ['dancer'],
     next: [], nextLocked: ['wanderer'],
@@ -619,9 +613,9 @@ const JOB_TREE = {
     desc: '她跳的每一支舞，都是替誰送行。'
   },
   creator: {
-    id: 'creator', name: '創造者', tier: 3, icon: '🧬', parent: 'alchemist',
+    id: 'creator', name: '創造者', tier: 2.5, icon: '🧬', parent: 'alchemist',
     baseLevelReq: 70, jobLevelReq: 50, jobLevelMax: 70,
-    hpMod: 1.125, spMod: 5.625, atkMod: 1.55, matkMod: 0.9,
+    atkMod: 1.55, matkMod: 0.9,
     hpSpFrom: 'alchemist', aspdFrom: 'alchemist',
     borrowSkillsFrom: ['alchemist'],
     next: [], nextLocked: ['geneticist'],
@@ -631,9 +625,9 @@ const JOB_TREE = {
     desc: '他不再問代價，因為代價早就付完了。'
   },
   stalker: {
-    id: 'stalker', name: '神行太保', tier: 3, icon: '👁️', parent: 'rogue',
+    id: 'stalker', name: '神行太保', tier: 2.5, icon: '👁️', parent: 'rogue',
     baseLevelReq: 70, jobLevelReq: 50, jobLevelMax: 70,
-    hpMod: 1.25, spMod: 5.0, atkMod: 1.75, matkMod: 0.7,
+    atkMod: 1.75, matkMod: 0.7,
     hpSpFrom: 'rogue', aspdFrom: 'rogue', baseAspd: 150,
     borrowSkillsFrom: ['rogue'],
     next: [], nextLocked: ['shadowchaser'],
@@ -643,9 +637,9 @@ const JOB_TREE = {
     desc: '你回頭的時候，他就已經是你了。'
   },
   champion: {
-    id: 'champion', name: '武術宗師', tier: 3, icon: '🥋', parent: 'monk',
+    id: 'champion', name: '武術宗師', tier: 2.5, icon: '🥋', parent: 'monk',
     baseLevelReq: 70, jobLevelReq: 50, jobLevelMax: 70,
-    hpMod: 1.625, spMod: 6.25, atkMod: 1.85, matkMod: 0.8,
+    atkMod: 1.85, matkMod: 0.8,
     hpSpFrom: 'monk', aspdFrom: 'monk',
     borrowSkillsFrom: ['monk'],
     next: [], nextLocked: ['sura'],
@@ -681,12 +675,19 @@ for (const job of Object.values(JOB_TREE)) {
 for (const job of Object.values(JOB_TREE)) {
   if (!job.borrowSkillsFrom) continue;
   const seen = new Set(job.skills.map(s => s.id));
+  /* `borrowedFrom[技能id] = 來源職業id`。**借來的跟自己的要分得出來**（#99）：
+       · 技能分頁不能在借用者底下把它們再畫一次（武僧借了服事整份，玩家又本來就
+         走過服事那一站，同一批技能會在兩個區塊各出現一次，而且借用者那份全是 MAX，
+         看起來像「一轉職就自動點滿」）
+       · 加點時要扣**來源職業**的點數池，不是借用者的 */
+  job.borrowedFrom = job.borrowedFrom || {};
   job.borrowSkillsFrom.forEach(srcId => {
     const src = JOB_TREE[srcId];
     if (!src) return;
     src.skills.forEach(sk => {
       if (seen.has(sk.id)) return;
       seen.add(sk.id);
+      job.borrowedFrom[sk.id] = srcId;
       job.skills.push(sk);
     });
   });
