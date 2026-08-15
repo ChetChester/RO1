@@ -206,6 +206,7 @@ function onTickUI() {
     }
     renderSkillBar();
     updateSkillAura();
+    updatePlayerSprite();   // 換武器要即時換騎乘圖；key 沒變時這個函式會直接 return
     // 即時更新角色分頁的 BUFF 倒數
     if (activeTab === 'character') updateBuffCountdown();
   }
@@ -318,17 +319,56 @@ let animating = false;
 let animCanvas = null;
 let animCanvasCtx = null;
 let currentAnimKey = null;
+/* 目前這個角色「該有」的普攻動作 key。currentAnimKey 播施放姿勢時會暫時指到別組，
+   所以判斷「圖需不需要換」一律看這個，不然施放到一半會被 updatePlayerSprite 打斷。 */
+let baseAnimKey = null;
+
+/* 騎乘圖（#73）：拿槍就換一組騎在坐騎上的動作。
+   官方能騎大嘴鳥的本來就只有騎士線與十字軍線，所以只列這幾個職業。
+   值是「去借誰的圖」——騎士與十字軍本體沒有畫騎乘圖，借騎士領主那組大嘴鳥；
+   皇家禁衛隊那組騎的是獅鷲不是大嘴鳥，所以沒讓十字軍借它。
+   哪天補了專屬的圖，把值改成自己的職業 id 就好，其餘不用動。 */
+const MOUNT_SPRITE_JOBS = {
+  knight:     'lordknight',
+  crusader:   'lordknight',
+  lordknight: 'lordknight',
+  paladin:    'lordknight',
+  runeknight: 'runeknight',
+  royalguard: 'royalguard',
+};
+const MOUNT_WEAPON_CATS = ['spear1', 'spear2'];
+
+/* 沒有自己的圖、直接借別人的職業。超級新手官方本來就是穿新手服的，借新手那組剛好。
+   沒列在這裡又沒有圖的職業會退回 player_swordsman.svg 那張靜圖。 */
+const SPRITE_ALIAS = { supernovice: 'novice' };
+
+// 現在該不該播騎乘圖？回傳要借哪個職業的圖，沒有就 null
+function mountSpriteJobFor(jobId) {
+  const src = MOUNT_SPRITE_JOBS[jobId];
+  if (!src) return null;
+  if (typeof aspdCategoryOf !== 'function') return null;
+  const cat = aspdCategoryOf(getEquipBaseItemId('weapon'));
+  return MOUNT_WEAPON_CATS.includes(cat) ? src : null;
+}
 
 function getAnimKey() {
   const job = currentJob();
   const gender = (state && state.gender) || 'male';
-  return `${job.id}_${gender}`;
+  const mount = mountSpriteJobFor(job.id);
+  if (mount) return `${mount}_${gender}_mount`;
+  return `${SPRITE_ALIAS[job.id] || job.id}_${gender}`;
 }
 
 function updatePlayerSprite() {
   const img = document.getElementById('player-img');
   if (!img) return;
   const key = getAnimKey();
+
+  /* 已經在播這一組就什麼都不做。
+     這個 early return 是換武器能即時換圖的前提——有了它這個函式才便宜到可以每個
+     tick 呼叫（見 onTickUI），不然得在每一個會動到裝備的地方各補一次呼叫，
+     而自動裝備、賣掉身上的裝備那些路徑遲早會漏掉一條。 */
+  if (key === baseAnimKey && animCanvas && animCanvas.style.display !== 'none') return;
 
   if (animFramesLoaded[key]) {
     showAnimCanvas(key);
@@ -368,9 +408,12 @@ function showAnimCanvas(key) {
   animCanvas.width = frames[0].naturalWidth;
   animCanvas.height = frames[0].naturalHeight;
   animCanvasCtx = animCanvas.getContext('2d');
+  stopCastAnim();               // 換職業／換武器時把播到一半的施放動作收掉
   currentAnimKey = key;
+  baseAnimKey = key;
   animFrameIdx = 0;
   drawAnimFrame();
+  loadAnimFrames(key + '_skill');   // 施放姿勢先預載，免得第一次放技能時來不及
 }
 
 function drawAnimFrame() {
@@ -400,6 +443,7 @@ async function loadAnimFrames(key) {
 }
 
 function playAttackAnim() {
+  if (castingAnim) return;   // 施放姿勢優先：兩組動作共用同一張 canvas，不讓路會互相蓋掉
   if (!currentAnimKey || !animFrameImages[currentAnimKey] || !animFrameImages[currentAnimKey].length) return;
   stopAnim();
   animating = true;
@@ -422,6 +466,60 @@ function playAttackAnim() {
 
 function stopAnim() {
   if (animTimer) { clearInterval(animTimer); animTimer = null; }
+}
+
+/* ---------------- 施放姿勢動畫（#73） ----------------
+   images/frames/<普攻的 key>_skill/ 底下有圖的職業，放技能時把主畫布切過去播一次，
+   播完切回普攻那組的第一格。沒有圖的職業（載進來是空陣列）整段不作用，普攻照舊。
+   騎乘中放技能會找 <職業>_<性別>_mount_skill，跟普攻的 key 是同一套規則接後綴。
+
+   施放中再收到一次施放不重播：卡片與被動觸發的技能是「免費施放」，
+   武僧那種連段一輪能觸發好幾次，每次都重播的話姿勢會一直卡在第一格抖動。 */
+const SKILL_ANIM_MS = 600;
+let castAnimTimer = null;
+let castingAnim = false;
+
+function playSkillCastAnim() {
+  if (castingAnim) return;
+  if (!animCanvas || !animCanvasCtx || animCanvas.style.display === 'none') return;
+  const backTo = baseAnimKey;
+  if (!backTo) return;
+  const key = backTo + '_skill';
+  const frames = animFrameImages[key];
+  if (!frames || !frames.length) return;
+
+  stopAnim();
+  animating = false;
+  castingAnim = true;
+  currentAnimKey = key;
+  animCanvas.width = frames[0].naturalWidth;
+  animCanvas.height = frames[0].naturalHeight;
+  animFrameIdx = 0;
+  drawAnimFrame();
+
+  castAnimTimer = setInterval(() => {
+    animFrameIdx++;
+    if (animFrameIdx >= frames.length) { restoreAfterCastAnim(backTo); return; }
+    drawAnimFrame();
+  }, SKILL_ANIM_MS / frames.length);
+}
+
+function restoreAfterCastAnim(backTo) {
+  if (castAnimTimer) { clearInterval(castAnimTimer); castAnimTimer = null; }
+  castingAnim = false;
+  const frames = animFrameImages[backTo];
+  if (!frames || !frames.length || !animCanvas) return;
+  currentAnimKey = backTo;
+  animCanvas.width = frames[0].naturalWidth;
+  animCanvas.height = frames[0].naturalHeight;
+  animFrameIdx = 0;
+  drawAnimFrame();
+}
+
+// 換職業／換武器時呼叫：不還原畫布（呼叫端馬上就要自己重設），只把計時器收乾淨
+function stopCastAnim() {
+  if (castAnimTimer) { clearInterval(castAnimTimer); castAnimTimer = null; }
+  castingAnim = false;
 }
 
 /* ---------------- 技能特效 ----------------
@@ -455,6 +553,7 @@ function skillFxFor(skillId) {
 /* 施放瞬間：在角色身上疊一張詠唱姿勢，播完自己移除。由 castSkill() 呼叫。 */
 function showSkillCastEffect(sk) {
   if (!sk) return;
+  playSkillCastAnim();          // 職業共用的施放姿勢，不分技能
   const fx = skillFxFor(sk.id);
   if (!fx || !fx.sprite) return;
   const host = document.getElementById('player-sprite');
@@ -1585,21 +1684,27 @@ function renderSkillsTab() {
      沒有這個選單的話技能點下去完全沒有出口——被動只記了等級上限，
      真正決定抄哪一個的是這裡。 */
   if (state.plagiarismLv > 0) {
-    const picks = (typeof plagiarismChoices === 'function' ? plagiarismChoices() : [])
-      .slice().sort((a, b) => a.name.localeCompare(b.name, 'zh-Hant'));
+    /* 選單照職業主系分組（#79，使用者 2026-08-15 指定）——
+       候選有上百個，攤成一長串平的清單根本挑不到東西。
+       分組表由 plagiarismGroups() 從 JOB_TREE 的 parent 鏈推出來，不另外維護。 */
+    const groups = (typeof plagiarismGroups === 'function') ? plagiarismGroups() : [];
     const cur = state.plagiarismSkillId || '';
     const curSk = cur ? SKILLS[cur] : null;
+    const total = groups.reduce((n, g) => n + g.skills.length, 0);
+    const opt = s => `<option value="${s.id}"${s.id === cur ? ' selected' : ''}>`
+      + `${s.name}（上限 Lv${Math.min(state.plagiarismLv, s.maxLv || 1)}）</option>`;
     html += `<div class="skill-job-section expanded">
       <div class="skill-job-header">📖 抄襲<span class="skill-job-tier">可用到 Lv${state.plagiarismLv}</span></div>
       <div class="skill-list">
         <div class="skill-row learned">
           <div class="skill-info">
             <div class="skill-name">記住一個攻擊技能</div>
-            <div class="skill-desc">從所有攻擊技能裡挑一個，能用的等級不會超過抄襲本身的等級。</div>
+            <div class="skill-desc">依職業主系分類，共 ${total} 個可選；能用的等級不會超過抄襲本身的等級。
+              ${state.preserveOn ? '（自由保護已生效：被動攻擊技也在名單裡）' : ''}</div>
             <div class="skill-cost">
               <select onchange="doSetPlagiarism(this.value)">
                 <option value=""${cur ? '' : ' selected'}>（沒有記住任何技能）</option>
-                ${picks.map(s => `<option value="${s.id}"${s.id === cur ? ' selected' : ''}>${s.name}（上限 Lv${Math.min(state.plagiarismLv, s.maxLv || 1)}）</option>`).join('')}
+                ${groups.map(g => `<optgroup label="${g.label}">${g.skills.map(opt).join('')}</optgroup>`).join('')}
               </select>
               ${curSk ? `　目前：<b>${curSk.name}</b> Lv${skillLv(cur)}` : ''}
             </div>
@@ -3241,7 +3346,8 @@ function renderJobTree() {
     if (line && line.length) {
       tiers = line.map(j => [j]);
     } else {
-      tiers.push(['lordknight', 'highwizard', 'sniper', 'whitesmith', 'assassincross', 'highpriest']);
+      tiers.push(['lordknight', 'paladin', 'highwizard', 'professor', 'sniper', 'clown', 'gypsy',
+                  'whitesmith', 'creator', 'assassincross', 'stalker', 'highpriest', 'champion']);
     }
   }
   const nodeW = 108, nodeH = 64, gapX = 20, tierGapY = 130;

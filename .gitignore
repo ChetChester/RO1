@@ -147,3 +147,4 @@ tools/
 
 # Godot 素材匯入殘留（本作是純瀏覽器 JS，這些檔沒有任何程式讀它）
 *.import
+frames_png/

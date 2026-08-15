@@ -47,7 +47,7 @@ const SKILLS = {
   vending: {"id":"vending","name":"露天商店","maxLv":1,"isQuest":true,"type":"passive","passiveStat":"vending","spCost":[0],"cooldown":[0],"internalCooldown":60,"sellMultiplier":10,"desc":"被動技能，可在背包頁面選最多3樣道具，每60秒自動以10倍價格賣出各1個。"},
   itemappraisal: {"id":"itemappraisal","name":"物品鑑定","maxLv":1,"isQuest":true,"type":"passive","passiveStat":"triStatBonus","spCost":[0],"cooldown":[0],"mult":[5],"desc":"被動技能，永久提升STR+5、INT+5、DEX+5。"},
   loudexclamation: {"id":"loudexclamation","name":"大聲吶喊","maxLv":1,"isQuest":true,"type":"buff_flatstat","spCost":[0],"cooldown":[30],"strBonus":[4],"mult":[30],"duration":[300],"desc":"短暫提升STR+4、ATK+30，持續300秒（隊伍效果暫不支援，待未來擴充）。"},
-  cartattack: {"id":"cartattack","name":"手推車攻擊","maxLv":1,"isQuest":true,"type":"damage_aoe","element":"neutral","spCost":[8],"cooldown":[3],"mult":[1.5],"desc":"轉職自動習得，用手推車撞擊敵人與周圍怪物，固定造成ATK150%範圍傷害。"},
+  cartattack: {"id":"cartattack","name":"手推車攻擊","maxLv":1,"isQuest":true,"type":"damage_aoe","alwaysHit":true,"element":"neutral","spCost":[8],"cooldown":[3],"mult":[1.5],"desc":"轉職自動習得，用手推車撞擊敵人與周圍怪物，固定造成ATK150%範圍傷害。"},
   discount: {"id":"discount","name":"低價買進","maxLv":10,"type":"passive","passiveStat":"discount","element":"neutral","spCost":[0],"cooldown":[0],"mult":[0.93,0.91,0.89,0.87,0.85,0.83,0.81,0.79,0.77,0.76],"desc":"永久降低商店購買價格7%~24%（依等級）。"},
   overcharge: {"id":"overcharge","name":"高價賣出","maxLv":10,"type":"passive","passiveStat":"overcharge","element":"neutral","spCost":[0],"cooldown":[0],"mult":[1.07,1.09,1.11,1.13,1.15,1.17,1.19,1.21,1.23,1.24],"desc":"永久提升販售價格7%~24%（依等級）。"},
   pushcart: {"id":"pushcart","name":"手推車使用","maxLv":10,"type":"passive","passiveStat":"autoCartItem","element":"neutral","spCost":[0],"cooldown":[0],"intervalSec":[30,25,25,20,20,15,15,15,15,15],"itemPools":[["carrot"],["carrot"],["carrot","apple","banana","grape","melon","coconut"],["carrot","apple","banana","grape","melon","coconut"],["carrot","apple","banana","grape","melon","coconut","red_potion","blue_herb"],["carrot","apple","banana","grape","melon","coconut","red_potion","blue_herb"],["carrot","apple","banana","grape","melon","coconut","red_potion","blue_herb","orange_potion"],["carrot","apple","banana","grape","melon","coconut","red_potion","blue_herb","orange_potion","yellow_potion","blue_potion"],["carrot","apple","banana","grape","melon","coconut","red_potion","blue_herb","orange_potion","yellow_potion","blue_potion","white_potion"],["carrot","apple","banana","grape","melon","coconut","red_potion","blue_herb","orange_potion","yellow_potion","blue_potion","white_potion","honey"]],"desc":"被動技能，隨等級解鎖更多隨機獲得的道具池並縮短冷卻：Lv1紅蘿蔔(CD30s)、Lv2(CD25s)、Lv3解鎖水果(CD25s)、Lv4(CD20s)、Lv5解鎖紅色藥水與藍色藥草(CD20s)、Lv6(CD15s)、Lv7解鎖赤色藥水(CD15s)、Lv8解鎖黃色藥水與藍色藥水、Lv9解鎖白色藥水、Lv10解鎖蜂蜜。每次觸發從當前等級的道具池隨機取得1個。"},
@@ -100,7 +100,7 @@ const SKILLS = {
   quagmire: {"id":"quagmire","name":"泥沼地","maxLv":1,"type":"passive","passiveStat":"onHitStunProc2","element":"earth","spCost":[0],"cooldown":[0],"procChance":[100],"stunSec":[0.5],"internalCooldown":[10],"desc":"被動技能，被攻擊時觸發，使攻擊者暈眩0.5秒，冷卻10秒。"},
   falcondelivery: {"id":"falcondelivery","name":"獵鷹尋敵","maxLv":4,"isQuest":true,"type":"passive","passiveStat":"critRate","spCost":[0],"cooldown":[0],"mult":[1,2,3,4],"desc":"被動技能，永久提升暴擊率+1%~4%。"},
   huntingmastery: {"id":"huntingmastery","name":"馴鷹術","maxLv":1,"type":"passive","passiveStat":"huntingMastery","spCost":[0],"cooldown":[0],"mult":[1],"desc":"被動技能，本身無直接效果，需先學習才能點閃電衝擊。"},
-  blitzbeat: {"id":"blitzbeat","name":"閃電衝擊","maxLv":5,"type":"damage_aoe","element":"wind","spCost":[18,18,18,18,18],"cooldown":[3,3,3,3,3],"mult":[1,2,3,4,5],"passiveMult":[0.4,0.8,1.2,1.6,2],"requires":{"skillId":"huntingmastery","level":1},"desc":"主動：召喚獵鷹範圍攻擊，ATK 100%~500%（依等級）。被動：普攻時依LUK機率額外觸發一次獵鷹單體攻擊，ATK最高40%~200%（依等級）。需先學會馴鷹術。"},
+  blitzbeat: {"id":"blitzbeat","name":"閃電衝擊","maxLv":5,"type":"damage_aoe","alwaysHit":true,"element":"wind","spCost":[18,18,18,18,18],"cooldown":[3,3,3,3,3],"mult":[1,2,3,4,5],"passiveMult":[0.4,0.8,1.2,1.6,2],"requires":{"skillId":"huntingmastery","level":1},"desc":"主動：召喚獵鷹範圍攻擊，ATK 100%~500%（依等級）。被動：普攻時依LUK機率額外觸發一次獵鷹單體攻擊，ATK最高40%~200%（依等級）。需先學會馴鷹術。"},
   falconnastery: {"id":"falconnastery","name":"鋼製喙","maxLv":10,"type":"passive","passiveStat":"falconFlatBonus","element":"neutral","spCost":[0],"cooldown":[0],"mult":[36,72,108,144,180,216,252,288,324,360],"desc":"被動技能，閃電衝擊（含被動觸發）傷害固定+36~360，不受倍率影響。"},
   trap: {"id":"trap","name":"地雷陷阱","maxLv":5,"type":"passive","passiveStat":"trapProc","trapEffect":"damage","element":"fire","spCost":[0],"cooldown":[0],"mult":[0.3,0.4,0.5,0.6,0.7],"procChance":[10,15,20,25,30],"internalCooldown":12,"desc":"被動技能，攻擊時機率觸發地雷陷阱，造成火屬性ATK 30%~70%直接傷害（冷卻12秒）。"},
   skidtrap: {"id":"skidtrap","name":"滑動陷阱","maxLv":5,"type":"passive","passiveStat":"trapProc","trapEffect":"stun","spCost":[0],"cooldown":[0],"stunSec":1,"procChance":[10,15,20,25,30],"internalCooldown":10,"desc":"被動技能，攻擊時機率觸發滑動陷阱，使敵人暈眩1秒（可與睡魔/定位陷阱疊加）（冷卻10秒）。"},
@@ -1839,7 +1839,9 @@ const SKILLS = {
     requires: { skillId: 'am_pharmacy', level: 3 },
     zenyCost: [5000, 5000, 5000, 5000, 5000], alchemyCost: true,
     mult: [2400, 2800, 3200, 3600, 4000],
-    desc: '消耗 5,000 鋅幣，隨機挑場上 1~3 隻敵人引爆：每隻承受 2400~4000 點**無視防禦**的固定傷害。'
+    // 地雷在腳邊自爆，官方也沒有命中判定這一段（官方原文只寫「無視防禦」）
+    alwaysHit: true,
+    desc: '消耗 5,000 鋅幣，隨機挑場上 1~3 隻敵人引爆：每隻承受 2400~4000 點**無視防禦**的固定傷害，必中。'
         + '（官方是召喚會自爆的地雷，本作沒有召喚實體，只留自爆那一下）'
   },
   am_cannibalize: {
@@ -1933,5 +1935,443 @@ const SKILLS = {
     requires: { skillId: 'am_rest', level: 1 },
     mult: [20],
     desc: '被動技能。生命體召喚的鋅幣消耗 −20%。（官方是復活戰死的生命體，本作的生命體不是實體）'
+  },
+
+  /* ---------------- 聖殿十字軍 PA_（#74）----------------
+     第一個**進階二轉的分支**（前六個進階二轉都在代表分支上）。官方 4 個技能全做。
+
+     | 官方 | 本作 | 差異 |
+     |---|---|---|
+     | 連續盾擊 PA_SHIELDCHAIN | `pa_shieldchain` | 照官方 |
+     | 神之威壓 PA_PRESSURE    | `pa_pressure`    | 照官方 |
+     | 捨命攻擊 PA_SACRIFICE   | `pa_sacrifice`   | 前置改掉、加 HP 下限 |
+     | 聖音 PA_GOSPEL          | `pa_gospel`      | 拿掉「不能動」，效果表由使用者指定 |
+
+     **官方前置有一個接不上**：捨命攻擊要「犧牲 Lv3」，而犧牲（CR_DEVOTION）在本作
+     沒有實作——它是把傷害轉移給隊友的技能，等隊伍系統。使用者 2026-08-14 指定前置改掉，
+     這裡改成掛在霸體 Lv1（官方的另一個前置，本作有）。
+
+     **命中修正 +20 做了**（#76 修正）：先前這裡寫「本作技能必中，所以 +20 沒東西可修正」
+     是錯的——`case 'damage'` 一直都有命中判定。改用既有的 `hitBonusOnCast`（背刺那個欄位）。 */
+
+  /* 官方：ATK 500%~1300%，「傷害會根據施展者的基本等級、盾牌重量和其精煉值而增加」。
+     三個加成本作都有現成的欄位：盾重與精煉走迴旋盾擊那兩個（`shieldWeightMult` /
+     `shieldRefineMult`，會併進武器那一桶，所以跟著吃屬性與體型），
+     基本等級走轉生術那個 `levelScaleMax`（基本等級 99 時吃滿）。 */
+  pa_shieldchain: {
+    id: 'pa_shieldchain', name: '連續盾擊 Shield Chain', maxLv: 5,
+    type: 'damage', element: 'neutral', requiresEquip: 'shield',
+    spCost: [28, 31, 34, 37, 40], cooldown: [3, 3, 3, 3, 3],
+    requires: { skillId: 'cr_shieldboomerang', level: 5 },
+    mult: [5, 7, 9, 11, 13],
+    shieldWeightMult: 1.0, shieldRefineMult: 4,
+    levelScaleMax: 50,
+    hitBonusOnCast: [20, 20, 20, 20, 20],
+    desc: '需裝備盾牌。用盾牌連續攻擊，造成 ATK 500%~1300% 傷害，命中修正 +20，'
+        + '並依盾牌的重量與精煉值額外增傷，傷害另隨基本等級上升（99 級時 +50%）。'
+  },
+  /* 官方：聖屬性魔法 MATK 650%~1250%，隨基本等級增加。
+     **這招在坦身上不會痛**——十字軍線 matkMod 1.0、加點表 INT 只有 6 級。
+     使用者 2026-08-14 指定照官方做，定位是「多一個玩法，不一定要強勢」，
+     所以不另外給聖殿十字軍 matkMod 去補。想讓它痛就得自己堆 INT 與魔攻裝。 */
+  pa_pressure: {
+    id: 'pa_pressure', name: '神之威壓 Pressure', maxLv: 5,
+    type: 'magic', element: 'holy',
+    spCost: [30, 35, 40, 45, 50], cooldown: [5, 5, 5, 5, 5],
+    requires: { skillId: 'cr_trust', level: 5 },
+    mult: [6.5, 8.0, 9.5, 11.0, 12.5],
+    levelScaleMax: 50,
+    desc: '從空中召喚巨型十字架壓制敵人，造成聖屬性 MATK 650%~1250% 傷害，'
+        + '傷害隨基本等級上升（99 級時 +50%）。'
+  },
+  /* 官方：SP 100，下 5 次普攻每次消耗 9% 的 HP，用該數值 ×100%~140% 當傷害，
+     無視迴避與防禦。使用者 2026-08-14 指定照官方做，只加兩件事：
+       持續時間 60~90 秒  官方沒有時限（放了就等你打完 5 下），本作補一個窗口
+       HP 下限            「只限制沒血不能放，不會放到死掉就好」
+
+     HP 下限這條是**武僧發勁那個坑的同一版**：自傷型的普攻觸發在高攻速下會把玩家
+     釘在 1 HP。差別是發勁最後靠 10 秒冷卻壓住，這招官方就只有 5 次，
+     所以不必加冷卻，只要「扣完會死就不扣」——次數留著，補完血再繼續。
+
+     這招要強必須撐高 HP（傷害 = 最大HP 9% × 倍率），
+     而堆 VIT 本來就會壓低攻速，5 次不會在一瞬間燒完。 */
+  pa_sacrifice: {
+    id: 'pa_sacrifice', name: '捨命攻擊 Sacrifice', maxLv: 5,
+    type: 'buff_sacrifice', element: 'neutral',
+    spCost: [100, 100, 100, 100, 100],
+    cooldown: [60, 68, 75, 83, 90],          // 跟持續時間一樣長，同時只會有一份
+    requires: { skillId: 'endure', level: 1 },
+    charges: 5, hpCostPct: 9,
+    mult: [1.0, 1.1, 1.2, 1.3, 1.4],
+    duration: [60, 68, 75, 83, 90],
+    desc: '持續 60~90 秒或用完 5 次為止：普攻時額外消耗 9% 最大HP，'
+        + '以該數值的 100%~140% 對目標造成無視迴避與防禦的傷害。'
+        + 'HP 不足以支付時這一次不觸發（次數留著），不會把自己打死。'
+  },
+  /* 官方是「唱頌 1 分鐘，期間無法移動、攻擊或使用技能」——放置遊戲不能有這種東西，
+     使用者 2026-08-14 指定拿掉限制、改成輔助型的場域，其餘照官方：
+     SP 80/100、機率 55%~100%、每 10 秒扣 HP 30/45 與 SP 20/35、持續 60 秒。
+
+     效果表兩邊各自擲一次機率（官方就是「有機率」），正面給自己、負面給場上全部敵人。
+     兩張表都由使用者指定，不是官方的隨機 buff 清單——官方那份要隊伍系統才有意義。 */
+  pa_gospel: {
+    id: 'pa_gospel', name: '聖音 Gospel', maxLv: 10,
+    type: 'field_gospel', element: 'holy',
+    spCost: [80, 80, 80, 80, 80, 100, 100, 100, 100, 100],
+    cooldown: [60, 60, 60, 60, 60, 60, 60, 60, 60, 60],
+    requires: { skillId: 'cr_trust', level: 8 },
+    chance: [55, 60, 65, 70, 75, 80, 85, 90, 95, 100],
+    hpDrain: [30, 30, 30, 30, 30, 45, 45, 45, 45, 45],
+    spDrain: [20, 20, 20, 20, 20, 35, 35, 35, 35, 35],
+    tickSec: 10,
+    duration: [60, 60, 60, 60, 60, 60, 60, 60, 60, 60],
+    desc: '唱頌福音 60 秒，每 10 秒扣自身 HP 30/45 與 SP 20/35，'
+        + '並各以 55%~100% 機率對自己與全體敵人隨機發動一種效果。'
+        + '　自己：全素質+10／隨機補血 1~9999／異常狀態免疫／命中與迴避+20（各持續 10 秒）。'
+        + '　敵人：無視防禦與迴避的 1~9999 亂數傷害／黑暗／中毒／10 級挑釁／無事發生。'
+  },
+
+  /* ---------------- 智者 PF_（#76）----------------
+     賢者的進階二轉。官方 8 個技能全做，**前置全部照官方**——
+     這職業運氣好，八個官方前置在本作全部存在（聖殿十字軍就缺了犧牲）。
+
+     使用者 2026-08-14 的指定裡，五個改成被動（放置遊戲不該要人一直點），
+     三個維持主動：易燃之網、雙倍投擲、HP轉換。
+
+     | 官方 | 本作 | 改動 |
+     |---|---|---|
+     | 易燃之網 PF_SPIDERWEB     | `pf_spiderweb`    | 拿掉「同時最多 2 個」，加 CD 5 秒 |
+     | 薄霧牆 PF_FOGWALL         | `pf_fogwall`      | 改被動：全體 50% 黑暗 2 秒，CD 10 秒 |
+     | 雙倍投擲 PF_DOUBLECASTING | `pf_doublecasting`| 照官方 |
+     | 速讀術 PF_MEMORIZE        | `pf_memorize`     | 詠唱本作沒有 → 改成雙倍投擲 +20% |
+     | HP轉換 PF_HPCONVERSION    | `pf_hpconversion` | 照官方 |
+     | 心神互換 PF_SOULCHANGE    | `pf_soulchange`   | 怪物沒有 SP → 改成普攻沉默 |
+     | 精神耗弱術 PF_SOULBURN    | `pf_soulburn`     | 官方限 PVP、且怪物沒 SP → 改成沉默＋魔法傷害 |
+     | 精神撼動 PF_MINDBREAKER   | `pf_mindbreaker`  | MATK 那半沒有對象（怪物沒有 matk 欄位），只留 MDEF |
+
+     **兩個「本作沒有」的老問題又出現了**：詠唱時間（速讀術）與怪物的 SP
+     （心神互換、精神耗弱術）。前者跟 #71 的取消施法／自由施法同一個坑，
+     後者是本輪才發現的——681 隻怪有 mdef，**0 隻有 sp**。 */
+
+  pf_spiderweb: {
+    id: 'pf_spiderweb', name: '易燃之網 Spider Web', maxLv: 1,
+    type: 'debuff_web', element: 'earth',
+    spCost: [30], cooldown: [5],
+    requires: { skillId: 'sa_dragonology', level: 4 },
+    costItems: ['spiderweb'], goldFallback: 1000,
+    fleeFlat: [50], duration: [8],
+    desc: '消耗蜘蛛絲 ×1（背包沒有就找倉庫，都沒有則付 1,000 鋅幣），'
+        + '使目標迴避 −50 持續 8 秒；期間目標受到的火屬性傷害加倍，'
+        + '但網子會被那一擊燒掉。對 BOSS 無效。'
+  },
+  /* 官方是 5×3 的霧牆：進入的敵人黑暗，而且範圍內單體技能 75% 失敗、遠距離與魔法傷害大減。
+     本作沒有座標，「牆」與「進入」都沒有對象；使用者 2026-08-14 指定只留黑暗那半，
+     改成被動：普攻時對**全體敵人各判定一次**。 */
+  pf_fogwall: {
+    id: 'pf_fogwall', name: '薄霧牆 Fog Wall', maxLv: 1,
+    type: 'passive', passiveStat: 'fogWall',
+    spCost: [0], cooldown: [0],
+    requires: [{ skillId: 'sa_violentgale', level: 2 }, { skillId: 'sa_deluge', level: 2 }],
+    mult: [50], ailSec: [2], internalCooldown: [10],
+    desc: '被動技能。普攻時對場上全體敵人各判定一次，50% 機率使其陷入黑暗 2 秒（內部冷卻 10 秒）。'
+  },
+  /* 官方：火箭／冰箭／雷擊術有機率立刻再放一次，持續 90 秒。照官方做。
+     跟賢者的自動念咒是同一組技能池，兩個疊起來就是真正的連射。 */
+  pf_doublecasting: {
+    id: 'pf_doublecasting', name: '雙倍投擲 Double Casting', maxLv: 5,
+    type: 'buff_doublecast', element: 'neutral',
+    spCost: [40, 45, 50, 55, 60], cooldown: [90, 90, 90, 90, 90],
+    requires: { skillId: 'sa_autospell', level: 1 },
+    mult: [40, 50, 60, 70, 80],
+    duration: [90, 90, 90, 90, 90],
+    desc: '持續 90 秒：施放火箭術／冰箭術／雷擊術時，有 40%~80% 機率立刻再放一次（不另外消耗 SP）。'
+  },
+  /* 官方是「下 5 次技能的變動詠唱時間減半」，而本作沒有詠唱時間
+     （跟 #71 的取消施法／自由施法撞同一面牆）。
+     使用者 2026-08-14 指定改成被動：直接加在雙倍投擲的機率上。 */
+  pf_memorize: {
+    id: 'pf_memorize', name: '速讀術 Memorize', maxLv: 1,
+    type: 'passive', passiveStat: 'memorize',
+    spCost: [0], cooldown: [0],
+    requires: [{ skillId: 'sa_advancedbook', level: 5 }, { skillId: 'sa_freecast', level: 5 },
+               { skillId: 'sa_autospell', level: 1 }],
+    mult: [20],
+    desc: '被動技能。雙倍投擲的觸發機率 +20%。（官方是變動詠唱減半，本作沒有詠唱時間）'
+  },
+  /* 官方 detail 的兩欄是「SP 消耗 1~5」與「轉換率 10%~50%」，desc 寫「將自身 10% 的 HP 轉換成 SP」。
+     所以本作的讀法是：**消耗當前 HP 的 10%，換到的 SP = 消耗量 × 轉換率**。
+     用 `hpCostPct` 這個既有欄位（聖十字審判在用的那個），扣血與「HP 不足擋下來」
+     都由通用那段處理，case 只負責換算——自己再扣一次就是雙重扣血。 */
+  pf_hpconversion: {
+    id: 'pf_hpconversion', name: 'HP轉換 HP Conversion', maxLv: 5,
+    type: 'hp_convert', element: 'neutral',
+    spCost: [1, 2, 3, 4, 5], cooldown: [5, 5, 5, 5, 5],
+    requires: [{ skillId: 'spregen', level: 1 }, { skillId: 'sa_magicrod', level: 1 }],
+    hpCostPct: 10, mult: [10, 20, 30, 40, 50],
+    desc: '消耗當前 HP 的 10%，轉換成等同該數值 10%~50% 的 SP。HP 不足時放不出來。'
+  },
+  /* 官方是「與目標交換 SP，雙方各消耗一半」——**本作怪物沒有 SP 欄位**（681 隻有 mdef，0 隻有 sp），
+     交換沒有對象。使用者 2026-08-14 指定改成普攻觸發的沉默。 */
+  pf_soulchange: {
+    id: 'pf_soulchange', name: '心神互換 Soul Change', maxLv: 1,
+    type: 'passive', passiveStat: 'soulChange',
+    spCost: [0], cooldown: [0],
+    requires: [{ skillId: 'sa_magicrod', level: 3 }, { skillId: 'sa_spellbreaker', level: 2 }],
+    mult: [20], ailSec: [1], internalCooldown: [5],
+    desc: '被動技能。普攻時有 20% 機率使目標沉默 1 秒（內部冷卻 5 秒）。'
+  },
+  /* 官方「把目標 SP 變 0，Lv5 成功時造成該 SP 兩倍的魔法傷害，失敗時打自己，
+     且只能在 PVP 與攻城戰使用」——本作三個前提都不成立（沒有 PVP、怪物沒有 SP）。
+     使用者 2026-08-14 指定改成普攻觸發：沉默 + MATK 100%~200% 的魔法傷害。
+     魔法傷害不判定命中（#76 的規則：MATK 必中）。 */
+  pf_soulburn: {
+    id: 'pf_soulburn', name: '精神耗弱術 Soul Burn', maxLv: 5,
+    type: 'passive', passiveStat: 'soulBurn', element: 'ghost',
+    spCost: [0], cooldown: [0],
+    requires: [{ skillId: 'sa_castcancel', level: 5 }, { skillId: 'sa_magicrod', level: 3 },
+               { skillId: 'sa_dispell', level: 3 }],
+    mult: [40, 50, 60, 70, 70], ailSec: [1],
+    dmgMult: [1.0, 1.25, 1.5, 1.75, 2.0],
+    internalCooldown: [10, 9, 8, 7, 5],
+    desc: '被動技能。普攻時有 40%~70% 機率使目標沉默 1 秒，成功時另外造成 MATK 100%~200% 的'
+        + '念屬性魔法傷害（內部冷卻 10~5 秒）。'
+  },
+  /* 官方是 MDEF −12%~−60% 且 MATK +20%~+100%。
+     **MATK 那半沒有對象**——怪物資料裡沒有 matk 欄位，怪物技能的傷害不是從 MATK 算的。
+     使用者 2026-08-14 指定的數值是 MDEF −6%~−30%（官方的一半），只留這半。 */
+  pf_mindbreaker: {
+    id: 'pf_mindbreaker', name: '精神撼動 Mind Breaker', maxLv: 5,
+    type: 'passive', passiveStat: 'mindBreaker',
+    spCost: [0], cooldown: [0],
+    requires: [{ skillId: 'spregen', level: 3 }, { skillId: 'pf_soulburn', level: 2 }],
+    mult: [30, 32, 35, 37, 40],
+    mdefCut: [6, 12, 18, 24, 30], duration: [10, 10, 10, 10, 10],
+    internalCooldown: [10, 9, 8, 7, 5],
+    desc: '被動技能。普攻時有 30%~40% 機率使目標的魔法防禦 −6%~−30%，持續 10 秒（內部冷卻 10~5 秒）。'
+        + '（官方另有「目標 MATK 上升」的負面代價，本作怪物沒有 MATK 欄位，那半不實作）'
+  },
+
+  /* ---------------- 搞笑藝人／冷豔舞姬 CG_（#77）----------------
+     詩人與舞孃的進階二轉。官方 6 個共用技能，本作做 5 個
+     （傀儡師的把戲擱置，等隊伍系統——它是「把自身素質分一半給隊友」，沒有隊友就沒有對象）。
+
+     | 官方 | 本作 |
+     |---|---|
+     | 落花伴著月光下的水車小屋 | `cg_moonlit`：合奏類，普攻免傷一次 |
+     | 傀儡師的把戲             | 擱置（隊伍系統） |
+     | 職人演奏家               | `cg_specialsinger`：被動 ASPD +1 |
+     | 海羅默德的手杖           | `cg_hermode`：歌曲類，技能免傷一次 |
+     | 命運的塔羅牌             | `cg_tarotcard`：被動，普攻 20% 觸發十選一 |
+     | 奧義箭亂舞               | `cg_arrowvulcan`：照官方 |
+
+     兩邊共用同一份定義（跟 `bd_*` 那十個詩舞共用技一樣），前置各自對到自己那條線。 */
+
+  /* 官方是 5×5 的防護罩（無法進入，但仍會受外來攻擊）——本作沒有座標。
+     使用者 2026-08-15 指定改成「被打到免傷一次，冷卻 10 秒」。
+     走既有的 `block` 桶（自動防禦與化學盾牌保護同一個），機率 100 + 冷卻 10 秒；
+     `blockScope: 'attack'` 讓它只擋普攻，技能那半是海羅默德的手杖負責。
+     開隊伍後與冷豔舞姬同時掛就是兩份，10 秒內免傷兩次——桶本來就支援多筆。 */
+  cg_moonlit: {
+    id: 'cg_moonlit', name: '落花伴著月光下的水車小屋 Moonlit Water Mill', maxLv: 5,
+    type: 'buff_block_timed', exclusiveGroup: 'ensemble',
+    spCost: [30, 40, 50, 60, 70], cooldown: [20, 25, 30, 35, 40],
+    requiresWeapon: 'instrument_whip',
+    blockScope: 'attack', blockCdSec: 10,
+    spDrain: [4, 8, 12, 16, 20], drainEverySec: 10,
+    duration: [20, 25, 30, 35, 40],
+    desc: '合奏類（同時只能開一個）。持續 20~40 秒，每 10 秒扣 SP 4~20：'
+        + '被普攻打到時免傷一次，冷卻 10 秒。'
+  },
+  cg_specialsinger: {
+    id: 'cg_specialsinger', name: '職人演奏家 Longing for Freedom', maxLv: 1,
+    type: 'passive', passiveStat: 'aspdFlat',
+    spCost: [0], cooldown: [0],
+    mult: [1],
+    desc: '被動技能，攻擊速度 +1。（官方是解除合奏後遺症，本作沒有那個後遺症）'
+  },
+  /* 官方限攻城戰、而且是給隊友魔法免疫——兩個前提本作都沒有。
+     使用者 2026-08-15 指定改成「被技能打到免傷一次，冷卻 10 秒」。 */
+  cg_hermode: {
+    id: 'cg_hermode', name: '海羅默德的手杖 Wand of Hermode', maxLv: 5,
+    type: 'buff_block_timed', exclusiveGroup: 'song',
+    spCost: [20, 30, 40, 50, 60], cooldown: [10, 20, 30, 40, 50],
+    requiresWeapon: 'instrument_whip',
+    blockScope: 'skill', blockCdSec: 10,
+    duration: [10, 20, 30, 40, 50],
+    desc: '歌曲類（同時只能開一個）。持續 10~50 秒：被怪物技能打到時免傷一次，冷卻 10 秒。'
+  },
+  /* 官方是主動、8%~40% 機率抽 14 張塔羅牌其中一張。
+     使用者 2026-08-15 指定改成被動、普攻 20% 觸發，效果表十選一（見 TAROT_CARDS）。 */
+  cg_tarotcard: {
+    id: 'cg_tarotcard', name: '命運的塔羅牌 Tarot Card of Fate', maxLv: 1,
+    type: 'passive', passiveStat: 'tarotCard',
+    spCost: [0], cooldown: [0],
+    mult: [20], internalCooldown: [10],
+    desc: '被動技能。普攻時有 20% 機率抽一張塔羅牌（內部冷卻 10 秒），十種效果隨機一種：'
+        + '沉默 2 秒／詛咒+暈眩+中毒／無視防禦 6666 傷害／無視防禦 4444 傷害／'
+        + 'ATK −20% 10 秒／解除敵方全部增益／無視防禦 1000 傷害／隨機兩種效果／'
+        + '睡眠或冰凍或石化／ATK 迴避 命中 防禦全部 −20% 10 秒。'
+  },
+  cg_arrowvulcan: {
+    id: 'cg_arrowvulcan', name: '奧義箭亂舞 Arrow Vulcan', maxLv: 10,
+    type: 'damage', element: 'neutral',
+    spCost: [12, 14, 16, 18, 20, 22, 24, 26, 28, 30],
+    cooldown: [3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
+    requiresWeapon: 'instrument_whip', consumeAmmo: 1,
+    mult: [6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+    levelScaleMax: 50,
+    desc: '需裝備樂器或鞭，消耗箭矢 ×1。連射造成 ATK 600%~1500% 傷害，'
+        + '傷害隨基本等級上升（99 級時 +50%）。'
+  },
+
+  /* ---------------- 創造者 BC_（#78）----------------
+     鍊金術士的進階二轉。官方 6 個做 3 個——使用者 2026-08-15 指定刪掉
+     植物栽培（召喚實體，本作玩家側召喚是 0 行）與鍊金術／藥水合成
+     （官方連 desc 都沒有，`maxLv: -1`，是開製作介面用的空技能）。 */
+
+  /* 官方是對 7×7 友方投擲纖細藥水。單人沒有友方，使用者指定改成被動的喝藥加成。
+     跟藥水投擲同一個桶，但**取大值不相加**——兩個都是「喝藥回復量」，
+     相加會變成 110%+150%，那不是官方任何一級的數字。 */
+  bc_slimpitcher: {
+    id: 'bc_slimpitcher', name: '纖細藥水投擲 Slim Pitcher', maxLv: 10,
+    type: 'passive', passiveStat: 'potionPitcher',
+    spCost: [0], cooldown: [0],
+    requires: { skillId: 'am_potionpitcher', level: 5 },
+    mult: [10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
+    desc: '被動技能。使用消耗品時的回復量變成 110%~200%（與藥水投擲取較高的那個，不疊加）。'
+        + '（開放隊伍系統後，隊友也會獲得 50% 的回復量）'
+  },
+  /* 官方 ATK 200%~2000%，傷害隨**目標的 VIT**、施展者的 INT 與基本等級增加。
+     本作怪物沒有 vit 欄位，使用者 2026-08-15 指定用 `defSoft` 代替——
+     軟防本來就是從 VIT 推導的，是同一個東西的下游。
+     破壞武器／鎧甲那半不做：本作裝備不會損壞，怪也沒有裝備（跟強酸攻擊同一個理由）。 */
+  bc_aciddemonstration: {
+    id: 'bc_aciddemonstration', name: '強酸火煙瓶投擲 Acid Demonstration', maxLv: 10,
+    type: 'damage', element: 'neutral',
+    spCost: [50, 50, 50, 50, 50, 50, 50, 50, 50, 50],
+    cooldown: [5, 5, 5, 5, 5, 5, 5, 5, 5, 5],
+    requires: [{ skillId: 'am_demonstration', level: 5 }, { skillId: 'am_acidterror', level: 5 }],
+    zenyCost: [30000, 30000, 30000, 30000, 30000, 30000, 30000, 30000, 30000, 30000],
+    alchemyCost: true,
+    mult: [2, 4, 6, 8, 10, 12, 14, 16, 18, 20],
+    targetSoftDefScale: 1, intScaleMax: 50, levelScaleMax: 50,
+    desc: '消耗 30,000 鋅幣，造成 ATK 200%~2000% 傷害。'
+        + '傷害隨**目標的軟防**（官方是目標 VIT，本作怪物沒有 VIT 欄位，用它推導出來的軟防代替）、'
+        + '自身 INT 與基本等級上升。'
+  },
+  /* 官方是四件裝備同時免於卸除與損壞——本作兩件事都不存在（#72 已確認）。
+     所以做成「四個化學保護一次全掛」，代價是單樣的兩倍價錢。 */
+  bc_fullprotection: {
+    id: 'bc_fullprotection', name: '所有化學武器保護 Full Chemical Protection', maxLv: 5,
+    type: 'buff_chemical', chemKind: 'all',
+    spCost: [40, 40, 40, 40, 40], cooldown: [5, 5, 5, 5, 5],
+    requires: [{ skillId: 'am_cp_weapon', level: 5 }, { skillId: 'am_cp_armor', level: 5 },
+               { skillId: 'am_cp_shield', level: 5 }, { skillId: 'am_cp_helm', level: 5 }],
+    zenyCost: [10000, 10000, 10000, 10000, 10000], alchemyCost: true,
+    mult: [100, 100, 100, 100, 100],
+    duration: [120, 240, 360, 480, 600],
+    desc: '消耗 10,000 鋅幣（單樣的兩倍），一次掛滿四個化學保護：'
+        + 'DEF +100／被攻擊時 20% 機率免傷（需裝盾，冷卻 10 秒）／最大HP +10%／武器ATK +20%，持續 2~10 分鐘。'
+        + '（開放隊伍系統後，隊友也會獲得一半效果）'
+  },
+
+  /* ---------------- 神行太保 ST_（#79）----------------
+     流氓的進階二轉。官方 4 個全做。 */
+
+  /* 官方「抵擋怪物或劍類武器的攻擊」——本作怪物沒有武器種類欄位，
+     使用者 2026-08-15 指定改成「怪物攻擊」全包，其餘照官方：
+     機率 15%~75%、最多 3 次、抵擋時只受一半傷害、且把擋下的那半反射回去。 */
+  st_rejectsword: {
+    id: 'st_rejectsword', name: '霸王魂 Reject Sword', maxLv: 5,
+    type: 'buff_reject', element: 'neutral',
+    spCost: [10, 15, 20, 25, 30], cooldown: [30, 30, 30, 30, 30],
+    mult: [15, 30, 45, 60, 75], charges: 3,
+    duration: [300, 300, 300, 300, 300],
+    desc: '持續 300 秒或用完 3 次為止：受到怪物攻擊時有 15%~75% 機率只吃一半傷害，'
+        + '並把擋下的那一半反射給對方。'
+  },
+  /* 官方核心是「隱身、不能攻擊、移速下降、SP 不自然恢復」——
+     放置遊戲不能有「不能攻擊」。使用者 2026-08-15 指定**只保留 STR 加成那半**。 */
+  st_chasewalk: {
+    id: 'st_chasewalk', name: '暗影追蹤 Chase Walk', maxLv: 5,
+    type: 'buff_flatstat', element: 'neutral',
+    spCost: [10, 10, 10, 10, 10], cooldown: [30, 30, 30, 30, 30],
+    // 官方前置是潛遁 Lv3，但本作的潛遁 maxLv 是 1（#69 壓縮過），照抄會變成永遠學不到
+    requires: [{ skillId: 'hiding', level: 5 }, { skillId: 'rg_tunneldrive', level: 1 }],
+    strBonus: [1, 2, 4, 8, 16], mult: [0],
+    duration: [30, 30, 30, 30, 30],
+    desc: 'STR +1~16，持續 30 秒。（官方另有隱身與移速下降，本作沒有位置概念，只留素質那半）'
+  },
+  /* 官方是「被技能打到不會改變抄襲記住的技能」——本作的抄襲是自己挑的，沒有被打掉的問題。
+     使用者 2026-08-15 指定改成「讓抄襲也能選被動攻擊技」。 */
+  st_preserve: {
+    id: 'st_preserve', name: '自由保護 Preserve', maxLv: 1,
+    type: 'passive', passiveStat: 'preserve',
+    spCost: [0], cooldown: [0],
+    requires: { skillId: 'rg_plagiarism', level: 10 },
+    mult: [1],
+    desc: '被動技能。抄襲的候選名單多出**被動攻擊技**（原本只能挑主動攻擊技）。'
+  },
+  st_fullstrip: {
+    id: 'st_fullstrip', name: '所有卸除 Full Strip', maxLv: 5,
+    type: 'passive', passiveStat: 'fullStrip',
+    spCost: [0], cooldown: [0],
+    requires: { skillId: 'rg_stripweapon', level: 5 },
+    mult: [7, 9, 11, 13, 15],
+    duration: [75, 90, 105, 120, 135],
+    desc: '被動技能。普攻時有 7%~15% 機率**同時**發動卸除頭盔、盾牌、鎧甲與武器，持續 75~135 秒。'
+  },
+
+  /* ---------------- 武術宗師 CH_（#79）----------------
+     武僧的進階二轉。官方 4 個全做，**四個都改成被動**（跟 #70 武僧整條線一致）。
+
+     連段鏈接上去之後長這樣：
+       六合拳 → 連環全身掌 → 猛龍誇強 ┬→ 伏虎拳 → 氣絕崩擊 → 阿修羅霸凰拳
+       普攻（爆氣中）→ 猛虎硬派山 ────┘
+     氣球體上限在武術宗師身上從 5 提高到 7（使用者指定），
+     否則新增的兩招各花 1 顆會把阿修羅的 5 顆擠掉——#70 已經踩過一次那個死鎖。 */
+
+  ch_soulcollect: {
+    id: 'ch_soulcollect', name: '狂蓄氣 Soul Collect', maxLv: 1,
+    type: 'passive', passiveStat: 'soulCollect',
+    spCost: [0], cooldown: [0],
+    requires: { skillId: 'mo_explosionspirits', level: 5 },
+    mult: [5], internalCooldown: [5],
+    desc: '被動技能。普攻時有 5% 機率一口氣補滿 5 顆氣球體（內部冷卻 5 秒）。'
+  },
+  ch_palmstrike: {
+    id: 'ch_palmstrike', name: '猛虎硬派山 Palm Strike', maxLv: 5,
+    type: 'passive', passiveStat: 'palmStrike',
+    spCost: [0], cooldown: [0],
+    requires: [{ skillId: 'mo_ironhand', level: 7 }, { skillId: 'mo_callspirits', level: 5 }],
+    mult: [3, 4, 5, 6, 7], strScale: 200,
+    chance: [20, 20, 20, 20, 20], stunSec: [1, 1, 1, 1, 1],
+    chainChance: [20, 20, 20, 20, 20], internalCooldown: [5, 5, 5, 5, 5],
+    desc: '被動技能，需爆氣狀態。普攻時有 20% 機率造成 ATK 300%~700% 傷害並使目標暈眩 1 秒'
+        + '（傷害隨 STR 與基本等級上升，內部冷卻 5 秒），之後有 20% 機率接上伏虎拳。'
+  },
+  ch_tigerfist: {
+    id: 'ch_tigerfist', name: '伏虎拳 Tiger Fist', maxLv: 5,
+    type: 'passive', passiveStat: 'tigerFist',
+    spCost: [0], cooldown: [0],
+    requires: [{ skillId: 'mo_ironhand', level: 5 }, { skillId: 'mo_tripleattack', level: 5 },
+               { skillId: 'mo_combofinish', level: 3 }],
+    mult: [6.5, 8, 9.5, 11, 12.5], cost: 1,
+    chance: [20, 20, 20, 20, 20],
+    stunChance: [20, 30, 40, 50, 60], stunSec: [2, 2, 2, 2, 2],
+    chainChance: [20, 20, 20, 20, 20],
+    desc: '被動技能。猛虎硬派山或猛龍誇強發動後有 20% 機率觸發：消耗 1 顆氣球體，'
+        + '造成 ATK 650%~1250% 傷害，20%~60% 機率使目標暈眩 2 秒，之後有 20% 機率接上氣絕崩擊。'
+  },
+  ch_chaincrush: {
+    id: 'ch_chaincrush', name: '氣絕崩擊 Chain Crush', maxLv: 10,
+    type: 'passive', passiveStat: 'chainCrush',
+    spCost: [0], cooldown: [0],
+    requires: [{ skillId: 'mo_ironhand', level: 5 }, { skillId: 'mo_callspirits', level: 5 },
+               { skillId: 'ch_tigerfist', level: 2 }],
+    mult: [2, 4, 6, 8, 10, 12, 14, 16, 18, 20], cost: 1,
+    chance: [20, 20, 20, 20, 20, 20, 20, 20, 20, 20],
+    desc: '被動技能。伏虎拳發動後有 20% 機率觸發：消耗 1 顆氣球體，造成 ATK 200%~2000% 傷害。'
+        + '之後在爆氣狀態下可以接上阿修羅霸凰拳（機率與猛龍誇強那條相同）。'
   },
 };

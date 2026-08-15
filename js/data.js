@@ -76,10 +76,25 @@ function monElementOf(monDef, mon) {
    那張表編碼的是原本的屬性與屬性等級，覆寫之後整張表都不再適用，只能回頭查克制表。 */
 function getElementMultiplierVsMonster(atkElement, monDef, mon) {
   const ov = monElementOverride(mon);
+  let m;
   if (!ov && monDef && monDef.elementResistance && monDef.elementResistance[atkElement] !== undefined) {
-    return monDef.elementResistance[atkElement] / 100;
+    m = monDef.elementResistance[atkElement] / 100;
+  } else {
+    m = getElementMultiplier(atkElement, ov || (monDef && monDef.element) || 'none');
   }
-  return getElementMultiplier(atkElement, ov || (monDef && monDef.element) || 'none');
+  /* 易燃之網（#76 智者）：官方「期間目標受到火屬性傷害時，傷害會變成雙倍，
+     但蜘蛛網會被燃燒而解除」。放在這裡是因為這支是唯一同時拿得到
+     **攻擊屬性**與**怪物實體**的地方；燒掉網子是副作用，所以只在真的是火屬性時發生。 */
+  if (mon && mon.webUntil && atkElement === 'fire') {
+    if (Date.now() < mon.webUntil) {
+      mon.webUntil = 0;
+      if (mon.debuffFlee) { delete mon.debuffFlee; delete mon.debuffFleeEnd; }
+      if (typeof logMsg === 'function' && monDef) logMsg(`🔥 ${monDef.name} 身上的蜘蛛網被燒掉了！（這一擊傷害加倍）`);
+      return m * 2;
+    }
+    mon.webUntil = 0;
+  }
+  return m;
 }
 
 // 中文欄位 → 引擎內部key 對照表（怪物資料來源用繁體中文，「闇」為「暗」的異體字需特別對應）
@@ -32728,6 +32743,8 @@ const WEAPON_REQ_CATEGORIES = {
   // 樂器／鞭子專用技能等於沒有武器限制
   instrument: ['instrument'],
   whip:    ['whip'],
+  // #77 搞笑藝人／冷豔舞姬共用同一份技能定義，官方寫的是「樂器和鞭子專用」
+  instrument_whip: ['instrument', 'whip'],
   knuckle: ['knuckle'],
   book:    ['book'],
   // #70 武僧的鐵沙掌：官方寫的是「空手或拳套」，所以 bare 也算一種合格的「武器」
@@ -32768,11 +32785,26 @@ function equipReqMet(req) {
 /* 查攻速表要用哪個職業的資料。進階二轉（領主騎士…）官方的攻速跟原二轉**完全相同**，
    所以不另外建表，靠 JOB_TREE 的 `aspdFrom` 指回本職。
    JOB_TREE 定義在 js/jobs.js，載入順序比 data.js 早，但這支函式只在執行期被呼叫，
-   所以拿 typeof 檔一下就好。 */
+   所以拿 typeof 檔一下就好。
+
+   **要一路跟到底**（#75 修）。以前只解析一層，所以
+     聖殿十字軍 → 十字軍 → `x_十字軍_聖殿十字軍`
+   這種兩段的指向會停在中間的 `crusader`，而 `ASPD_WEAPON_BASE` 裡沒有那個 key
+   （十字軍自己也是靠 aspdFrom 指過去的），於是**整個退回空手值 154**，
+   而且 `jobCanUseWeapon()` 查不到表時是「一律放行」，等於那個職業什麼武器都拿得動。
+   兩個症狀都不會報錯，只會讓數值悄悄不對——所以改成沿著 aspdFrom 一路跟到終點。
+   迴圈保護：跟超過 JOB_TREE 的職業數就當作資料寫錯，停在原地。 */
 function aspdJobKey(jobId) {
   if (typeof JOB_TREE === 'undefined') return jobId;
-  const j = JOB_TREE[jobId];
-  return (j && j.aspdFrom) || jobId;
+  let key = jobId;
+  const seen = new Set();
+  while (true) {
+    const j = JOB_TREE[key];
+    if (!j || !j.aspdFrom || j.aspdFrom === key) return key;
+    if (seen.has(key)) return key;      // 指成環，停在這裡
+    seen.add(key);
+    key = j.aspdFrom;
+  }
 }
 
 /* 詩人與舞孃拆表（#68）。

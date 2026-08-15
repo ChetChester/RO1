@@ -42,16 +42,13 @@ const JOB_TREE = {
     baseLevelReq: 45, jobLevelReq: 10, jobLevelMax: 99,
     hpMod: 0.37, spMod: 12.0, atkMod: 1.0, matkMod: 1.0,
     baseAspd: {"dagger":138,"sword":137,"tsword":null,"bow":null,"rod":129,"mace":144,"katar":null,"spear":null,"knuckle":null}, shieldPenalty: -6,
+    /* #75 修：以前沒寫 aspdFrom，而 `ASPD_WEAPON_BASE` 裡沒有 supernovice 這個 key
+       （官方那列叫 `x_超級初心者`），所以攻速一路退回空手值 154，
+       而且 `jobCanUseWeapon()` 查不到表時一律放行——超級新手拿得動拳刃、矛、樂器、鞭、槍械。 */
+    aspdFrom: 'x_超級初心者',
     next: [],
-    // 職業等級上限 99，加成點數比照一轉的密度往後鋪；六項平均分配，呼應「什麼都會一點」
-    bonusLevels: {
-      str: [4, 16, 28, 40, 52, 64, 76, 88],
-      agi: [7, 19, 31, 43, 55, 67, 79, 91],
-      vit: [10, 22, 34, 46, 58, 70, 82, 94],
-      int: [1, 13, 25, 37, 49, 61, 73, 85, 97],
-      dex: [3, 15, 27, 39, 51, 63, 75, 87, 99],
-      luk: [6, 18, 30, 42, 54, 66, 78, 90]
-    },
+    // 官方 BonusStats（rAthena job_stats.yml 的 Supernovice）
+    bonusLevels: { str:[1,13,25,37,49], agi:[3,15,27,39,52], vit:[5,17,29,41,56], int:[7,19,31,43,60], dex:[9,21,33,45,64], luk:[11,23,35,47,68] },
     skills: [],   // 自己沒有專屬技能，全部靠下面借
     borrowSkillsFrom: ['swordsman', 'mage', 'archer', 'merchant', 'thief', 'acolyte'],
     desc: '不選擇任何一條路，於是每一條路都走得到。體質孱弱，卻能使出六個職業的看家本領。'
@@ -472,7 +469,7 @@ const JOB_TREE = {
     // 進階二轉「取代」二轉（不再經過騎士那一站），所以二轉的技能整份借過來
     borrowSkillsFrom: ['knight'],
     next: [], nextLocked: ['runeknight'],
-    bonusLevels: { str:[4,10,15,21,27,33,46,47,52,58,64,70], agi:[13,38,55], vit:[1,3,8,12,17,18,23,29,36,43,60,66], int:[], dex:[11,19,31,40,48,49,62,68], luk:[5,20,28,37,57] },
+    bonusLevels: { str:[1,6,7,8,19,25,33,41,46,47,52,56,57,64,70], agi:[2,10,14,17,37,53,60,65], vit:[5,12,22,29,40,43,58,68], int:[13,67], dex:[4,11,16,28,31,36,44,49,62], luk:[3,27,38] },
     // 官方 8 個技能全數到齊（2026-08-08）
     skills: [
       'lk_berserk', 'lk_tensionrelax', 'lk_parrying', 'lk_aurablade',
@@ -488,7 +485,7 @@ const JOB_TREE = {
     // 進階二轉「取代」二轉（不再經過騎士那一站），所以二轉的技能整份借過來
     borrowSkillsFrom: ['wizard'],
     next: [], nextLocked: ['warlock'],
-    bonusLevels: { str:[12,56], agi:[6,10,24,34,41,43,46,47,60], vit:[38,64], int:[1,4,9,18,22,29,31,33,40,45,48,50,52,58,66,70], dex:[2,5,13,26,32,39,54,62], luk:[15,36,68] },
+    bonusLevels: { str:[20,40,60], agi:[8,18,26,34,50,56,65,69], vit:[3,29,47,53,66], int:[1,5,10,14,19,24,28,32,37,38,39,46,49,55,59,62,70], dex:[2,9,17,22,23,31,43,61,67], luk:[12,41,57] },
     skills: ['hw_ganbantein', 'hw_napalmvulcan', 'hw_souldrain', 'hw_magiccrasher', 'hw_magicpower', 'hw_gravitation'],
     desc: '把咒文推到極限的人，最後連自己都成了咒文的一部分。'
   },
@@ -500,7 +497,7 @@ const JOB_TREE = {
     // 進階二轉「取代」二轉（不再經過騎士那一站），所以二轉的技能整份借過來
     borrowSkillsFrom: ['hunter'],
     next: [], nextLocked: ['ranger'],
-    bonusLevels: { str:[11,25,34,47,58], agi:[3,7,15,19,27,31,39,43,52,62], vit:[9,21,37,50,66], int:[5,17,29,41,56], dex:[1,2,6,13,23,33,45,49,54,60,68,70], luk:[10,26,42,64] },
+    bonusLevels: { str:[8,24,45,61], agi:[2,6,10,11,21,28,33,38,43,48,58], vit:[12,32,55], int:[5,20,42,54,65], dex:[1,3,4,16,17,22,26,30,35,40,46,51,60,69], luk:[14,25,31,36,50,57,62,70] },
     skills: ['sn_windwalk', 'sn_sharpshooting', 'sn_sight', 'sn_falconassault'],
     desc: '一箭，一命。距離只是他與獵物之間的一個數字。'
   },
@@ -512,7 +509,7 @@ const JOB_TREE = {
     // 進階二轉「取代」二轉（不再經過騎士那一站），所以二轉的技能整份借過來
     borrowSkillsFrom: ['blacksmith'],
     next: [], nextLocked: ['mechanic'],
-    bonusLevels: { str:[1,7,13,22,30,38,44,50,54,62,70], agi:[10,26,40,58], vit:[4,16,28,36,46,52,66], int:[6,19,33,48,60], dex:[3,9,15,24,32,42,56,64], luk:[12,20,35,68] },
+    bonusLevels: { str:[2,3,17,26,33,52], agi:[7,19,20,31,36,58,64], vit:[9,13,29,48,60,65], int:[4,15,22,34,50,61], dex:[1,6,12,23,32,38,41,47,55,56,62,70], luk:[8,16,28,39,44,45,66,67] },
     // 官方 8 個，三個空技能（金錢鑄造／金屬塊製造／攻擊塔製作）刪除——見 js/skills.js
     skills: ['ws_weaponrefine', 'ws_cartboost', 'ws_cartterm', 'ws_meltdown', 'ws_overthrustmax'],
     desc: '鐵砧上敲出來的不只是武器，還有一整個時代的重量。'
@@ -525,7 +522,7 @@ const JOB_TREE = {
     // 進階二轉「取代」二轉（不再經過騎士那一站），所以二轉的技能整份借過來
     borrowSkillsFrom: ['assassin'],
     next: [], nextLocked: ['guillotinecross'],
-    bonusLevels: { str:[2,9,17,26,35,44,52,60,68], agi:[1,5,11,19,28,37,46,50,56,64,70], vit:[14,31,41,58], int:[23,48], dex:[7,21,33,43,54,66], luk:[3,15,29,39,62] },
+    bonusLevels: { str:[2,7,12,21,29,38,50,54,66], agi:[1,4,5,15,20,24,25,31,32,33,42,46,51,56,62], vit:[9,47,69], int:[], dex:[10,23,37,39,43,53,57,61,64,70], luk:[3,8,16,18,26,34,48,65] },
     // 官方 6 個，幻影步（ASC_HALLUCINATION）刪除——官方資料本身就是空的，見 js/skills.js
     skills: ['asc_katar', 'asc_cdp', 'asc_edp', 'asc_breaker', 'asc_meteorassault'],
     desc: '影子裡的影子。你察覺的那一刻，已經是他允許的。'
@@ -538,9 +535,124 @@ const JOB_TREE = {
     // 進階二轉「取代」二轉（不再經過騎士那一站），所以二轉的技能整份借過來
     borrowSkillsFrom: ['priest'],
     next: [], nextLocked: ['archbishop'],
-    bonusLevels: { str:[4,11,17,27,35,56], agi:[6,29,37,48,62], vit:[7,14,34,36,45,58,68], int:[8,9,22,42,43,52,60,70], dex:[16,20,25,32,54,64], luk:[1,3,10,21,31,39,50,66] },
+    bonusLevels: { str:[5,12,21,31,38,45,60], agi:[3,8,19,29,42,55,65,68], vit:[4,22,30,50,51,58,67], int:[1,7,11,20,23,24,34,47,57,61,66,70], dex:[13,16,26,28,37,43,46,56,62], luk:[40,49] },
     skills: ['hp_manarecharge', 'hp_basilica', 'hp_assumptio', 'hp_meditatio'],
     desc: '祈禱到了盡頭，連神都會側耳。'
+  },
+
+  /* ---------------- 分支線的進階二轉（tier 3）----------------
+     #74。上面那六個進階二轉掛在「代表分支」上，這七個掛在另一條分支上。
+     使用者 2026-08-14 指定「分支二轉的全部轉生那路一起處理」——
+     所以七個一次補齊，**技能之後逐步補**（只有聖殿十字軍先做完 4 個）。
+
+     補進 JOB_TREE 之後轉生的路就自動通了：`rebirthLine()` 是查
+     `nextLocked[0]` 在不在 JOB_TREE 裡，在就換上去，不在就退回二轉本身。
+     這七個一補進來，六條分支線的轉生斷層（BUGS #67-續）同時消失，不必改 engine。
+
+     四個共通設定沿用上面那批（理由寫在 highpriest 上方那段，不重複）：
+     jobLevelMax 70 / baseLevelReq 70 / hpSpFrom 與 aspdFrom 指回本職 /
+     hpMod 與 spMod 是本職 ×1.25。
+
+     `aspdFrom` 一律寫**本職的職業 id**。`aspdJobKey()` 會沿著 aspdFrom 一路跟到終點
+     （#75 改的；以前只解析一層，寫 'crusader' 會停在那裡、查不到表就整個退回空手值 154），
+     所以 聖殿十字軍 → 十字軍 → `x_十字軍_聖殿十字軍` 這種兩段的指向現在接得起來。
+
+     **`bonusLevels` 這批用的是官方轉生職自己的表**（rAthena job_stats.yml 的
+     Paladin / Professor / Clown / Gypsy / Creator / Stalker / Champion），
+     不是「本職的表 + 51~70」。官方轉生職的加成表跟原二轉是不同的兩張，
+     而 `computeJobBonuses()` 是每個職業各查各的表，進階二轉又取代了二轉
+     （轉生後的路線裡根本沒有十字軍那一站），所以直接用官方表是對的也是自洽的。
+     （上面那六個代表分支當初是用「本職的表 + 自己補 51~70」做的，跟官方對不上，
+     #75 已經連同超級新手一起校正成官方表——現在 34 個職業全部對得上 job_stats.yml。） */
+  paladin: {
+    id: 'paladin', name: '聖殿十字軍', tier: 3, icon: '🛡️', parent: 'crusader',
+    baseLevelReq: 70, jobLevelReq: 50, jobLevelMax: 70,
+    hpMod: 1.875, spMod: 3.75, atkMod: 1.65, matkMod: 1.0,
+    hpSpFrom: 'crusader', aspdFrom: 'crusader',
+    /* matkMod 維持十字軍的 1.0 沒有加。神之威壓雖然是魔法技能，但使用者 2026-08-14
+       指定「照官方，不一定要強勢」——想讓那招痛就自己堆 INT 與魔攻裝，不靠職業係數補。 */
+    borrowSkillsFrom: ['crusader'],
+    next: [], nextLocked: ['royalguard'],
+    bonusLevels: { str:[2,10,18,26,33,40,48,55,64], agi:[3,8,16,24,37,52,60,70], vit:[1,9,15,21,30,42,49,53,63,69], int:[7,14,29,43,54,61,65], dex:[6,12,17,23,36,45,57,68], luk:[39,59,67] },
+    // 官方 4 個技能全數到齊（#74）
+    skills: ['pa_shieldchain', 'pa_pressure', 'pa_sacrifice', 'pa_gospel'],
+    desc: '盾後面站著的不只是他自己。'
+  },
+  professor: {
+    // 名稱用「智者」：官方攻速表那一列就叫 `x_賢者_智者`，跟資料對齊（使用者 2026-08-14 指定）
+    id: 'professor', name: '智者', tier: 3, icon: '📚', parent: 'sage',
+    baseLevelReq: 70, jobLevelReq: 50, jobLevelMax: 70,
+    hpMod: 0.875, spMod: 8.75, atkMod: 1.0, matkMod: 1.6,
+    hpSpFrom: 'sage', aspdFrom: 'sage',
+    borrowSkillsFrom: ['sage'],
+    next: [], nextLocked: ['sorcerer'],
+    bonusLevels: { str:[5,18,27,36,45,56], agi:[3,12,23,32,43,50,54,60,69], vit:[7,24,39,63], int:[1,2,11,14,22,30,38,41,49,57,64,68,70], dex:[8,16,20,26,29,34,37,46,52,55,62], luk:[21,66] },
+    // 官方 8 個技能全數到齊（#76）
+    skills: [
+      'pf_spiderweb', 'pf_fogwall', 'pf_doublecasting', 'pf_memorize',
+      'pf_hpconversion', 'pf_soulchange', 'pf_soulburn', 'pf_mindbreaker',
+    ],
+    desc: '知識本身就是一種暴力，只是他習慣先說明。'
+  },
+  clown: {
+    id: 'clown', name: '搞笑藝人', tier: 3, icon: '🎺', parent: 'bard', genderLock: 'male',
+    baseLevelReq: 70, jobLevelReq: 50, jobLevelMax: 70,
+    hpMod: 1.0625, spMod: 5.625, atkMod: 1.65, matkMod: 0.9,
+    hpSpFrom: 'bard', aspdFrom: 'bard', baseAspd: 150,
+    borrowSkillsFrom: ['bard'],
+    next: [], nextLocked: ['minstrel'],
+    bonusLevels: { str:[5,10,19,33,45,54,62,70], agi:[1,4,9,13,24,32,36,49,53,58,65,68], vit:[16,59], int:[8,21,28,41,69], dex:[2,7,15,23,30,39,40,43,50,56,57,61,63,66], luk:[11,18,26,47] },
+    // 官方 6 個做 5 個（傀儡師的把戲擱置，等隊伍系統）
+    skills: ['cg_moonlit', 'cg_specialsinger', 'cg_hermode', 'cg_tarotcard', 'cg_arrowvulcan'],
+    desc: '掌聲響起的時候，戰場已經結束了。'
+  },
+  gypsy: {
+    id: 'gypsy', name: '冷豔舞姬', tier: 3, icon: '🌹', parent: 'dancer', genderLock: 'female',
+    baseLevelReq: 70, jobLevelReq: 50, jobLevelMax: 70,
+    hpMod: 1.0625, spMod: 5.625, atkMod: 1.65, matkMod: 0.9,
+    hpSpFrom: 'dancer', aspdFrom: 'dancer', baseAspd: 150,
+    borrowSkillsFrom: ['dancer'],
+    next: [], nextLocked: ['wanderer'],
+    bonusLevels: { str:[2,6,20,35,50,66], agi:[4,11,12,13,25,31,38,47,52,57,61,62,67,70], vit:[17,54], int:[8,26,39,53,60], dex:[1,9,14,15,18,22,23,28,33,41,43,45,49,58,65,69], luk:[27,63] },
+    // 跟搞笑藝人共用同一份（官方就是共用的六個）
+    skills: ['cg_moonlit', 'cg_specialsinger', 'cg_hermode', 'cg_tarotcard', 'cg_arrowvulcan'],
+    desc: '她跳的每一支舞，都是替誰送行。'
+  },
+  creator: {
+    id: 'creator', name: '創造者', tier: 3, icon: '🧬', parent: 'alchemist',
+    baseLevelReq: 70, jobLevelReq: 50, jobLevelMax: 70,
+    hpMod: 1.125, spMod: 5.625, atkMod: 1.55, matkMod: 0.9,
+    hpSpFrom: 'alchemist', aspdFrom: 'alchemist',
+    borrowSkillsFrom: ['alchemist'],
+    next: [], nextLocked: ['geneticist'],
+    bonusLevels: { str:[6,31,53,66], agi:[5,18,27,38,54,67], vit:[9,33,61], int:[7,13,22,30,46,59,68], dex:[1,10,15,23,35,41,42,43,47,49,56,57,63,70], luk:[3,8,20,25,34,45,51,52,60,64,69] },
+    // 官方 6 個做 3 個（植物栽培／鍊金術／藥水合成刪除，理由見 js/skills.js 的創造者區塊）
+    skills: ['bc_slimpitcher', 'bc_aciddemonstration', 'bc_fullprotection'],
+    desc: '他不再問代價，因為代價早就付完了。'
+  },
+  stalker: {
+    id: 'stalker', name: '神行太保', tier: 3, icon: '👁️', parent: 'rogue',
+    baseLevelReq: 70, jobLevelReq: 50, jobLevelMax: 70,
+    hpMod: 1.25, spMod: 5.0, atkMod: 1.75, matkMod: 0.7,
+    hpSpFrom: 'rogue', aspdFrom: 'rogue', baseAspd: 150,
+    borrowSkillsFrom: ['rogue'],
+    next: [], nextLocked: ['shadowchaser'],
+    bonusLevels: { str:[1,11,22,32,43,47,53,62,67], agi:[2,9,12,21,27,34,41,45,58,64,70], vit:[6,15,42,63], int:[5,44,57], dex:[10,16,17,26,29,37,38,49,52,56,60,66], luk:[4,20,24,31,50,59] },
+    // 官方 4 個技能全數到齊（#79）
+    skills: ['st_rejectsword', 'st_chasewalk', 'st_preserve', 'st_fullstrip'],
+    desc: '你回頭的時候，他就已經是你了。'
+  },
+  champion: {
+    id: 'champion', name: '武術宗師', tier: 3, icon: '🥋', parent: 'monk',
+    baseLevelReq: 70, jobLevelReq: 50, jobLevelMax: 70,
+    hpMod: 1.625, spMod: 6.25, atkMod: 1.85, matkMod: 0.8,
+    hpSpFrom: 'monk', aspdFrom: 'monk',
+    borrowSkillsFrom: ['monk'],
+    next: [], nextLocked: ['sura'],
+    bonusLevels: { str:[1,9,17,27,37,48,59,65,66], agi:[4,12,20,21,29,45,52,62,70], vit:[3,15,24,39,42,58,68], int:[2,11,33,47,56,64,69], dex:[6,16,22,30,38,44,50,53,60,67], luk:[13,34,46] },
+    // 官方 4 個技能全數到齊（#79），四個都是被動，跟 #70 武僧整條線一致
+    skills: ['ch_soulcollect', 'ch_palmstrike', 'ch_tigerfist', 'ch_chaincrush'],
+    desc: '一拳之後就沒有第二拳了，因為不需要。'
   }
 };
 
@@ -598,18 +710,11 @@ for (const job of Object.values(JOB_TREE)) {
 const JOBS_TIER2_PENDING = [];
 
 /* 二、還沒做的進階二轉。
-   **六個主線的進階二轉（領主騎士／高等巫師／狙擊之王／神匠／十字刺客／高階祭司）
-   已經在上面的 JOB_TREE 裡了**（2026-08-08 的框架），剩下這七個都掛在
-   JOBS_TIER2_PENDING 那七個還沒做的普通二轉底下，所以要先有父職業才做得起來。 */
-const JOBS_TRANS_PENDING = [
-  { id: 'paladin',       name: '聖殿十字軍',   parent: 'crusader' },
-  { id: 'professor',     name: '教授',         parent: 'sage' },
-  { id: 'clown',         name: '演奏者',       parent: 'bard' },
-  { id: 'gypsy',         name: '吉普賽',       parent: 'dancer' },
-  { id: 'creator',       name: '生命鍊成師',   parent: 'alchemist' },
-  { id: 'stalker',       name: '神行太保',     parent: 'rogue' },
-  { id: 'champion',      name: '拳聖',         parent: 'monk' },
-];
+   **2026-08-14 全部清空**：十三個進階二轉全部進了 JOB_TREE——
+   六個代表分支在 #58~#64、七個分支線在 #74。
+   技能還沒補完（只有領主騎士 8 個、高等巫師 6 個…與聖殿十字軍 4 個是完成的），
+   但**職業本體都在**，所以六條分支線的轉生路都通了。待補的技能清單見 docs/BUGS.md。 */
+const JOBS_TRANS_PENDING = [];
 
 // 三、三轉（tier 3）。官方一律從轉生二轉接上去，所以 parent 全在上面那份清單裡
 const JOBS_TIER3_PENDING = [

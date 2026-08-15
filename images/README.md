@@ -15,12 +15,39 @@ images/
 ├── monsters/     怪物圖，檔名 = 怪物編號.png（例如 1002.png）
 ├── items/        消耗品/素材圖，檔名 = 道具編號.png
 ├── maps/         地圖背景圖，檔名 = 地圖編號.png（例如 5001.png，建議 480×270 或同比例橫圖）
+├── frames/       玩家角色的逐格動畫，見下面「角色動畫」
 └── equip/
     ├── weapon/   武器圖，檔名 = 武器編號.png
     └── armor/    防具圖，檔名 = 防具編號.png
 ```
 
 音樂資料夾請見 `music/README.md`。
+
+## 角色動畫 frames/
+
+一個資料夾一組動作，裡面放 `frame_000.png` ～ `frame_019.png`（連號，不必放滿 20 張，
+放幾張就播幾格）。同一組裡的圖尺寸要一致，不同組之間不用。畫面上固定顯示成 120×160。
+
+資料夾名稱就是 `js/ui.js` 的 `getAnimKey()` 算出來的 key：
+
+| 格式 | 什麼時候播 | 例子 |
+|---|---|---|
+| `<職業id>_<性別>` | 普攻，也是站著不動時的預設 | `monk_male`、`sage_female` |
+| `<職業id>_<性別>_mount` | 該職業**手上拿槍**時，整組取代上面那個 | `lordknight_male_mount` |
+| `<職業id>_<性別>_skill` | 放技能的瞬間播一次，播完自己回上面那組 | `wizard_female_skill` |
+| `<職業id>_<性別>_mount_skill` | 騎乘中放技能 | `lordknight_male_mount_skill` |
+
+職業 id 看 `js/jobs.js` 的 `JOB_TREE`，性別只有 `male` / `female`。
+**沒有的組合就是沒有**——找不到資料夾不會噴錯，`_skill` 沒圖就不播施放動作，
+連普攻那組都沒有才會退回 `player_swordsman.svg` 那張靜圖。
+
+兩張對照表在 `js/ui.js`：
+- `MOUNT_SPRITE_JOBS` — 哪些職業拿槍要換騎乘圖，以及沒有自己的圖時去借誰的
+  （騎士與十字軍目前借騎士領主那組大嘴鳥）
+- `SPRITE_ALIAS` — 整個職業直接借別人的圖（超級新手借新手）
+
+還沒實作的職業（`JOBS_TRANS_PENDING` / `JOBS_TIER3_PENDING`）的圖已經先照
+上面的規則放好了，職業做出來當天不用再動圖。
 
 ## 規格建議
 - 格式：PNG（支援透明背景）
