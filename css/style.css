@@ -973,7 +973,19 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-deep); co
 .modal-box {
   width: 420px; max-width: 100%; background: var(--bg-panel); border: 1px solid var(--gold);
   border-radius: 14px; padding: 26px; box-shadow: 0 20px 60px rgba(0,0,0,0.55);
+  /* 內容再長也不超過視窗高度（#123）。改成直排 flex 之後，
+     只有**中間那塊**會捲——標題與底下的按鈕永遠留在畫面上。
+     整個盒子一起捲的話，「我知道了」會被推到看不見的地方，
+     使用者得先捲到底才關得掉。 */
+  display: flex; flex-direction: column;
+  max-height: calc(100vh - 40px);   /* 40px = overlay 的上下 padding */
 }
+/* 中間可捲的那塊。用 :not() 排除固定不動的標題與按鈕，
+   免得每個彈窗都要另外加 class */
+.modal-box > *:not(.modal-title):not(.modal-confirm):not(.consent-row) {
+  overflow-y: auto; min-height: 0;
+}
+.modal-title, .modal-confirm, .consent-row { flex: 0 0 auto; }
 .modal-title { font-family: var(--font-display); color: var(--gold-soft); margin: 0 0 14px; text-align: center; }
 .offline-duration { font-size: 14px; line-height: 1.7; color: var(--ink); margin: 0 0 10px; }
 .offline-levelup { color: var(--gold-soft); font-weight: 700; margin-bottom: 10px; }
@@ -1817,8 +1829,8 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-deep); co
 /* 回安全區鈕（#120）：貼在「選擇地區」標題右邊 */
 .map-home-btn { float: right; font-size: 12px; }
 
-/* 首次確認視窗與法律聲明（#121）*/
-.modal-box-tall { max-width: 620px; max-height: 82vh; overflow-y: auto; }
+/* 首次確認視窗與法律聲明（#121）。捲動交給 .modal-box 那組規則（#123）*/
+.modal-box-tall { width: 620px; }
 .consent-row {
   display: flex; align-items: center; gap: 8px; justify-content: center;
   margin: 14px 0 4px; font-size: 13px; cursor: pointer;
