@@ -1,4 +1,14 @@
 /* ============================================================
+   諸神放置錄 — 免費同人放置遊戲
+   本作完全免費，純為懷舊而作。**禁止任何形式的販售或營利**
+   （販售、內購、付費解鎖、廣告分潤皆不允許），修改版本亦同。
+   設定致敬《仙境傳說 Ragnarok Online》；程式與文字為原創實作，
+   與 Gravity Co., Ltd. 無關，亦未獲其授權或認可。
+   授權：CC BY-NC-SA 4.0（可散布可改作，不得商用，衍生版本須同樣授權）。
+   特別鳴謝：本作靈感源自 秋玥[shifine] 發布的免費遊戲。
+   完整聲明與授權全文見 repo 根目錄的 LICENSE。
+   ============================================================ */
+/* ============================================================
    RO 放置世界 — 核心資料表
    所有數值/文字資料集中於此，engine.js 只讀取不寫死。
    ============================================================ */
@@ -32191,10 +32201,45 @@ const AUTO_BUY_QTY = 100;
 
 /* 基礎經驗。50 級是分水嶺：前段只比舊曲線陡一點（×1.8），
    要的三小時全押在 50 級之後，所以後段的冪次從 1.39 跳到 4.12。 */
+/* ---------------- 基礎經驗曲線 ----------------
+
+   1~99 是原本那兩段（1~50 一小時、50~80 兩小時、80~99 三小時，見 #80）。
+
+   100~200 是進階二轉的延伸段（#110）。**不是把 99 那條公式外推**——
+   外推出來 Lv99→200 只有 1.68 億，照每日預算算不到五天就走完了。
+
+   照的是官方三轉曲線的**形狀**：比率逐段變陡，重量全壓在最後十級。
+   官方原始數字（100 級 127 萬 → 200 級 71 億、總量 670 億）直接搬進來要 59 個月，
+   整條等比縮小又會讓 Lv100 比 Lv99 還便宜（曲線往下掉一階），
+   所以改成「起點接著 Lv99、比率分四段加速」，兩件事同時滿足：
+
+     · 起點 260,000，接在 Lv99 的 246,900 之後，沒有斷層
+     · 190→200 佔 100→200 總量的 67.5%（官方 66.8%）
+       180→200 佔 87.1%（官方 88.0%）、150→200 佔 98.5%（官方 99.2%）
+
+   校準目標（使用者 2026-08-16 指定）：**打寶模式一般檔（經驗 ×5）三個月達成 Lv200**。
+   每日預算取「2 小時主動 + 22 小時離線」＝ 3,785 萬／天，90 天 ＝ 34 億，
+   而這條曲線 100→200 的總量就是 34.06 億。
+   不開打寶是 15 個月，瘋狂檔（×10）是 1.5 個月。
+
+   改任何一個係數之後，用 tools/measure_exp_curve.js 重新對一次。 */
+const BASE_EXP_L100 = 260000;              // Lv100→101 的需求（接在 Lv99 的 246,900 之後）
+const BASE_EXP_SEGS = [                    // [到幾級, 每級乘幾]
+  [130, 1.045],
+  [150, 1.06],
+  [180, 1.085],
+  [200, 1.1313],
+];
 function expToNextBaseLevel(level) {
-  return level < 50
-    ? Math.floor(65 * Math.pow(level, 1.39))
-    : Math.floor(14800 * Math.pow(level / 50, 4.12));
+  if (level < 50) return Math.floor(65 * Math.pow(level, 1.39));
+  if (level < 100) return Math.floor(14800 * Math.pow(level / 50, 4.12));
+  let need = BASE_EXP_L100;
+  let cur = 100;
+  for (const [to, r] of BASE_EXP_SEGS) {
+    while (cur < to && cur < level) { need *= r; cur++; }
+    if (cur >= level) break;
+  }
+  return Math.floor(need);
 }
 
 /* 職業經驗。**要看職業階層**，不能只看職業等級——
@@ -32240,6 +32285,9 @@ function monsterImgSrc(defId) {
 function itemImgSrc(itemId) {
   const def = ITEMS[itemId];
   if (!def) return `images/_placeholder_item.png`;
+  /* 遺物沒有 imgId（畫面上用 emoji），不先擋掉會組出 items/undefined.png，
+     每一列都送一次註定 404 的請求——雖然 onerror 會退回佔位圖，但那是白費的往返。 */
+  if (!def.imgId) return `images/_placeholder_${itemPlaceholderKind(def)}.png`;
   const dir = def.type === 'weapon' ? 'equip/weapon' : def.type === 'armor' ? 'equip/armor' : 'items';
   return resolveImgPath(`${dir}/${def.imgId}.png`);
 }

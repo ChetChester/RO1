@@ -23,6 +23,23 @@
   --font-body: 'Noto Sans TC', sans-serif;
 }
 
+/* 打寶模式的介面染色（#111）。**只覆寫三個底色 + 分隔線**——
+   金／緋紅／藍綠那幾個是狀態色（HP、SP、按鈕、警告），整份重畫的話
+   會全部失去對比，玩家反而看不出哪裡是可按的。
+   一般＝微紅、瘋狂＝暗紅，用色深度區分兩檔。 */
+body.farm-normal {
+  --bg-deep: #1a1218;
+  --bg-panel: #271a24;
+  --bg-panel-2: #32222e;
+  --line: #452a38;
+}
+body.farm-mad {
+  --bg-deep: #1c0c0f;
+  --bg-panel: #2d1014;
+  --bg-panel-2: #3b151b;
+  --line: #5a1d24;
+}
+
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-deep); color: var(--ink); font-family: var(--font-body); }
 
@@ -220,17 +237,24 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-deep); co
 .ally-hp-fill { height: 100%; background: linear-gradient(90deg, #d94f4f, #ff8a6b); }
 
 /* 浮動面板：疊在戰鬥區右側，遊戲照跑（不是 modal-overlay） */
+/* 標題列（🤝 隊友 ＋ ✕）要釘住不動（#109）：以前整個面板是捲動容器，
+   標題跟著內容一起捲走，加了自動戰鬥設定之後內容變長，往下捲就找不到關閉鈕。
+   改成外層不捲、只有 body 捲——跟倉庫／鍛造那兩個浮動視窗同一個結構。 */
 .ally-panel {
   position: absolute; top: 52px; right: 12px; z-index: 6;
-  width: 380px; max-height: calc(100% - 76px); overflow-y: auto;
+  width: 380px; max-height: calc(100% - 76px);
+  display: flex; flex-direction: column; overflow: hidden;
   padding: 10px 12px; border-radius: 10px;
   background: rgba(18,20,28,0.94); border: 1px solid var(--gold);
   box-shadow: 0 12px 32px rgba(0,0,0,0.5);
 }
 .ally-panel-head {
+  flex: none;
   display: flex; align-items: center; justify-content: space-between;
   font-size: 12px; color: var(--gold-soft); margin-bottom: 6px;
 }
+/* min-height:0 少了的話 flex 子元素不會縮，body 撐爆外層就等於沒有捲動 */
+#ally-panel-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
 .ally-panel-close {
   background: none; border: none; color: var(--ink-dim); cursor: pointer; font-size: 13px;
 }
@@ -240,6 +264,8 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-deep); co
 .ally-opt label { flex-wrap: wrap; }
 .ally-range { width: 110px; vertical-align: middle; }
 .ally-sec-toggle { cursor: pointer; display: flex; justify-content: space-between; align-items: baseline; }
+/* 隊友自動戰鬥區塊裡的說明小字（#105） */
+.ally-note-sm { font-size: 11px; color: var(--ink-dim); margin: 4px 0 2px; line-height: 1.5; }
 .ally-sec-toggle:hover { color: var(--gold); }
 .ally-note { font-size: 11px; color: var(--ink-dim); line-height: 1.7; margin-bottom: 10px; }
 .ally-sec {
@@ -1465,6 +1491,12 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-deep); co
 .codex-spot.shop .codex-spot-name { flex: none; color: var(--gold-soft); }
 .codex-spot.mvp { border-left: 2px solid var(--gold); }
 .codex-spot.mvp .codex-spot-pct { color: var(--teal-soft); }
+/* MVP 出沒地圖的「BOSS 模式」標籤（#108） */
+.codex-spot-mvp {
+  flex: none; font-size: 9px; padding: 1px 5px; border-radius: 3px;
+  color: var(--crimson-soft); border: 1px solid var(--crimson); white-space: nowrap;
+}
+.codex-mvp-note { display: block; margin: 2px 0 4px; }
 .codex-go {
   flex: none; padding: 2px 8px; font-size: 10px; border-radius: 4px; cursor: pointer;
   background: rgba(212,175,55,0.12); border: 1px solid var(--gold-soft); color: var(--gold-soft);
@@ -1641,3 +1673,146 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-deep); co
 .cmp-up, .cmp-down { display: inline-block; margin-right: 10px; font-variant-numeric: tabular-nums; }
 .cmp-up { color: #6dd47e; }
 .cmp-down { color: var(--crimson-soft); }
+
+/* ---------------- 遺物頁（#113／#115 改版）----------------
+   八格欄位釘在頂端跟著分頁鈕一起 sticky；套裝說明改走 tooltip，
+   欄位本身只用發光顏色表示湊到第幾段（2 綠／3 黃／5 紅）。 */
+.relic-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
+  margin: 8px 0; padding-bottom: 8px;
+}
+.relic-cell {
+  border: 1px solid var(--line); border-radius: 6px; padding: 8px 4px;
+  text-align: center; background: var(--bg-panel-2); min-height: 66px;
+}
+.relic-cell.empty { opacity: .45; }
+.relic-cell.filled { cursor: pointer; border-color: var(--gold, #c9a24a); }
+.relic-cell.filled:hover { background: var(--bg-panel); }
+.relic-cell-icon { font-size: 20px; line-height: 1.1; }
+.relic-cell-name { font-size: 11px; margin-top: 2px; }
+.relic-cell-set { font-size: 10px; color: var(--ink-dim); }
+
+/* 湊到第幾段就發什麼光。用外框＋光暈而不是改底色——
+   打寶模式已經把整個介面染紅了，改底色會分不出來 */
+.relic-cell.glow2 { border-color: #4fd07a; box-shadow: 0 0 8px rgba(79,208,122,.55); }
+.relic-cell.glow3 { border-color: #f2c744; box-shadow: 0 0 9px rgba(242,199,68,.6); }
+.relic-cell.glow5 { border-color: #ff5a4a; box-shadow: 0 0 11px rgba(255,90,74,.7); }
+
+/* 背包分頁（#116）：一次只看一套，切換鈕吃跟欄位一樣的發光顏色 */
+.relic-bag-tabs {
+  display: flex; flex-wrap: wrap; gap: 4px; margin: 10px 0 6px;
+}
+.relic-tab { font-size: 12px; }
+.relic-tab-n { font-variant-numeric: tabular-nums; opacity: .75; margin-left: 2px; }
+.relic-tab.glow2 { border-color: #4fd07a; }
+.relic-tab.glow3 { border-color: #f2c744; }
+.relic-tab.glow5 { border-color: #ff5a4a; }
+.relic-bag-missing {
+  font-size: 11px; color: var(--ink-dim); margin: 0 0 6px 8px;
+}
+
+/* 這一格現在被誰佔著。空著＝可直接穿，別套＝穿上去會換掉那件 */
+.relic-occ { font-size: 11px; }
+.relic-occ.free { color: #4fd07a; }
+.relic-occ.same { color: var(--ink-dim); }
+.relic-occ.swap { color: #f2c744; }
+
+.relic-bag-group { margin-bottom: 10px; }
+.relic-bag-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-weight: 600; padding: 4px 8px; margin-bottom: 4px;
+  border-left: 3px solid var(--line); background: var(--bg-panel-2); border-radius: 0 4px 4px 0;
+}
+.relic-bag-head.glow2 { border-left-color: #4fd07a; }
+.relic-bag-head.glow3 { border-left-color: #f2c744; }
+.relic-bag-head.glow5 { border-left-color: #ff5a4a; }
+.relic-bag-count { font-weight: 400; font-size: 12px; color: var(--ink-dim); }
+
+.relic-merchant {
+  border: 1px dashed var(--line); border-radius: 6px; padding: 8px 10px; margin-bottom: 10px;
+}
+.relic-merchant-head { font-weight: 600; margin-bottom: 6px; }
+.relic-merchant-sub { font-weight: 400; font-size: 12px; color: var(--ink-dim); }
+.relic-merchant-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 4px; }
+.relic-merchant-note { font-size: 11px; color: var(--ink-dim); }
+.relic-row-icon {
+  width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-size: 20px;
+}
+
+/* tooltip 裡的套裝三段 */
+.tt-relic-count.glow2 { color: #4fd07a; }
+.tt-relic-count.glow3 { color: #f2c744; }
+.tt-relic-count.glow5 { color: #ff5a4a; }
+.tt-relic-tier { display: flex; gap: 8px; font-size: 12px; padding: 3px 0; line-height: 1.35; }
+.tt-relic-tier.off { opacity: .42; }
+.tt-relic-need { flex: 0 0 52px; font-variant-numeric: tabular-nums; }
+
+/* ---- 武僧遺物的兩個特效（#113）---- */
+/* 加特林的「-1」：比一般傷害小一號、偏金色，讓一排連射看起來是同一串 */
+.damage-float.gatling {
+  font-size: 15px; color: #ffd76a; text-shadow: 0 0 4px rgba(255,180,40,.8);
+}
+/* 佛法無邊：全身黃光一秒 */
+@keyframes buddha-glow-kf {
+  0%   { filter: drop-shadow(0 0 0 rgba(255,215,90,0)); }
+  25%  { filter: drop-shadow(0 0 14px rgba(255,215,90,1)) brightness(1.35); }
+  100% { filter: drop-shadow(0 0 0 rgba(255,215,90,0)); }
+}
+.player-sprite.buddha-glow { animation: buddha-glow-kf 1s ease-out; }
+.damage-float.buddha-text {
+  color: #ffd76a; font-size: 20px; font-weight: 700;
+  text-shadow: 0 0 8px rgba(255,180,40,.9);
+}
+
+/* ---------------- 免責聲明（#118）----------------
+   標題畫面用有框的區塊（要被看到），遊戲中用細細一行（不能擋路）。
+   兩者的文字都來自 js/about.js，這裡只管長相。 */
+.disclaimer-box {
+  position: relative; z-index: 1;
+  margin: 36px auto 0; max-width: 640px;
+  border: 1px solid var(--line); border-radius: 8px;
+  padding: 12px 16px; background: rgba(0,0,0,.28);
+}
+.disclaimer-badge {
+  font-weight: 700; font-size: 13px; letter-spacing: .5px;
+  color: var(--gold, #c9a24a); margin-bottom: 8px;
+}
+.disclaimer-lines {
+  font-size: 11px; line-height: 1.85; color: var(--ink-dim);
+}
+.disclaimer-lines div { margin: 1px 0; }
+
+/* 創角畫面：一行就好，不要擋住加點 */
+.disclaimer-inline {
+  margin-top: 14px; font-size: 11px; color: var(--ink-dim); opacity: .8; text-align: center;
+}
+
+/* 遊戲中的常駐頁尾：一直看得到，但只佔一行 */
+.disclaimer-footer {
+  flex: 0 0 auto;
+  padding: 4px 8px; font-size: 10px; line-height: 1.4;
+  color: var(--ink-dim); opacity: .7; text-align: center;
+  border-top: 1px solid var(--line); cursor: pointer;
+}
+.disclaimer-footer:hover { opacity: 1; }
+
+/* 關於視窗 */
+.about-lines { text-align: left; font-size: 13px; line-height: 1.75; margin: 10px 0; }
+.about-lines p { margin: 6px 0; }
+.about-home { font-size: 12px; color: var(--ink-dim); margin-top: 10px; }
+
+/* 授權與鳴謝（#119）*/
+.disclaimer-license {
+  margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line);
+  font-size: 11px;
+}
+.disclaimer-license a, .about-sec a { color: var(--gold, #c9a24a); }
+.about-sec {
+  text-align: left; margin-top: 12px; padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.about-sec h4 { margin: 0 0 6px; font-size: 13px; color: var(--gold, #c9a24a); }
+.about-sec p { margin: 4px 0; font-size: 12px; line-height: 1.7; }
+
+/* 回安全區鈕（#120）：貼在「選擇地區」標題右邊 */
+.map-home-btn { float: right; font-size: 12px; }

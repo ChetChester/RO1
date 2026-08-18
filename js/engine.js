@@ -1,4 +1,14 @@
 /* ============================================================
+   諸神放置錄 — 免費同人放置遊戲
+   本作完全免費，純為懷舊而作。**禁止任何形式的販售或營利**
+   （販售、內購、付費解鎖、廣告分潤皆不允許），修改版本亦同。
+   設定致敬《仙境傳說 Ragnarok Online》；程式與文字為原創實作，
+   與 Gravity Co., Ltd. 無關，亦未獲其授權或認可。
+   授權：CC BY-NC-SA 4.0（可散布可改作，不得商用，衍生版本須同樣授權）。
+   特別鳴謝：本作靈感源自 秋玥[shifine] 發布的免費遊戲。
+   完整聲明與授權全文見 repo 根目錄的 LICENSE。
+   ============================================================ */
+/* ============================================================
    RO 放置世界 — 遊戲引擎
    ============================================================ */
 
@@ -208,6 +218,11 @@ function createCharacter(name, statAlloc, gender) {
     rebirthPath: null,   // 轉生前走過的職業鏈，例 ['swordsman','knight']。轉生後只能照這條路重走
     learnedSkills: {},   // {skillId: level}
     equip: { head_top: null, head_mid: null, head_bottom: null, weapon: null, armor: null, shield: null, garment: null, footgear: null, accessory1: null, accessory2: null, ammo: null },
+    relics: emptyRelicSlots(),   // 遺物欄（#113）：8 格，跟一般裝備完全分開
+    relicReviveUsed: 0,          // 牧師遺物用掉幾次復活（換圖回滿）
+    relicReviveReadyAt: 0,
+    relicMonkReadyAt: 0,         // 武僧遺物的加特林冷卻
+    relicShieldReadyAt: 0,       // 鐵匠遺物的護盾冷卻
     equipSkin: 'grid',  // 裝備視窗外觀：grid / ro / ro_dark
     refinement: {},   // 舊版精煉資料（按itemId），僅供遷移讀取，新邏輯一律用 instances
     equippedCards: {}, // 舊版插卡資料（按欄位），僅供遷移讀取，新邏輯一律用 instances
@@ -224,6 +239,7 @@ function createCharacter(name, statAlloc, gender) {
        舊存檔沒有這個欄位時照樣退回 'melee'（見 loadGame），不改變既有角色的行為。 */
     encounterMode: 'ranged', // 'melee'=近戰, 'ranged'=遠攻
     mvpMode: false,         // MVP 模式開關
+    farmMode: 0,            // 打寶模式（#110）：0 關／1 一般／2 瘋狂
     lastSpawnTime: 0,     // 上次生怪時間
     hp: 1, sp: 1, maxHp: 1, maxSp: 1,
     cooldowns: {},         // {skillId: msRemaining}
@@ -246,6 +262,7 @@ function createCharacter(name, statAlloc, gender) {
        新角色在第一次讀檔之前是 undefined——面板上三個勾勾都是空的，
        實際行為卻要等重載才會變成預設的「開」。 */
     autoBuyAllyPotion: true,
+    autoBuyAllySpPotion: true,   // 藍水（#105）：隊友要放技能就得有 SP
     autoBuyAllyArrow: true,
     autoBuyReviveLeaf: true,
     autoSellConfig: { enabled: false, items: [] }, // 自動販賣：每30秒自動賣出背包內已選擇的道具
@@ -998,6 +1015,20 @@ function recomputeDerived(fullHeal) {
   state.zenSpFlatBonus = 0;
   state.zenSpPctBonus = 0;
   state.spItemEffectBonusPct = 0;
+  /* 自然回復的兩個**乘法**加成（#107）。這兩個以前完全沒有被重設，
+     而 `case 'hpRegenMult'` / `case 'spRegen'` 寫的是 `= (舊值 || 1) * val`——
+     等於每跑一次 recomputeDerived() 就再乘一次。升級、換裝、插卡、buff 到期
+     都會跑 recomputeDerived，所以是指數成長：實測快速恢復 Lv10（×2）
+     的角色玩一陣子之後每秒回 9.3e+220 HP，等於完全不會死。
+     跟 BUGS.md #1 的 DEX 膨脹是同一種病，修法一樣——加總前先歸零。 */
+  state.hpRegenMult = 1;
+  state.spRegenMult = 1;
+  /* 遺物的特殊效果旗標（#113）。跟上面兩行同一個理由放在歸零區：
+     卸下遺物就要跟著消失，不能靠「下次算的時候會蓋掉」。 */
+  state.relicProcs = {};
+  if (typeof activeRelicTiers === 'function') {
+    activeRelicTiers().forEach(({ tier }) => { if (tier.proc) state.relicProcs[tier.proc] = true; });
+  }
   state.hasAspdFlatPassive = false;
   state.hasAngelusProc = false;
   state.angelusCooldownSec = 10;
@@ -2185,6 +2216,17 @@ function recomputeDerived(fullHeal) {
      （#24 buff_flee、#58 buff_def、#61 的 VIT flat buff…），
      新開一個 buff 型別時就把消費端跟既有的加成合在一起，少一個分岔就少一次。
      tickBuffs() 每個 tick 都會呼叫 recomputeDerived()，所以到期會自動還原。 */
+  /* ATK +N%（#113 遺物）。跟 matkPct 對稱，乘在所有 ATK 來源加完之後。
+     **三個桶子要一起乘**：普攻的傷害鏈是分開讀 _atkWeapon / _atkStatus / _atkMastery 的
+     （官方的體型與屬性修正只作用在武器 ATK 上），只乘 state.atk 的話普攻完全吃不到。 */
+  const atkPctBonus = getCardBonus('atkPct') / 100;
+  if (atkPctBonus !== 0) {
+    const m = 1 + atkPctBonus;
+    state._atkWeapon = Math.round(state._atkWeapon * m);
+    state._atkStatus = Math.round(state._atkStatus * m);
+    state._atkMastery = Math.round(state._atkMastery * m);
+    state.atk = state._atkStatus + state._atkWeapon + state._atkMastery;
+  }
   const matkPctBonus = getCardBonus('matkPct') / 100;
   const matkBuffMult = buffMult('matk').mult;
   if (matkPctBonus !== 0 || matkBuffMult !== 1) {
@@ -2542,7 +2584,9 @@ function monDebuffMdef(inst) {
   return 1;
 }
 function defOf(mon, scale, magic, inst) {
-  const s = (scale === undefined ? 1 : scale) * (inst ? ailDefMult(inst) : 1);
+  // 打寶模式（#110）：怪的物防與魔防一起變硬。這裡是防禦值的共用入口，乘一次全部吃到
+  const fm = farmMult('def');
+  const s = (scale === undefined ? 1 : scale) * (inst ? ailDefMult(inst) : 1) * fm;
   if (magic) {
     const ig = (state.cardMdefIgnorePct || 0) + (mon.isBoss ? (state.cardBossMdefIgnorePct || 0) : 0);
     const ms = s * Math.max(0, 1 - ig / 100) * monDebuffMdef(inst);
@@ -2604,7 +2648,8 @@ function monsterBaseAtk(monDef, roll, mon) {
   const maxRoll = mon && monBuff(mon, 'maxRoll') > 0;
   const v = roll === 'mid' ? 1 : (maxRoll ? 1.2 : 0.8 + Math.random() * 0.4);
   const base = (monDef.atk || 0) * v + (monDef.mobStr || 0) + (monDef.level || 0);
-  return base * (1 + (mon ? monBuff(mon, 'atkPct') : 0) / 100) * monDebuffAtk(mon);
+  // 打寶模式（#110）：這裡是「怪物傷害的唯一入口」，乘一次普攻與怪物技能就一起吃到
+  return base * farmMult('atk') * (1 + (mon ? monBuff(mon, 'atkPct') : 0) / 100) * monDebuffAtk(mon);
 }
 
 /* 怪物身上的物攻減益（#60 野蠻凶砍）。
@@ -2841,10 +2886,27 @@ function hitChancePctVsMonster(playerHit, monDef, inst) {
   }
   return Math.min(100, Math.max(5, Math.round(100 - (threshold - playerHit))));
 }
+/* 迴避上限隨場上怪數遞減（#107，使用者 2026-08-16 指定）：
+     1 隻 95%／2 隻 90%／3 隻 85%／4 隻 80%／5 隻 75%
+
+   官方沒有這條，是本作自己的圍毆懲罰：一次被五隻打的時候，
+   靠 AGI 站著不動就無敵的玩法要付出代價。
+
+   **夾的是上限，不是公式的基準**。基準仍然是 95（`95 − (門檻 − FLEE)`），
+   所以 FLEE 還沒堆到頂的角色一點都不受影響——算出來 60% 的人不管場上幾隻都還是 60%。
+   被砍到的只有已經頂著上限的全迴避流，這就是「不會暴死但多一點危機」的意思。 */
+const FLEE_CAP_BASE = 95;
+const FLEE_CAP_STEP = 5;
+function fleeCapPct(count) {
+  const n = Math.max(1, count != null ? count : ((state.monsters || []).length || 1));
+  return Math.max(5, FLEE_CAP_BASE - FLEE_CAP_STEP * (n - 1));
+}
 function dodgeChancePctFromMonster(playerFlee, monDef, hitDebuff) {
   let threshold = monDef.fleeReq || monsterHitOf(monDef);
+  // 打寶模式讓怪更會打中（#110）：直接加在門檻上，迴避率就是等量減少（差值制 1 點 = 1%）
+  threshold += farmFlat('hitFlat');
   if (hitDebuff) threshold = Math.max(1, threshold - hitDebuff);
-  return Math.min(95, Math.max(5, Math.round(95 - (threshold - playerFlee))));
+  return Math.min(fleeCapPct(), Math.max(5, Math.round(FLEE_CAP_BASE - (threshold - playerFlee))));
 }
 
 /* ---------------- 中毒（施毒/塗毒共用）----------------
@@ -3750,10 +3812,12 @@ function tryOnAttackStrikes(target, monDef) {
    一直是空的。照樣寫進去是因為規則是「全隊」，等哪天怪會對隊友下狀態就自動生效，
    不必回頭再想起這件事。 */
 function tickPartyAutoCure() {
-  if (!state.hasPartyAutoCure) return;
   const now = Date.now();
-  if (now < (state.partyAutoCureReadyAt || 0)) return;
-  const types = state.partyAutoCureTypes || [];
+  /* 誰有這支被動、誰的冷卻好了就誰解（#105）。以前只認玩家身上那一份，
+     祭司隊友的治療術等於不存在。倒地的隊友不算施術者。 */
+  const caster = partySupportCasters().find(c => c.hasPartyAutoCure && now >= (c.partyAutoCureReadyAt || 0));
+  if (!caster) return;
+  const types = caster.partyAutoCureTypes || [];
   const cured = [];
   const clear = (holder, who) => {
     if (!holder || !holder.playerAil) return;
@@ -3767,8 +3831,9 @@ function tickPartyAutoCure() {
   clear(state, '你');
   allyList().forEach(a => clear(a, a && a._allyName));
   if (!cured.length) return;
-  state.partyAutoCureReadyAt = now + (state.partyAutoCureCooldownSec || 10) * 1000;
-  logMsg(`💊 治療術發動，解除了${cured.join('、')}。`);
+  caster.partyAutoCureReadyAt = now + (caster.partyAutoCureCooldownSec || 10) * 1000;
+  const by = caster === state ? '' : `（${caster._allyName}）`;
+  logMsg(`💊 治療術發動${by}，解除了${cured.join('、')}。`);
 }
 
 /* 沉默之術（#95）：普攻機率讓目標沉默。使用者指定「20% 機率、冷卻 10 秒」，
@@ -5077,6 +5142,7 @@ function gameTick() {
   if (Date.now() - state._lastSlowTick >= 1000) {
     state._lastSlowTick = Date.now();
     passiveRegen();
+    tickAllyRegen();          // 隊友也有自然回復（#105）
     townRestore();
     autoUsePotion();
     autoUseSpPotion();
@@ -5282,6 +5348,7 @@ function gameTick() {
   }
 
   if (!state.monsters) state.monsters = [];
+  tickRelicShield();          // 鐵匠遺物：每 5 秒補一面護盾（#113）
   // 近戰模式持續生怪，遠攻模式等怪物死後再生
   spawnMonster();
   if (state.monsters.length > 0) {
@@ -5339,9 +5406,72 @@ function gameTick() {
    Lv99 角色 65 秒回滿，而且回血比全遊戲任何一隻怪的輸出都快，站著不動打不死。
    調難度只要改這一個數。 */
 const REGEN_IDLE_SCALE = 3.5;
-/* 近戰模式場上同時最多幾隻（使用者 2026-08-16 指定 1~3 隻，原本是 5）。
-   衝鋒攻擊、召喚小弟、BOSS 帶小弟都照這個數字補位，所以只改這一個地方。 */
-const MELEE_MAX_MONSTERS = 3;
+/* 近戰模式場上同時最多幾隻。衝鋒攻擊、召喚小弟、BOSS 帶小弟都照這個數字補位。 */
+const MELEE_MAX_MONSTERS = 5;
+/* 近戰模式**一次生幾隻**（使用者 2026-08-16 指定「隨機 1~3 隻」）。
+   跟上面的上限是兩回事：上限管場上總數，這個管每次補怪的批量。
+   實際生出來的數量還會被剩餘空位夾住，所以場上不會超過 MELEE_MAX_MONSTERS。 */
+const MELEE_SPAWN_BATCH_MAX = 3;
+/* 開了 BOSS 模式之後，每次補怪抽到 MVP 的機率（%）。
+   圖鑑的「出沒地圖」也讀這個數字換算每張圖的出現率（#108），
+   所以兩邊不會各寫各的。 */
+const MVP_SPAWN_CHANCE_PCT = 20;
+
+/* ---------------- 打寶模式（#110）----------------
+
+   使用者 2026-08-16 指定，參考另一個放置遊戲的「席琳的世界」設計：
+   一個可切換的開關，開了之後**全場的怪一起變強、產出也一起變高**，
+   分「一般／瘋狂」兩檔，互斥。
+
+   這是 99 級之後**唯一**的成長管道——基礎經驗曲線就是照
+   「一般檔（經驗 ×5）三個月走完 100→200」配的（見 data.js 的 expToNextBaseLevel）。
+   不開的話同一段要 15 個月，瘋狂檔 1.5 個月。
+
+   倍率取自參考來源的一般／瘋狂兩檔，`hit` 那格是加在「命中門檻」上的比例
+   （本作的命中/迴避是差值制，不是把怪的 HIT 直接乘上去，見 dodgeChancePctFromMonster）。 */
+const FARM_MODE_OFF = 0, FARM_MODE_NORMAL = 1, FARM_MODE_MAD = 2;
+/* `hitFlat` 是加在**命中門檻**上的點數，不是倍率（使用者 2026-08-16 改的）。
+   本作的命中／迴避是差值制，1 點就是 1%——原本照參考來源寫成 ×1.5，
+   對 Lv160 的怪等於門檻 317 → 438，玩家的迴避率會從 95% 直接掉到 5%，
+   是斷崖不是斜坡。改成固定 +40／+80，迴避率就是穩穩地少 40%／80%。 */
+const FARM_MODE_MULT = {
+  [FARM_MODE_NORMAL]: { hp: 3, atk: 2, def: 1.5, hitFlat: 40, exp: 5, gold: 5, drop: 3, spawn: 0.8 },
+  [FARM_MODE_MAD]:    { hp: 5, atk: 3, def: 1.75, hitFlat: 80, exp: 10, gold: 10, drop: 5, spawn: 0.8 },
+};
+const FARM_MODE_NAMES = { [FARM_MODE_NORMAL]: '打寶模式', [FARM_MODE_MAD]: '瘋狂打寶' };
+// 進階二轉才開得了——99 之後才用得到，也才扛得住 HP×3 的怪
+const FARM_MODE_JOB_TIER = 2.5;
+function farmMode() { return (state && state.farmMode) || FARM_MODE_OFF; }
+function farmMult(key) {
+  const m = FARM_MODE_MULT[farmMode()];
+  return m ? (m[key] != null ? m[key] : 1) : 1;
+}
+// 加法型的那幾格（目前只有命中）：沒開打寶時是 0，不是 1
+function farmFlat(key) {
+  const m = FARM_MODE_MULT[farmMode()];
+  return m ? (m[key] || 0) : 0;
+}
+function farmModeUnlocked(jobId) {
+  const jd = JOB_TREE[jobId || (state && state.jobId)];
+  return !!(jd && jd.tier >= FARM_MODE_JOB_TIER);
+}
+function setFarmMode(mode) {
+  const m = Number(mode) || FARM_MODE_OFF;
+  if (m !== FARM_MODE_OFF && !farmModeUnlocked()) {
+    logMsg('⚠️ 打寶模式要進階二轉才開得了。');
+    return false;
+  }
+  if (state.farmMode === m) return true;
+  state.farmMode = m;
+  /* 場上的怪要清掉重生：血量是**生怪當下**照倍率算進去的，
+     不清的話切換之後場上會混著兩種倍率的怪，玩家看到的血條對不上。 */
+  state.monsters = [];
+  state.monster = null;
+  logMsg(m === FARM_MODE_OFF ? '🌙 關閉打寶模式。' : `🔥 ${FARM_MODE_NAMES[m]}開啟！怪物更強，經驗 ×${FARM_MODE_MULT[m].exp}、掉落 ×${FARM_MODE_MULT[m].drop}。`);
+  saveGame();
+  if (typeof renderAll === 'function') renderAll();
+  return true;
+}
 const REGEN_HP_TICK_SEC = 6;
 const REGEN_SP_TICK_SEC = 8;
 /* 每秒實際回多少 HP/SP。抽出來是為了讓角色分頁印得出同一個數字（#102）——
@@ -5671,6 +5801,10 @@ function computeAspd() {
   // 官方上限：未滿100等 190，100等以上 193
   const cap = state.baseLevel >= 100 ? 193 : 190;
   state.aspd = Math.min(cap, Math.max(100, finalAspd));
+  /* 刺客遺物 5 件的「攻速恆定 193」（#113）：直接頂到上限。
+     寫成「頂到 cap」而不是寫死 193——99 級以下上限是 190，
+     寫死會讓那段時間的角色拿到官方拿不到的攻速。 */
+  if (state.buffs.some(b => b.type === 'aspdmax')) state.aspd = cap;
   state.attackInterval = getAttackInterval(state.aspd);
 }
 function buffMult(type) {
@@ -5797,7 +5931,7 @@ function spawnMonster() {
      改成讀旗標之後兩個技能共用同一個消費點，之後再加第三個也不必動這裡。 */
   const ridePassive = state.hasRiding;
 
-  // 近戰模式：最多 MELEE_MAX_MONSTERS 隻，0隻時0.5秒一隻，1隻以上時3秒一隻
+  // 近戰模式：0隻時0.5秒補一批、1隻以上時3秒補一批，每批 1~3 隻，場上上限 MELEE_MAX_MONSTERS
   if (state.encounterMode === 'melee') {
     if (state.monsters.length >= maxMonsters) return;
     const now = Date.now();
@@ -5813,6 +5947,8 @@ function spawnMonster() {
     if (cb !== 1) delay = Math.max(100, Math.round(delay / cb));
     // 操控樂器／練習舞蹈（#68）：官方是合奏時移速上升，照慣例改成生怪加速
     if (state.songSpawnSpeedPct) delay = Math.max(100, Math.round(delay / (1 + state.songSpawnSpeedPct / 100)));
+    // 打寶模式補怪更快（#110）：跟上面三個加速來源一樣相乘、一樣吃 100ms 下限
+    if (farmMult('spawn') !== 1) delay = Math.max(100, Math.round(delay * farmMult('spawn')));
     if (now - state.lastSpawnTime < delay) return;
     state.lastSpawnTime = now;
   }
@@ -5821,32 +5957,45 @@ function spawnMonster() {
     if (state.monsters.length > 0) return;
   }
 
-  // MVP 模式：20% 機率出 MVP Boss（需該地圖有 MVP 數據，且當前無 MVP 存活）
-  let defId;
   const mvpList = MVP_MAP_DATA[map.id];
-  const hasMvpAlive = mvpList && state.monsters.some(m => mvpList.includes(m.defId));
-  if (state.mvpMode && mvpList && !hasMvpAlive && Math.random() < 0.2) {
-    defId = mvpList[Math.floor(Math.random() * mvpList.length)];
-  } else {
-    defId = pickWeightedMonster(map.monsters);
+  /* 近戰模式一次生 1~3 隻（使用者 2026-08-16 指定）。遠攻模式照舊一次一隻。
+     批量會被**剩餘空位**夾住，所以場上永遠不超過 maxMonsters。 */
+  const room = Math.max(0, maxMonsters - state.monsters.length);
+  const batch = state.encounterMode === 'melee'
+    ? Math.min(room, 1 + Math.floor(Math.random() * MELEE_SPAWN_BATCH_MAX))
+    : 1;
+
+  for (let i = 0; i < batch; i++) {
+    // MVP 帶小弟時會自己把空位填滿，所以每一輪都要重新確認還有沒有位置
+    if (state.monsters.length >= maxMonsters) break;
+    // MVP 模式：20% 機率出 MVP Boss（需該地圖有 MVP 數據，且當前無 MVP 存活）
+    let defId;
+    const hasMvpAlive = mvpList && state.monsters.some(m => mvpList.includes(m.defId));
+    if (state.mvpMode && mvpList && !hasMvpAlive && Math.random() * 100 < MVP_SPAWN_CHANCE_PCT) {
+      defId = mvpList[Math.floor(Math.random() * mvpList.length)];
+    } else {
+      defId = pickWeightedMonster(map.monsters);
+    }
+    const def = MONSTERS[defId];
+    if (!def) continue; // 怪物不存在，跳過這一隻
+    state.monsterIdCounter = (state.monsterIdCounter || 0) + 1;
+    // 打寶模式的血量倍率是**生怪當下**算進去的（切換模式時 setFarmMode 會清場重生）
+    const hp = Math.round(def.hp * farmMult('hp'));
+    state.monsters.push({ defId, hp, maxHp: hp, id: state.monsterIdCounter });
+    applyDontForgetMe(state.monsters[state.monsters.length - 1]);
+    codexRecordSeen(defId);
+    const isMvp = mvpList && mvpList.includes(defId);
+    logMsg(isMvp ? `⚠️ ${def.icon} ${def.name}（MVP）降臨了！` : `一隻 ${def.icon} ${def.name} 出現了！`);
+    if (isMvp) summonBossSlaves(def);
   }
-  const def = MONSTERS[defId];
-  if (!def) return; // 怪物不存在，跳過
-  state.monsterIdCounter = (state.monsterIdCounter || 0) + 1;
-  state.monsters.push({ defId, hp: def.hp, maxHp: def.hp, id: state.monsterIdCounter });
-  applyDontForgetMe(state.monsters[state.monsters.length - 1]);
   state.monster = state.monsters[0];
-  codexRecordSeen(defId);
-  const isMvp = mvpList && mvpList.includes(defId);
-  logMsg(isMvp ? `⚠️ ${def.icon} ${def.name}（MVP）降臨了！` : `一隻 ${def.icon} ${def.name} 出現了！`);
-  if (isMvp) summonBossSlaves(def);
 }
 
 /* 召喚小弟（#36 的最後一條）。
 
    官方 `NPC_SUMMONSLAVE` / `NPC_CALLSLAVE` / `NPC_SUMMONMONSTER` 共 127 條，
    做法是「BOSS 一出場就把周圍的小弟叫齊」。本作沒有位置概念，所以直接把
-   **場上剩下的空位一次生滿**（上限仍是 `maxMonsters`，近戰模式 3 隻）——
+   **場上剩下的空位一次生滿**（上限仍是 `maxMonsters`，近戰模式 5 隻）——
    一次到位而不是逐隻慢慢補，才有「BOSS 帶著一群手下登場」的感覺。
 
    小弟從**該地圖的一般配怪表**抽，不從 MVP 表抽（不然會變成一次出兩隻 BOSS）。
@@ -6137,6 +6286,16 @@ function playerAttackInner() {
   // 官方暴擊無視 DEF（也無視閃避）。以前暴擊照常吃減傷，等於只剩 1.5 倍那半邊效果，
   // 對高 DEF 的怪打起來跟普通攻擊差不了多少
   let dmg = (isCrit ? Math.max(1, Math.round(raw)) : mitigateDamage(raw, monDefVal, monSoftVal)) + raceFlatBonus(monDef);
+  /* 刺客遺物 5 件（#113）：乘在**減傷之後**的最終傷害上。
+     乘在 raw 上的話 10 倍會先被怪物防禦吃掉一大半，跟「10 倍傷害」這句話對不起來。
+     放在 dpsTracker 前面，紀錄才是玩家實際打出去的數字。 */
+  const relicMult = rollRelicDamageMult();
+  if (relicMult > 1) {
+    dmg = Math.round(dmg * relicMult);
+    /* 2 倍那段有 10% 機率，等於每秒都會刷一行——技能欄還要放六合拳、阿修羅那些，
+       會被洗掉。只報稀有的那兩段（5 倍以上），2 倍安靜生效。 */
+    if (relicMult >= 5) logMsg(`🗡️ 遺物發動！本次傷害 ${relicMult} 倍！`, 'skill');
+  }
   if (isCrit && !_dpsPaused && state && state.dpsTracker) state.dpsTracker.damage += dmg;
 
   /* 怪物身上的增益（#36）：自動防禦擋下整下、防禦型增益減傷、反射盾把傷害彈回來。
@@ -6178,6 +6337,13 @@ function playerAttackInner() {
     tryTarotCard(target, monDef);        // 搞笑藝人／冷豔舞姬（#77）：命運的塔羅牌
     tryChampionProcs(target, monDef);    // 武術宗師（#79）：狂蓄氣、猛虎硬派山 → 伏虎拳 → 氣絕崩擊
   });
+  /* 遺物的普攻效果（#113）。放在被動那一排之後、擊殺判定之前：
+     濺射要能打死其他怪，而主目標的擊殺結算仍然由下面那段負責。 */
+  tryRelicBlindProc();
+  tryRelicSplashProc(dmg, target);
+  tryRelicAspdProc();
+  tryRelicMonkGatling(target, monDef);
+  tryRelicBlacksmithStrike(target);
   // 命中音效（暴擊改放 Critical.ogg）。隊友也會出聲，音量走 allySfxVolume()
   if (typeof playHitSound === 'function') playHitSound(isCrit);
 
@@ -6475,6 +6641,17 @@ function monsterCastSkillInner(mon, monDef, sk) {
     // 乘在防禦之前的話，軟防那一段是固定減值，會讓實際倍率大於寫出來的數字
     dmg = Math.max(1, Math.round(mitigatePlayerIncoming(raw, hardDef, softDef) * playerDmgTakenMult()));
     dmg = rejectSwordAbsorb(dmg, mon, monDef);  // 霸王魂（#79）
+    /* 遺物免傷（#113）也要擋技能。只擋普攻的話，會放技能的怪身上
+       「20% 免疫」等於不存在——而高等圖幾乎每隻怪都會放技能。 */
+    {
+      const by = relicNegatesHit();
+      if (by) {
+        logMsg(`${by}！完全免疫了 ${nameOf()}！`);
+        if (typeof showPlayerFloat === 'function') showPlayerFloat('免傷', 'miss');
+        if (typeof showBuddhaShield === 'function' && by.indexOf('佛法') >= 0) showBuddhaShield();
+        return;
+      }
+    }
     state.hp -= dmg;
     logMsg(`✨ ${nameOf()} 造成了 ${dmg} 點傷害！`);
     if (typeof showPlayerFloat === 'function') showPlayerFloat('-' + dmg, 'normal');
@@ -6609,6 +6786,16 @@ function monsterAttackSingle(mon) {
     logMsg(`🛡️ 光之盾完全擋下了 ${monDef.name} 的攻擊！`);
     if (typeof showPlayerFloat === 'function') showPlayerFloat('免傷', 'miss');
     return;
+  }
+  // 遺物免傷（#113）：騎士 20%／武僧 5%。跟光之盾同一類，所以放在一起
+  {
+    const by = relicNegatesHit();
+    if (by) {
+      logMsg(`${by}！完全免疫了 ${monDef.name} 的攻擊！`);
+      if (typeof showPlayerFloat === 'function') showPlayerFloat('免傷', 'miss');
+      if (typeof showBuddhaShield === 'function' && by.indexOf('佛法') >= 0) showBuddhaShield();
+      return;
+    }
   }
   // 噴砂被動造成的命中下降：等同降低這隻怪的fleeReq門檻，玩家更容易迴避
   let hitDebuff = 0;
@@ -6884,6 +7071,31 @@ function getMonsterMaps(monId) {
         });
       });
     });
+    /* MVP 的出沒地圖（#108）。MVP **不在** `MAPS[*].monsters` 裡——牠們住在
+       `MVP_MAP_DATA[地圖id] = [BOSS id…]`，所以上面那圈一隻都掃不到，
+       圖鑑的「出沒地圖」只能印「無（需開啟 BOSS 模式）」，玩家根本不知道要去哪找。
+
+       機率照 spawnMonster() 的實際規則算：開了 BOSS 模式之後，每次補怪有 20%
+       抽 MVP，再從該圖的 MVP 清單裡均分。標上 `mvp: true` 讓 UI 標示
+       「要開 BOSS 模式」——沒開的話這一格永遠不會發生。 */
+    if (typeof MVP_MAP_DATA !== 'undefined') {
+      const byId = {};
+      MAPS.forEach(m => { byId[m.id] = m; });
+      Object.keys(MVP_MAP_DATA).forEach(mapId => {
+        const m = byId[mapId];
+        if (!m) return;
+        const list = MVP_MAP_DATA[mapId] || [];
+        if (!list.length) return;
+        list.forEach(id => {
+          if (!MONSTERS[id]) return;
+          (_codexMapCache[id] = _codexMapCache[id] || []).push({
+            id: m.id, name: m.name, weight: 0,
+            pct: MVP_SPAWN_CHANCE_PCT / list.length,
+            mvp: true,
+          });
+        });
+      });
+    }
     Object.values(_codexMapCache).forEach(a => a.sort((x, y) => y.pct - x.pct));
   }
   return _codexMapCache[monId] || [];
@@ -6943,6 +7155,24 @@ function getEtherDropChance(monDef) {
   const tier = ETHER_DROP_RATES.find(t => lv >= t.minLevel);
   return tier ? tier.chance : 0;
 }
+/* 從掉落表裡挑一樣，**照各自的掉落率加權**（#109）。
+
+   偷竊與貪婪本來是 `drops[Math.floor(Math.random() * drops.length)]`——**均分**，
+   完全無視掉落率。虎王的掉落表有 11 項，虎王卡片的正常掉落率是 0.05%，
+   均分之下被挑中的機率是 9.1%，**182 倍**；火靈原石（賣 1500）0.23% → 9.1%，40 倍。
+   偷竊 Lv10 有 62% 觸發率，等於卡片的實際到手率變成正常掉落的一百多倍——
+   使用者 2026-08-16 回報「偷竊獲得高價物的機率太高」就是這個。
+
+   加權之後，稀有度的相對關係跟正常掉落一致：虎王卡片佔 0.05/135.5 ≈ 0.037%。 */
+function pickWeightedDrop(drops) {
+  const list = (drops || []).filter(d => d && d.item && d.chance > 0);
+  if (!list.length) return null;
+  const total = list.reduce((a, d) => a + d.chance, 0);
+  let r = Math.random() * total;
+  for (const d of list) { r -= d.chance; if (r <= 0) return d; }
+  return list[list.length - 1];   // 浮點誤差的保險
+}
+
 function rollEtherDrop(monDef) {
   const chance = getEtherDropChance(monDef);
   if (chance <= 0) return;
@@ -6973,8 +7203,8 @@ function killMonster(def, monObj) {
   // 經驗值倍增（#68）跟卡片的種族經驗加成相乘
   const expMult = (1 + ((def.race && state.cardExpRace && state.cardExpRace[def.race]) || 0))
     * (1 + buffMult('exp').flatBonus / 100);
-  const gotExp = Math.round(def.exp * expMult);
-  const gotJobExp = Math.round(def.jobExp * expMult);
+  const gotExp = Math.round(def.exp * expMult * farmMult('exp'));
+  const gotJobExp = Math.round(def.jobExp * expMult * farmMult('exp'));
   /* **隊友打死的怪，獎勵要記在玩家頭上。** 隊友是靠 withAlly() 換身跑
      playerAttack() 的，走到這裡時全域的 state 是隊友那份快照——不導回去的話
      經驗、鋅幣、掉落、圖鑑全部進了快照，玩家一毛都拿不到（實測過）。
@@ -6996,7 +7226,7 @@ function killMonster(def, monObj) {
     _allyActing ? 'ally' : 'main');   // 隊友補的刀還是留在隊友欄
   codexRecordKill(monKey);
   withOwner(() => gainExp(gotExp, gotJobExp));
-  const goldGain = Math.round((3 + def.level * 1.4) * buffMult('gold').mult);
+  const goldGain = Math.round((3 + def.level * 1.4) * buffMult('gold').mult * farmMult('gold'));
   owner.gold += goldGain;
   if (state.dpsTracker) {
     const t = state.dpsTracker;
@@ -7021,16 +7251,22 @@ function killMonster(def, monObj) {
     state.hp = Math.min(state.maxHp, state.hp + hpKill);
     if (state.hp > before && typeof showPlayerFloat === 'function') showPlayerFloat('+' + (state.hp - before), 'heal');
   }
+  /* 掉落率的打寶加成（#110）。夾在 1 以下：本來就 100% 的掉落乘上去沒有意義，
+     而 >1 的機率會讓「稀有度」在偷竊那類加權計算裡失真。 */
+  const dropMult = farmMult('drop');
   (def.drops || []).forEach(d => {
-    if (Math.random() < d.chance) addItem(d.item, 1);
+    if (Math.random() < Math.min(1, d.chance * dropMult)) addItem(d.item, 1);
   });
   rollEtherDrop(def);
-  // 偷竊被動：擊敗怪物時機率額外掉落一份道具
+  rollRelicDrop(def);                    // 遺物（#113）：只有打寶模式會掉
+  // 偷竊被動：擊敗怪物時機率額外掉落一份道具（照掉落率加權，見 pickWeightedDrop）
   if (state.stealChance && def.drops && def.drops.length > 0 && Math.random() * 100 < state.stealChance) {
-    const stolen = def.drops[Math.floor(Math.random() * def.drops.length)];
-    addItem(stolen.item, 1);
-    const stolenName = ITEMS[stolen.item] ? ITEMS[stolen.item].name : stolen.item;
-    logMsg(`🗡️ 偷竊發動！額外獲得了 ${stolenName}！`);
+    const stolen = pickWeightedDrop(def.drops);
+    if (stolen) {
+      addItem(stolen.item, 1);
+      const stolenName = ITEMS[stolen.item] ? ITEMS[stolen.item].name : stolen.item;
+      logMsg(`🗡️ 偷竊發動！額外獲得了 ${stolenName}！`);
+    }
   }
   // 尋找礦石被動：擊敗怪物時機率額外獲得隨機屬性礦石（供屬性石製造使用）
   if (state.hasFindingOreProc && Math.random() * 100 < state.findingOreChance) {
@@ -7039,12 +7275,14 @@ function killMonster(def, monObj) {
     addItem(ore, 1);
     logMsg(`⛏️ 尋找礦石發動！額外獲得了 ${ITEMS[ore].name}！`);
   }
-  // 貪婪被動：擊敗怪物時機率多獲得一份戰利品
+  // 貪婪被動：擊敗怪物時機率多獲得一份戰利品（跟偷竊同一套加權）
   if (state.hasGreedProc && def.drops && def.drops.length > 0 && Math.random() * 100 < state.greedChance) {
-    const bonus = def.drops[Math.floor(Math.random() * def.drops.length)];
-    addItem(bonus.item, 1);
-    const bonusName = ITEMS[bonus.item] ? ITEMS[bonus.item].name : bonus.item;
-    logMsg(`💰 貪婪發動！額外獲得了 ${bonusName}！`);
+    const bonus = pickWeightedDrop(def.drops);
+    if (bonus) {
+      addItem(bonus.item, 1);
+      const bonusName = ITEMS[bonus.item] ? ITEMS[bonus.item].name : bonus.item;
+      logMsg(`💰 貪婪發動！額外獲得了 ${bonusName}！`);
+    }
   }
   // 卡片附加掉落（箱子、料理、精煉素材那一批）
   tryCardKillDrops(def);
@@ -7094,6 +7332,21 @@ function tryAutoRevive() {
     logMsg(`✨ 捨身取義發動！原地復活，恢復了${state.cardReviveFull ? '全部' : state.autoRevive2HpPct + '%'} HP！`);
     return true;
   }
+  /* 自己的兩條都不行時，換還站著的祭司隊友扶（#105）。
+     技能寫的是「全隊有人倒下」，倒下的人是玩家時當然也算。 */
+  for (const a of allyAliveList()) {
+    if (!a.hasAutoRevive1 || now < (a.autoRevive1ReadyAt || 0)) continue;
+    const cost = a.autoRevive1SpCost || 0;
+    if (a.sp < cost) continue;
+    a.sp -= cost;
+    a.autoRevive1ReadyAt = now + a.autoRevive1CooldownSec * 1000;
+    state.hp = Math.max(1, Math.round(state.maxHp * a.autoRevive1HpPct / 100));
+    if (state.cardReviveFull) full();
+    logMsg(`✨ 復活術發動（${a._allyName}）！扶起了你（HP ${a.autoRevive1HpPct}%）。`);
+    return true;
+  }
+  // 牧師遺物是最後一道保險：自己的復活術與隊友的祭司都優先用掉（#113）
+  if (tryRelicPriestRevive()) return true;
   return false;
 }
 
@@ -7114,6 +7367,7 @@ function onPlayerDown() {
   if (!safeMap) safeMap = 'prontera'; // 兜底
   state.mapId = safeMap;
   reviveAlliesInTown();   // 被抬回城，隊友一起站起來（#83）
+  resetRelicRevive();     // 牧師遺物的復活次數也一起回滿（#113）
   ensureCodex().maps[safeMap] = 1; // 被抬回城也算造訪過，這條路徑沒有經過 changeMap()
   state.hp = state.maxHp;
   state.sp = state.maxSp;
@@ -7127,10 +7381,34 @@ function onPlayerDown() {
   if (typeof renderMapTab === 'function') renderMapTab();
 }
 
-/* ---------------- 經驗 / 升級 ---------------- */
+/* ---------------- 經驗 / 升級 ----------------
+
+   基礎等級上限與素質上限（#110／#111）。**轉了三轉才解鎖**——三轉本身是純外觀
+   （沒有自己的技能，見 js/jobs.js 的 tier 3 區塊），它存在的意義就是這兩道門：
+
+     基礎等級 99 → 200
+     單項素質   99 → 130
+
+   99 之後的每一級都要靠打寶模式才走得動——曲線就是照那個前提配的，
+   見 data.js 的 expToNextBaseLevel()。 */
+const BASE_LEVEL_CAP = 99;
+const BASE_LEVEL_CAP_ADVANCED = 200;
+const STAT_CAP = 99;
+const STAT_CAP_ADVANCED = 130;
+function isTier3(jobId) {
+  const jd = JOB_TREE[jobId || (state && state.jobId)];
+  return !!(jd && jd.tier >= 3);
+}
+function baseLevelCapOf(jobId) {
+  return isTier3(jobId) ? BASE_LEVEL_CAP_ADVANCED : BASE_LEVEL_CAP;
+}
+function statCapOf(jobId) {
+  return isTier3(jobId) ? STAT_CAP_ADVANCED : STAT_CAP;
+}
+
 function gainExp(baseExp, jobExp) {
   state.baseExp += baseExp;
-  const baseLevelCap = 99; // 新手/一轉/二轉最高等級限制
+  const baseLevelCap = baseLevelCapOf();
   let need = expToNextBaseLevel(state.baseLevel);
   while (state.baseExp >= need && state.baseLevel < baseLevelCap) {
     state.baseExp -= need;
@@ -7193,21 +7471,41 @@ const MERC_LEDGER_KEY = 'ro_idle_merc_ledger_v1';
 let _allyActing = null;
 let _allyOwnerState = null;
 
-/* 把 state 暫時換成某個隊友來跑 fn。**不要在 fn 裡呼叫 saveGame()**——
-   那會把隊友的快照寫進玩家的存檔格。 */
+/* 把 state 暫時換成某個隊友來跑 fn。saveGame() 在換身期間會自己跳過（見那邊的註解）。
+
+   **收尾要還原成進來時的樣子，不能寫死 null（#105）**：這支是會巢狀呼叫的——
+   祭司隊友放全體 buff 時，`shareBuffsWithAllies()` 會為了替另一位隊友重算衍生數值
+   再 `withAlly()` 一次。內層寫死 `_allyActing = null` 的話，回到外層時旗標已經沒了：
+   後半段的訊息會跑錯欄、獎勵導回錯人，而且 castSkill 尾端那次 `saveGame()`
+   會失去保護，直接把隊友快照寫進玩家的存檔格。 */
 function withAlly(ally, fn) {
   const saved = state;
+  const savedActing = _allyActing;
+  const savedOwner = _allyOwnerState;
+  const savedMonsters = ally.monsters, savedMonster = ally.monster;
   ally.monsters = saved.monsters;      // 共用同一個場，隊友才打得到玩家面前的怪
   ally.monster = saved.monster;
   _allyActing = ally;
-  _allyOwnerState = saved;
+  // 巢狀時「真正的玩家」還是最外層那個，不是上一層的隊友
+  _allyOwnerState = savedOwner || saved;
+  /* 地圖也要跟著玩家（#109）。快照是整份複製過來的，`mapId` 停在**那個角色
+     被存檔時所在的地圖**——通常是城鎮。換身期間 `isInTown()` 讀的就是這個欄位，
+     所以 `wastesResourceInTown()` 會回「在城鎮，別浪費」，把隊友的加速術（吃 15 HP）、
+     治癒術、場域類技能整批擋掉：實測祭司隊友放得出天使之賜福，加速術卻一次都放不出來。
+     隊友本來就跟玩家在同一張圖，直接同步過去。 */
+  ally.mapId = _allyOwnerState.mapId;
   state = ally;
   try { return fn(); } finally {
     state = saved;
-    _allyActing = null;
-    _allyOwnerState = null;
-    ally.monsters = saved.monsters;    // 場的參考交還（存檔前由 saveGame 清掉）
-    ally.monster = null;
+    _allyActing = savedActing;
+    _allyOwnerState = savedOwner;
+    if (savedActing) {                 // 巢狀：把場的參考還原成內層進來前的樣子
+      ally.monsters = savedMonsters;
+      ally.monster = savedMonster;
+    } else {
+      ally.monsters = saved.monsters;  // 場的參考交還（存檔前由 saveGame 清掉）
+      ally.monster = null;
+    }
   }
 }
 // 換身中時的「真正的玩家」；沒換身就是 state 本身
@@ -7372,7 +7670,21 @@ function alliesTick() {
       return;
     }
     tryAllyPotion(ally);        // 先喝水再打，免得這一輪就倒了
+    tryAllySpPotion(ally);      // 藍水（#105）：要放技能就得有 SP
     ensureAllyAmmo(ally);       // 弓箭手隊友的箭由玩家供應
+    /* 隊友的自動戰鬥（#105）。跟玩家跑的是**同兩支**函式，所以攻擊技能、
+       輔助技能、SP 門檻、治癒術的 HP% 條件全部照玩家那套規則走，不另寫一份。
+
+       跑在攻擊之前：先開 buff 再打，跟玩家的慢心跳順序一致。
+       `withAlly` 期間 `saveGame()` 會自己跳過（見 saveGame 的註解）——
+       castSkill 尾端就有一次，沒有那道保險這裡會把玩家的存檔蓋成隊友。 */
+    try {
+      withAlly(ally, () => {
+        if (state.autoSkill) tryAutoCastSkill();
+        tryAutoCastSupportSkills();
+      });
+    } catch (e) { console.error('隊友施法失敗', ally && ally._allyName, e); }
+    if (ally._downed) return;   // 自傷類技能（聖十字審判、HP轉換）可能把自己放倒
     if (!ally._lastAttackAt) ally._lastAttackAt = now - 1000;
     ally._atkAccum = (ally._atkAccum || 0) + (now - ally._lastAttackAt);
     ally._lastAttackAt = now;
@@ -7428,31 +7740,43 @@ function allyNeedsAmmo(ally) {
    **複製而不是共用同一個物件**：兩邊的殘餘時間各自遞減，而且護盾類的 buff 會被
    打掉耐久——共用一個物件等於三個人合用一面盾，第一個人挨打就把全隊的盾磨光了。
 
-   `_allyActing` 時直接跳過：隊友目前不會施放技能，這是保險絲，免得哪天開了之後
-   變成隊友互相無限廣播。 */
+   **隊友自己放的也算數（#105）**：以前這裡第一行是 `if (_allyActing) return;`，
+   那是「隊友還不會施放技能」年代的保險絲。現在隊友跑完整的自動戰鬥，
+   祭司隊友的聖母之頌歌當然要發給玩家與另一位隊友。
+   不會無限廣播——這支只是**複製已經算好的 buff**，不會再觸發一次施放。 */
 function shareBuffsWithAllies(fresh, freshShields, sk) {
-  if (_allyActing) return;
   if (!fresh.length && !freshShields.length) return;
-  const list = allyList().filter(a => a && !a._downed);
-  if (!list.length) return;
-  list.forEach(ally => {
-    if (!Array.isArray(ally.buffs)) ally.buffs = [];
-    if (!Array.isArray(ally.shields)) ally.shields = [];
+  const caster = _allyActing;                 // null＝玩家自己放的
+  const owner = allyOwnerState();             // 換身中時的「真正的玩家」
+  /* 收 buff 的人＝全隊扣掉施術者自己（他那份在 castSkill 裡已經推好了）。
+     隊友放的時候玩家也在收禮名單上，這就是以前少掉的那一半。 */
+  const targets = [];
+  if (caster) targets.push(owner);
+  (owner.allies || []).forEach(a => { if (a && !a._downed && a !== caster) targets.push(a); });
+  if (!targets.length) return;
+  const lv = skillLv(sk.id);
+  targets.forEach(tg => {
+    if (!Array.isArray(tg.buffs)) tg.buffs = [];
+    if (!Array.isArray(tg.shields)) tg.shields = [];
     // 同一支技能重放時先清掉自己上一次推的，跟玩家那邊同一條規則
-    ally.buffs = ally.buffs.filter(b => b.skillId !== sk.id);
-    ally.shields = ally.shields.filter(sh => sh.id !== sk.id);
-    fresh.forEach(b => ally.buffs.push(Object.assign({}, b)));
-    /* 護盾的耐久要照**隊友自己的** maxHp 重算——霸邪之陣寫的是「最大HP 的 12~30%」，
-       照抄玩家那份的話，血薄的祭司會發給坦克一面只有自己血量三成的盾。 */
+    tg.buffs = tg.buffs.filter(b => b.skillId !== sk.id);
+    tg.shields = tg.shields.filter(sh => sh.id !== sk.id);
+    fresh.forEach(b => tg.buffs.push(Object.assign({}, b)));
+    /* 護盾的耐久要照**收禮那個人自己的** maxHp 重算——霸邪之陣寫的是「最大HP 的 12~30%」，
+       照抄施術者那份的話，血薄的祭司會發給坦克一面只有自己血量三成的盾。 */
     freshShields.forEach(sh => {
-      const cp = Array.isArray(sk.shieldCapacityPct) ? sk.shieldCapacityPct[skillLv(sk.id) - 1] : sk.shieldCapacityPct;
+      const cp = Array.isArray(sk.shieldCapacityPct) ? sk.shieldCapacityPct[lv - 1] : sk.shieldCapacityPct;
       const copy = Object.assign({}, sh);
-      if (cp != null) copy.remainingHp = Math.round((ally.maxHp || 1) * cp / 100);
-      ally.shields.push(copy);
+      if (cp != null) copy.remainingHp = Math.round((tg.maxHp || 1) * cp / 100);
+      tg.shields.push(copy);
     });
-    withAlly(ally, () => recomputeDerived(false));
+    /* 重算衍生數值。玩家那份要用**玩家的身分**跑（換身中就是 withOwner），
+       隊友那份照舊換身進去；withAlly 是可以巢狀的（見它的註解）。 */
+    if (tg === owner) withOwner(() => recomputeDerived(false));
+    else withAlly(tg, () => recomputeDerived(false));
   });
-  pushCombatLog(`  → 「${sk.name}」同時給了 ${list.map(a => a._allyName).join('、')}。`, 'ally');
+  const names = targets.map(tg => (tg === owner ? '你' : tg._allyName)).join('、');
+  pushCombatLog(`  → 「${sk.name}」同時給了 ${names}。`, 'ally');
 }
 
 /* 護盾抵擋（霸邪之陣／暗之障壁／冰刃之牆），回傳扣完之後還剩多少傷害。
@@ -7495,26 +7819,51 @@ function tickAllyBuffs() {
   });
 }
 
+/* ---------------- 隊伍支援技的施術者（#105）----------------
+
+   復活術與治療術本來只認**玩家自己身上**的那一份：兩支都跑在玩家的 state 上、
+   讀 `state.hasAutoRevive1` / `state.hasPartyAutoCure`。
+   結果是「雇一個祭司當隊友，他的復活術與治療術完全不會作用」——
+   使用者 2026-08-16 指定要讓隊友那份也算數。
+
+   施術者名單 = 玩家 + 還站著的隊友。**倒地的隊友不能施術**（他自己都躺著了），
+   所以復活術不會出現「倒地的祭司自己把自己扶起來」。
+   冷卻與 SP 記在**各自身上**：兩個祭司就是兩份，這跟官方一樣是兩個人各放各的。 */
+function partySupportCasters() {
+  const out = [state];
+  allyList().forEach(a => { if (a && !a._downed) out.push(a); });
+  return out;
+}
+// 施術者的稱呼（玩家沒有 _allyName）
+function casterName(c) { return c === state ? '你' : (c._allyName || '隊友'); }
+
 /* 復活術（#95）：使用者指定改成「全隊有人倒下就自動扶起」。
 
    跟自己那半邊（`tryAutoRevive()`）**共用同一個冷卻與 SP 消耗**——官方就是同一支技能，
    分成兩份冷卻等於憑空多一次復活。回血量、SP 消耗、冷卻全部沿用技能表的原值。
    扶起隊友不吃天地樹葉子，也不必等倒地 15 秒的冷卻——那是葉子那條路的規則。 */
 function tryPriestReviveAlly(ally) {
-  if (!state.hasAutoRevive1 || !ally || !ally._downed) return false;
+  if (!ally || !ally._downed) return false;
   const now = Date.now();
-  if (now < (state.autoRevive1ReadyAt || 0)) return false;
-  const cost = state.autoRevive1SpCost || 0;
-  if (state.sp < cost) return false;
-  state.sp -= cost;
-  state.autoRevive1ReadyAt = now + state.autoRevive1CooldownSec * 1000;
-  ally._downed = false;
-  ally._reviveAt = 0;
-  ally.hp = Math.max(1, Math.round(ally.maxHp * state.autoRevive1HpPct / 100));
-  ally.sp = ally.maxSp;
-  ally._atkAccum = 0; ally._lastAttackAt = 0;
-  logMsg(`✨ 復活術發動！扶起了 ${ally._allyName}（HP ${state.autoRevive1HpPct}%）。`);
-  return true;
+  // 玩家優先（他的技能等級通常最高），再輪到還站著的隊友
+  for (const c of partySupportCasters()) {
+    if (c === ally) continue;                       // 倒地的人不會出現在名單裡，保險
+    if (!c.hasAutoRevive1) continue;
+    if (now < (c.autoRevive1ReadyAt || 0)) continue;
+    const cost = c.autoRevive1SpCost || 0;
+    if (c.sp < cost) continue;
+    c.sp -= cost;
+    c.autoRevive1ReadyAt = now + c.autoRevive1CooldownSec * 1000;
+    ally._downed = false;
+    ally._reviveAt = 0;
+    ally.hp = Math.max(1, Math.round(ally.maxHp * c.autoRevive1HpPct / 100));
+    ally.sp = ally.maxSp;
+    ally._atkAccum = 0; ally._lastAttackAt = 0;
+    const by = c === state ? '' : `（${c._allyName}）`;
+    logMsg(`✨ 復活術發動${by}！扶起了 ${ally._allyName}（HP ${c.autoRevive1HpPct}%）。`);
+    return true;
+  }
+  return false;
 }
 
 /* 自動補隊友的箭（#93）。**不能靠玩家那支 `tryAutoBuyArrow()`**：那支第一行就問
@@ -7555,7 +7904,7 @@ function setAutoBuyAllyArrow(v) { state.autoBuyAllyArrow = !!v; saveGame(); }
 function pickMonsterTarget() {
   const alive = allyAliveList();
   if (!alive.length) return null;
-  if (Math.random() * 100 < ALLY_MONSTER_TARGET_PLAYER_PCT) return null;
+  if (Math.random() * 100 < relicPlayerTargetPct()) return null;   // 牧師遺物 3 件會拉高這個數字（#113）
   return alive[Math.floor(Math.random() * alive.length)];
 }
 
@@ -7610,6 +7959,19 @@ function reviveAlliesInTown() {
    `useItem()` 不能直接用——那支會把回復量算在當下的 state 上，
    而我們要的是「從玩家背包扣一瓶、補到隊友身上」。 */
 const ALLY_POTION_FALLBACK = 'red_potion';
+/* 隊友的自然回復（#105）。以前隊友的 HP/SP **完全不會自己回**——
+   只有雇傭當下、被扶起、回城鎮這三個時機補滿，中間全靠灌藥水。
+   SP 更慘：沒有藍水那條路，放完就是放完。
+   使用者 2026-08-16 指定「給隊友自然回復」，直接借玩家那一支
+   `passiveRegen()` 換身跑，公式與放置加速倍率完全一致，不另開一套。 */
+function tickAllyRegen() {
+  allyList().forEach(a => {
+    if (!a || a._downed) return;
+    try { withAlly(a, () => passiveRegen()); }
+    catch (e) { console.error('隊友自然回復失敗', a && a._allyName, e); }
+  });
+}
+
 function allyPotionHeal(def, ally) {
   let amt = 0;
   if (def.heal) amt += def.heal;
@@ -7647,6 +8009,48 @@ function setAllyPotionCfg(key, value) {
   saveGame();
 }
 function setAutoBuyAllyPotion(v) { state.autoBuyAllyPotion = !!v; saveGame(); }
+
+/* 隊友的藍水（#105）。隊友開始自己放技能之後 SP 就是消耗品了，
+   結構完全比照上面的紅水：玩家背包供應、門檻可調、沒了自動買。 */
+const ALLY_SP_POTION_FALLBACK = 'blue_potion';
+const AUTO_BUY_ALLY_SP_QTY = 100;
+function allyPotionSpRestore(def, ally) {
+  let amt = 0;
+  if (def.restoreSp) amt += def.restoreSp;
+  if (def.restoreSpPct) amt += Math.round(ally.maxSp * def.restoreSpPct / 100);
+  return amt;
+}
+function tryAllySpPotion(ally) {
+  const cfg = state.allySpPotion || {};
+  if (!cfg.enabled) return false;
+  if (ally._downed) return false;
+  const pct = (cfg.spThreshold || 30) / 100;
+  if (ally.sp >= ally.maxSp * pct) return false;
+  const ids = [cfg.primary, cfg.fallback || ALLY_SP_POTION_FALLBACK].filter(Boolean);
+  for (const id of ids) {
+    const def = ITEMS[id];
+    if (!def) continue;
+    if (getItemQty(id) <= 0 && state.autoBuyAllySpPotion && def.buyPrice) {
+      const unit = Math.max(1, Math.round(def.buyPrice * (state.shopDiscountMult || 1)));
+      if (state.gold >= unit * AUTO_BUY_ALLY_SP_QTY) buyItem(id, AUTO_BUY_ALLY_SP_QTY);
+    }
+    if (getItemQty(id) <= 0) continue;
+    const amt = allyPotionSpRestore(def, ally);
+    if (amt <= 0) continue;
+    removeItem(id, 1);
+    const before = ally.sp;
+    ally.sp = Math.min(ally.maxSp, ally.sp + amt);
+    pushCombatLog(`  → ${ally._allyName} 喝了${def.name}，回復 ${Math.round(ally.sp - before)} 點SP。`, 'ally');
+    return true;
+  }
+  return false;
+}
+function setAllySpPotionCfg(key, value) {
+  if (!state.allySpPotion) state.allySpPotion = { enabled: true, primary: '', fallback: ALLY_SP_POTION_FALLBACK, spThreshold: 30 };
+  state.allySpPotion[key] = value;
+  saveGame();
+}
+function setAutoBuyAllySpPotion(v) { state.autoBuyAllySpPotion = !!v; saveGame(); }
 
 // 自動購買天地樹葉子：抄 tryAutoBuyArrow 的形狀（低於門檻就補貨、錢不夠就安靜跳過）
 const AUTO_BUY_LEAF_THRESHOLD = 2;
@@ -7703,7 +8107,7 @@ function monsterAttackAlly(mon, monDef, ally) {
 const GM_LEVEL_STEP = 50;
 const GM_GOLD_STEP = 1000000;
 function gmAddLevels(n) {
-  const cap = 99;
+  const cap = baseLevelCapOf();   // 進階二轉是 200（#110）
   let gained = 0, got = 0;
   const want = n || GM_LEVEL_STEP;
   while (gained < want && state.baseLevel < cap) {
@@ -7750,6 +8154,17 @@ function gmAddGold(n) {
   if (typeof renderAll === 'function') renderAll();
   return state.gold;
 }
+/* 測試用：一次拿 100 張遺物券。券換出來的是「指定套裝的隨機一件」，
+   所以這一顆就能把兩套遺物都湊齊，不必真的去刷 0.1%。 */
+const GM_RELIC_TICKETS = 100;
+function gmAddRelicTickets(n) {
+  const amount = n || GM_RELIC_TICKETS;
+  addItem(RELIC_TICKET_ID, amount);
+  logMsg(`🛠️ GM：遺物券 +${amount} → ${getItemQty(RELIC_TICKET_ID)} 張。`);
+  saveGame();
+  if (typeof renderAll === 'function') renderAll();
+  return getItemQty(RELIC_TICKET_ID);
+}
 
 /* ---------------- 屬性加點 ----------------
    兩條公式皆採用 RO 正式版對照表（巴哈姆特/RO Wiki 公開資料）換算：
@@ -7759,12 +8174,70 @@ function gmAddGold(n) {
 function statPointsAtLevel(level) {
   return Math.floor((level - 1) / 5) + 3;
 }
+/* 加點成本。100 以下是官方那條「每 10 點漲 1」（`floor((N−1)/10)+2`），
+   **100 以上另有一張表**（使用者 2026-08-16 給的官方數字，#112）：
+
+     現值 101~105 → 每點 16      現值 116~120 → 每點 28
+     現值 106~110 → 每點 20      現值 121~125 → 每點 32
+     現值 111~115 → 每點 24      現值 126~130 → 每點 36
+
+   參數是「目前的素質值」，回傳的是**再加 1 點**要花多少——所以 current=100 走的
+   還是舊公式（11 點），第一次吃到 16 是 101→102。
+   接得上：舊公式在 91~100 這一段算出來就是 11，跟使用者給的「92~100 每點 11」一致。
+
+   代價差距很大：單項 1→99 共 628 點，1→130 要 1,394 點（後面那 31 點就花掉 766 點，
+   光是 121→130 就佔 304 點）。Lv200 一路升上來總共拿得到 4,497 點，
+   剛好夠把**三項多一點**點到 130——所以 130 這條線本來就不是每項都點得滿，這是刻意的。 */
+const STAT_COST_HIGH = [
+  [105, 16], [110, 20], [115, 24], [120, 28], [125, 32], [130, 36],
+];
 function statPointCost(currentValue) {
-  return 2 + Math.floor((currentValue - 1) / 10);
+  if (currentValue <= 100) return 2 + Math.floor((currentValue - 1) / 10);
+  for (const [cap, cost] of STAT_COST_HIGH) if (currentValue <= cap) return cost;
+  return STAT_COST_HIGH[STAT_COST_HIGH.length - 1][1];
+}
+
+/* ---- 素質洗點（#120）----
+   收 10 萬鋅幣，把加過的點全部退回來重點。
+
+   退幾點是**照當初實際花掉的算**，不是照現在的數值乘一個係數——
+   加點成本是階梯式的（101 以上另一張表，見 statPointCost），
+   用係數估會退多退少，退多了就是無限增點的漏洞。
+   所以從 1 一路加到目前值，把每一階的成本加起來，那就是真正花掉的總額。 */
+const STAT_RESET_COST_ZENY = 100000;
+function statPointsSpentOn(value) {
+  let total = 0;
+  for (let v = 1; v < value; v++) total += statPointCost(v);
+  return total;
+}
+function statResetRefund() {
+  return BASE_STAT_KEYS.reduce((sum, k) => sum + statPointsSpentOn(state.stats[k] || 1), 0);
+}
+function statResetBlockReason() {
+  if (state.gold < STAT_RESET_COST_ZENY) {
+    return `鋅幣不足，需要 ${STAT_RESET_COST_ZENY.toLocaleString()}z。`;
+  }
+  if (statResetRefund() <= 0) return '你還沒有加過任何素質點。';
+  return null;
+}
+function resetStats() {
+  if (statResetBlockReason()) return false;
+  const refund = statResetRefund();
+  state.gold -= STAT_RESET_COST_ZENY;
+  BASE_STAT_KEYS.forEach(k => { state.stats[k] = 1; });
+  state.statPoints += refund;
+  recomputeDerived(true);
+  /* 素質歸零之後最大 HP/SP 會掉，目前值要跟著夾——
+     不夾的話會出現 HP 12000/3000 這種畫面（而且回血邏輯會以為滿血） */
+  state.hp = Math.min(state.hp, state.maxHp);
+  state.sp = Math.min(state.sp, state.maxSp);
+  logMsg(`🔄 素質洗點完成！退回 ${refund} 點素質點，花費 ${STAT_RESET_COST_ZENY.toLocaleString()}z。`);
+  saveGame();
+  return true;
 }
 
 function allocateStat(key) {
-  const statCap = 99; // 能力值上限
+  const statCap = statCapOf();   // 三轉 130、其餘 99（#111）
   if (state.stats[key] >= statCap) return false;
   const cost = statPointCost(state.stats[key]);
   if (state.statPoints < cost) return false;
@@ -7831,11 +8304,21 @@ function skillPointPoolJobs(jobId) {
   const jd = JOB_TREE[jobId];
   if (!jd) return [jobId];
   const out = [jobId];
-  // 進階二轉 → 併入它的二轉母職
-  if (jd.tier === 2.5 && jd.parent && (JOB_TREE[jd.parent] || {}).tier === 2) out.push(jd.parent);
-  // 二轉 → 併入以它為母職的進階二轉
-  if (jd.tier === 2) {
-    Object.values(JOB_TREE).forEach(j => { if (j.tier === 2.5 && j.parent === jobId) out.push(j.id); });
+  /* 二轉 / 進階二轉 / 三轉是同一條線上的同一個池（#101、#111）。
+     三轉沒有自己的技能，職業等級發的點數要花得掉就得併進來，
+     不然轉了三轉之後每升一級都拿到一點永遠用不到的技能點。 */
+  const lineage = j2 => {
+    const out2 = [];
+    let cur = JOB_TREE[j2];
+    while (cur && cur.tier >= 2) { out2.push(cur.id); cur = JOB_TREE[cur.parent]; }
+    return out2;
+  };
+  if (jd.tier >= 2) {
+    lineage(jobId).forEach(id => { if (!out.includes(id)) out.push(id); });
+    // 往下找：以這條線為母職的更高階職業也算同一個池
+    Object.values(JOB_TREE).forEach(j => {
+      if (j.tier > 2 && lineage(j.id).includes(jobId) && !out.includes(j.id)) out.push(j.id);
+    });
   }
   return out;
 }
@@ -10057,6 +10540,30 @@ function isInTown() {
   return map && map.monsters.length === 0;
 }
 
+/* ---- 回最近的安全區（#120）----
+   優先找**目前這一區**的安全區；這一區沒有就回普隆德拉。
+   跟 onPlayerDown() 被抬回城走的是同一套判斷，只是那邊是被動觸發。 */
+const FALLBACK_SAFE_MAP = 'prontera';
+function nearestSafeMapId() {
+  const region = typeof regionOf === 'function' ? regionOf(state.mapId) : null;
+  if (region) {
+    for (const mid of region.maps) {
+      const m = MAPS.find(x => x.id === mid);
+      if (m && (m.monsters || []).length === 0) return mid;
+    }
+  }
+  return MAPS.find(x => x.id === FALLBACK_SAFE_MAP) ? FALLBACK_SAFE_MAP : null;
+}
+function goNearestSafeZone() {
+  const id = nearestSafeMapId();
+  if (!id) return false;
+  if (state.mapId === id) {
+    logMsg('🏠 你已經在安全區了。');
+    return false;
+  }
+  return changeMap(id);
+}
+
 function townRestore() {
   if (!isInTown()) return;
   if (state.hp < state.maxHp || state.sp < state.maxSp) {
@@ -10811,7 +11318,11 @@ function effectiveGearBonuses() {
     const d = lo.slots[s];
     return d ? `${d.itemId}+${d.refine}[${d.cards.join(',')}]` : '-';
   }).join('|') + '#' + state.jobId
-    + '#' + BASE_STAT_KEYS.map(k => (state.stats && state.stats[k]) || 0).join(',');
+    + '#' + BASE_STAT_KEYS.map(k => (state.stats && state.stats[k]) || 0).join(',')
+    /* 遺物也要進簽章，否則換遺物不會重算——條件式加成卡在舊值那個坑（見上面）
+       在這裡會變成「拔掉整套遺物，加成還在」。 */
+    + '#' + (typeof RELIC_SLOTS === 'undefined' ? '' :
+      RELIC_SLOTS.map(s => relicsOf()[s] || '-').join(','));
   if (_gearBonusCache && _gearBonusKey === key) return _gearBonusCache;
 
   const total = {};
@@ -10850,6 +11361,13 @@ function effectiveGearBonuses() {
       sets.push({ id: setId, name: def.name, bonus: def.bonus });
     }
   }
+  /* 遺物（#113）：併進同一張總表，所有既有的消費端不必知道加成是哪來的。
+     沒有 bonus 只有 proc 的那一段（5 件）在這裡是空的，旗標另外在
+     recomputeDerived 裡設。 */
+  activeRelicTiers().forEach(({ set, tier }) => {
+    mergeBonus(total, tier.bonus);
+    sets.push({ id: 'relic_' + set.id + '_' + tier.need, name: `${set.name} ${tier.need} 件`, bonus: tier.bonus });
+  });
 
   _gearBonusKey = key;
   _activeSets = sets;
@@ -10857,6 +11375,317 @@ function effectiveGearBonuses() {
   return total;
 }
 function activeEquipSets() { effectiveGearBonuses(); return _activeSets; }
+
+/* ---------------- 遺物（#113）----------------
+   資料在 js/relics.js。這裡只做四件事：欄位、計件、加成、掉落。
+
+   計件的定義是「身上有幾件**同一套**的遺物」。因為八個欄位一格一個部位，
+   同一套不可能重複，所以直接數就行，不必像席琳那樣去重。
+------------------------------------------------- */
+function emptyRelicSlots() {
+  const o = {};
+  if (typeof RELIC_SLOTS !== 'undefined') RELIC_SLOTS.forEach(s => { o[s] = null; });
+  return o;
+}
+/* 換身中（withAlly）一律看玩家的遺物：隊友沒有自己的遺物欄，
+   不導回去的話牠們會拿到空表，套裝效果在隊友身上憑空消失。 */
+function relicsOf() {
+  const st = allyOwnerState() || state;
+  return (st && st.relics) || {};
+}
+/* { setId: 件數 } */
+function relicSetCounts() {
+  const out = {};
+  if (typeof RELIC_SLOTS === 'undefined') return out;
+  const worn = relicsOf();
+  RELIC_SLOTS.forEach(slot => {
+    const d = RELIC_ITEMS[worn[slot]];
+    if (d && d.type === 'relic') out[d.relicSet] = (out[d.relicSet] || 0) + 1;
+  });
+  return out;
+}
+/* 目前生效的段數：[{ setId, set, tier, count }]。畫面與加成共用這一支 */
+function activeRelicTiers() {
+  const out = [];
+  if (typeof RELIC_SETS === 'undefined') return out;
+  Object.entries(relicSetCounts()).forEach(([setId, n]) => {
+    const set = RELIC_SETS[setId];
+    if (!set) return;
+    set.tiers.forEach(tier => { if (n >= tier.need) out.push({ setId, set, tier, count: n }); });
+  });
+  return out;
+}
+/* 裝備／卸下。遺物不進 resolveEquipSlotFor，所以不會跟一般裝備搶欄位 */
+function equipRelic(itemId) {
+  const d = RELIC_ITEMS[itemId];
+  if (!d || d.type !== 'relic') return false;
+  if (!state.relics) state.relics = emptyRelicSlots();
+  const row = state.inventory.find(r => r.item === itemId && !r.instanceId);
+  if (!row || row.qty < 1) return false;
+  const slot = d.relicSlot;
+  const cur = state.relics[slot];
+  if (cur === itemId) return false;
+  removeItem(itemId, 1);
+  if (cur) addItem(cur, 1);            // 原本那件退回背包，不沒收
+  state.relics[slot] = itemId;
+  recomputeDerived(true);
+  logMsg(`🏺 裝上了 ${d.name}。`);
+  saveGame();
+  return true;
+}
+function unequipRelic(slot) {
+  if (!state.relics || !state.relics[slot]) return false;
+  const itemId = state.relics[slot];
+  state.relics[slot] = null;
+  addItem(itemId, 1);
+  recomputeDerived(true);
+  logMsg(`🏺 卸下了 ${RELIC_ITEMS[itemId].name}。`);
+  saveGame();
+  return true;
+}
+
+/* ---- 掉落 ----
+   只有打寶模式會掉，**瘋狂不加成**（使用者指定）。遺物與遺物券各自獨立擲一次，
+   所以同一隻怪有可能兩樣都給。 */
+function rollRelicDrop(def) {
+  if (typeof RELIC_PIECE_IDS === 'undefined' || !RELIC_PIECE_IDS.length) return;
+  if (!farmMode()) return;
+  const pct = def && def.isBoss ? RELIC_DROP_PCT_BOSS : RELIC_DROP_PCT_NORMAL;
+  if (Math.random() * 100 < pct) {
+    const id = RELIC_PIECE_IDS[Math.floor(Math.random() * RELIC_PIECE_IDS.length)];
+    addItem(id, 1);
+    logMsg(`🏺 掉落了 ${RELIC_ITEMS[id].name}！`);
+  }
+  if (Math.random() * 100 < pct) {
+    addItem(RELIC_TICKET_ID, 1);
+    logMsg('🎫 掉落了 遺物券！');
+  }
+}
+
+/* ---- 遺物券 ----
+   背包裡的遺物 10 件換 1 張。**從數量最多的那一種開始扣**——
+   這樣「只有一份」的珍稀部位自然被留到最後，玩家不必先手動鎖定。 */
+function relicSpareTotal() {
+  if (!state || !Array.isArray(state.inventory)) return 0;
+  return state.inventory.reduce((n, r) => {
+    const d = RELIC_ITEMS[r.item];
+    return d && d.type === 'relic' && !r.instanceId ? n + r.qty : n;
+  }, 0);
+}
+function exchangeRelicTicket() {
+  if (relicSpareTotal() < RELIC_TICKET_COST) {
+    logMsg(`🎫 背包裡的遺物不足 ${RELIC_TICKET_COST} 件，換不了券。`);
+    return false;
+  }
+  let left = RELIC_TICKET_COST;
+  while (left > 0) {
+    const rows = state.inventory.filter(r => {
+      const d = RELIC_ITEMS[r.item];
+      return d && d.type === 'relic' && !r.instanceId && r.qty > 0;
+    }).sort((a, b) => b.qty - a.qty);
+    if (!rows.length) return false;      // relicSpareTotal 已經擋過，理論上到不了
+    const take = Math.min(left, rows[0].qty);
+    removeItem(rows[0].item, take);
+    left -= take;
+  }
+  addItem(RELIC_TICKET_ID, 1);
+  logMsg(`🎫 用 ${RELIC_TICKET_COST} 件遺物換到了 1 張遺物券。`);
+  saveGame();
+  return true;
+}
+/* ---- 5 件的特殊效果 ----
+   三支都由 playerAttackInner() 在**命中之後**呼叫，全部只作用於普通攻擊。
+   技能不吃這些效果，這是兩套遺物共同的設計前提（見 relics.js 的說明）。 */
+
+/* 刺客：互斥的倍率階梯。由高倍率往低比對，中了就停，所以 10/5/2 三段不會疊。
+   期望值 ×1.39（0.01×10 + 0.05×5 + 0.10×2 + 0.84×1）。 */
+function rollRelicDamageMult() {
+  if (!state.relicProcs || !state.relicProcs.assassin) return 1;
+  const r = Math.random() * 100;
+  let acc = 0;
+  for (const step of RELIC_PROC_ASSASSIN.ladder) {
+    acc += step.chance;
+    if (r < acc) return step.mult;
+  }
+  return 1;
+}
+/* 刺客：攻速恆定。走 buff 陣列，recomputeDerived 的 ASPD 上限那行讀它。
+   重複觸發是**刷新**不是疊加——疊加會讓高攻速角色把持續時間堆到永久。 */
+function tryRelicAspdProc() {
+  if (!state.relicProcs || !state.relicProcs.assassin) return;
+  if (Math.random() * 100 >= RELIC_PROC_ASSASSIN.aspdChance) return;
+  const ms = RELIC_PROC_ASSASSIN.aspdSec * 1000;
+  const cur = state.buffs.find(b => b.type === 'aspdmax');
+  if (cur) { cur.msRemaining = Math.max(cur.msRemaining || 0, ms); return; }
+  state.buffs.push({ type: 'aspdmax', name: '完美的潛行', icon: '🗡️', msRemaining: ms });
+  recomputeDerived(true);
+  logMsg(`🗡️ 完美的潛行！攻速恆定 ${RELIC_PROC_ASSASSIN.aspdValue}，持續 ${RELIC_PROC_ASSASSIN.aspdSec} 秒。`, 'skill');
+}
+/* 法師：全場黑暗。外層一次判定，中了之後**每隻怪各自再擲一次**——
+   使用者指定的「全場敵人 50% 判定黑暗」是後面這一層。 */
+function tryRelicBlindProc() {
+  if (!state.relicProcs || !state.relicProcs.mage) return;
+  if (!state.monsters || !state.monsters.length) return;
+  if (Math.random() * 100 >= RELIC_PROC_MAGE.blindChance) return;
+  let n = 0;
+  state.monsters.forEach(mon => {
+    if (mon.hp <= 0) return;
+    if (Math.random() * 100 >= RELIC_PROC_MAGE.blindPerMonster) return;
+    const md = MONSTERS[mon.defId];
+    if (md && applyAilment(mon, md, 'blind')) n++;
+  });
+  if (n > 0) logMsg(`🔮 閃光術！${n} 隻敵人陷入黑暗。`, 'skill');
+}
+/* 法師：普攻改打全體。把**已經算好的最終傷害**複製到其他怪身上。
+
+   三條規則是刻意的，少一條就會爆炸：
+     1. 不重擲命中與暴擊——否則五隻怪等於五次暴擊骰
+     2. 濺射不再觸發濺射，也不觸發任何 on-attack 被動與卡片 proc
+        （tryCardAilments 那一整排只在主目標身上跑）
+     3. 走 monsters 的**快照**迭代：killMonster 是用 filter 重新綁定陣列的，
+        邊殺邊讀活陣列會漏怪 */
+function tryRelicSplashProc(dmg, mainTarget) {
+  if (!state.relicProcs || !state.relicProcs.mage) return;
+  if (!state.monsters || state.monsters.length < 2) return;
+  if (Math.random() * 100 >= RELIC_PROC_MAGE.splashChance) return;
+  const list = state.monsters.slice();
+  let n = 0;
+  list.forEach(mon => {
+    if (mon === mainTarget || mon.hp <= 0) return;
+    const md = MONSTERS[mon.defId];
+    if (!md) return;
+    mon.hp -= dmg;
+    ailBreakOnDamage(mon, md);
+    n++;
+    if (typeof showDamageFloatAt === 'function') showDamageFloatAt(mon.id, dmg, false);
+    if (mon.hp <= 0) killMonster(md, mon);
+  });
+  if (n > 0) logMsg(`🔮 閃光術擴散！額外打中 ${n} 隻敵人，各 ${dmg} 點傷害。`, 'skill');
+}
+
+/* ---- 騎士／武僧：被打時完全免傷 ----
+   跟光之盾（defenderNegates）同一類，所以掛在同一個插入點；
+   怪物技能那條路徑也要擋，不然「20% 免疫」在會放技能的怪身上等於不存在。 */
+function relicNegatesHit() {
+  const p = state.relicProcs || {};
+  if (p.knight && Math.random() * 100 < RELIC_PROC_KNIGHT.immuneChance) return '🛡️ 騎士遺物';
+  if (p.monk && Math.random() * 100 < RELIC_PROC_MONK.immuneChance) return '📿 佛法無邊';
+  return null;
+}
+
+/* ---- 武僧：加特林 ----
+   固定傷害＝**不吃怪物防禦**，所以 CD 是唯一的節流閥（見 relics.js 的說明）。
+   飄字跳一排「-1」是純特效，傷害仍然一次結算——真的打 3600 次會把迴圈跑爆。 */
+function tryRelicMonkGatling(target, monDef) {
+  if (!state.relicProcs || !state.relicProcs.monk) return;
+  const now = Date.now();
+  if (now < (state.relicMonkReadyAt || 0)) return;
+  if (Math.random() * 100 >= RELIC_PROC_MONK.procChance) return;
+  state.relicMonkReadyAt = now + RELIC_PROC_MONK.cooldownSec * 1000;
+  const dmg = RELIC_PROC_MONK.fixedDamage;
+  target.hp -= dmg;
+  ailBreakOnDamage(target, monDef);
+  if (typeof showGatlingFloats === 'function') showGatlingFloats(target.id, RELIC_PROC_MONK.gatlingHits);
+  logMsg(`👊 南無加特林菩薩！造成 ${dmg} 點固定傷害。`, 'skill');
+  if (target.hp <= 0) killMonster(monDef, target);
+}
+
+/* ---- 鐵匠：定時護盾 ----
+   走既有的 state.shields（霸邪之陣那套），消耗規則完全共用——
+   另開一套「遺物專用護盾」等於要把 absorbWithShields 的四條規則再寫一遍。
+   remainingCharges 給很大是因為這面盾是**耐久制**不是次數制：
+   5000 點打完就破，不管挨了幾下。 */
+function tickRelicShield() {
+  if (!state.relicProcs || !state.relicProcs.blacksmith) return;
+  const now = Date.now();
+  if (now < (state.relicShieldReadyAt || 0)) return;
+  if (!state.shields) state.shields = [];
+  if (state.shields.some(sh => sh.id === 'relic_bs')) return;   // 上一面還沒破就不補
+  state.relicShieldReadyAt = now + RELIC_PROC_BLACKSMITH.shieldCooldownSec * 1000;
+  state.shields.push({
+    id: 'relic_bs', remainingHp: RELIC_PROC_BLACKSMITH.shieldHp,
+    remainingCharges: 9999, expiresAt: now + 999999 * 1000,
+  });
+}
+
+/* ---- 鐵匠：普攻追打 ----
+   ATK100%+MATK100% 是刻意的雙傷害（使用者確認）：遺物不限職業，
+   純物理、純魔法、混合三種 build 都吃得到其中一半以上。
+   走一般的物理減傷（mitigateDamage），不是固定傷害。 */
+function tryRelicBlacksmithStrike(mainTarget) {
+  if (!state.relicProcs || !state.relicProcs.blacksmith) return;
+  if (!state.monsters || !state.monsters.length) return;
+  if (Math.random() * 100 >= RELIC_PROC_BLACKSMITH.procChance) return;
+  const pool = state.monsters.filter(m => m.hp > 0);
+  if (!pool.length) return;
+  const base = (state.atk || 0) * RELIC_PROC_BLACKSMITH.atkPct / 100
+    + (state.matk || 0) * RELIC_PROC_BLACKSMITH.matkPct / 100;
+  // 隨機挑 N 隻（不重複）。場上不足 N 隻就打幾隻算幾隻，不重複打同一隻
+  const picks = pool.slice();
+  for (let i = picks.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const t = picks[i]; picks[i] = picks[j]; picks[j] = t;
+  }
+  const targets = picks.slice(0, RELIC_PROC_BLACKSMITH.targets);
+  let hit = 0;
+  targets.forEach(mon => {
+    const md = MONSTERS[mon.defId];
+    if (!md || mon.hp <= 0) return;
+    const dmg = mitigateDamage(base, ...defOf(md));
+    mon.hp -= dmg;
+    ailBreakOnDamage(mon, md);
+    hit++;
+    if (typeof showDamageFloatAt === 'function') showDamageFloatAt(mon.id, dmg, false);
+    if (mon.hp <= 0) killMonster(md, mon);
+  });
+  if (hit > 0) logMsg(`⚙️ 鐵匠遺物！射穿了 ${hit} 名敵人。`, 'skill');
+}
+
+/* ---- 牧師：自動復活 ----
+   3 次用完要**換圖**才回滿（見 changeMap）。只靠 CD 的話，
+   3 分鐘一到就等於無限次，「3 次」這個數字就沒有意義了。
+   接在 tryAutoRevive() 的最後：自己的復活術與隊友的祭司都優先，
+   遺物是最後一道保險。 */
+function tryRelicPriestRevive() {
+  if (!state.relicProcs || !state.relicProcs.priest) return false;
+  const now = Date.now();
+  if (state.relicReviveUsed == null) state.relicReviveUsed = 0;
+  if (state.relicReviveUsed >= RELIC_PROC_PRIEST.charges) return false;
+  if (now < (state.relicReviveReadyAt || 0)) return false;
+  state.relicReviveUsed++;
+  state.relicReviveReadyAt = now + RELIC_PROC_PRIEST.cooldownSec * 1000;
+  state.hp = Math.max(1, Math.round(state.maxHp * RELIC_PROC_PRIEST.reviveHpPct / 100));
+  const left = RELIC_PROC_PRIEST.charges - state.relicReviveUsed;
+  logMsg(`✝️ 牧師遺物！原地復活（HP ${RELIC_PROC_PRIEST.reviveHpPct}%），還剩 ${left} 次。`);
+  return true;
+}
+/* 換圖回滿次數。死亡被抬回安全區也會經過這裡 */
+function resetRelicRevive() {
+  state.relicReviveUsed = 0;
+  state.relicReviveReadyAt = 0;
+}
+/* 3 件：從隊友身上多接 10% 的攻擊。回傳「怪打玩家」的機率 */
+function relicPlayerTargetPct() {
+  const extra = (state.relicProcs && state.relicProcs.priest_taunt) ? RELIC_PROC_PRIEST.takeDamagePct : 0;
+  return Math.min(100, ALLY_MONSTER_TARGET_PLAYER_PCT + extra);
+}
+
+/* 遺物商人：1 張券換「指定套裝」的隨機一件。指定套裝是這張券唯一的價值——
+   直接掉落是全套裝隨機，湊特定一套全靠這裡 */
+function redeemRelicTicket(setId) {
+  const pool = relicPieceIdsOfSet(setId);
+  if (!pool.length) return false;
+  if (getItemQty(RELIC_TICKET_ID) < 1) {
+    logMsg('🎫 你沒有遺物券。');
+    return false;
+  }
+  removeItem(RELIC_TICKET_ID, 1);
+  const id = pool[Math.floor(Math.random() * pool.length)];
+  addItem(id, 1);
+  logMsg(`🏺 遺物商人給了你 ${RELIC_ITEMS[id].name}。`);
+  saveGame();
+  return true;
+}
 
 const BASE_STAT_KEYS = ['str', 'agi', 'vit', 'int', 'dex', 'luk'];
 function getCardBonus(stat) {
@@ -10904,6 +11733,13 @@ function sellItem(itemId, qty) {
   const def = ITEMS[itemId];
   const row = state.inventory.find(r => r.item === itemId && !r.instanceId);
   if (!def || !row || row.qty < qty) return false;
+  /* 遺物賣價是 0，賣掉等於**免費銷毀**（#115）。
+     多的遺物有兩個正當出路：換遺物券、或存倉庫躲開換券的扣除，
+     賣出不在其中——擋掉，免得手滑把湊了幾十小時的部位變成 0 鋅幣。 */
+  if (def.type === 'relic') {
+    logMsg(`🏺 ${def.name} 賣不掉。多的遺物請拿去換遺物券，要留的存倉庫。`);
+    return false;
+  }
   if (isItemLocked(itemId)) {
     logMsg(`🔒 ${def.name} 已鎖定，無法賣出。請先解除鎖定。`);
     return false;
@@ -10978,6 +11814,7 @@ function autoSellSelectedItems() {
     const def = ITEMS[itemId];
     const row = state.inventory.find(r => r.item === itemId && !r.instanceId);
     if (!def || !row || row.qty < 1) return;
+    if (def.type === 'relic') return;   // 遺物賣不掉（見 sellItem）
     if (isItemLocked(itemId)) return;   // 鎖定的道具自動販賣一律跳過
     const qty = row.qty;
     removeItem(itemId, qty);
@@ -11020,6 +11857,7 @@ function tryAutoVending() {
     const def = ITEMS[itemId];
     const row = state.inventory.find(r => r.item === itemId && !r.instanceId);
     if (!def || !row || row.qty < 1) return;
+    if (def.type === 'relic') return;   // 遺物賣不掉（見 sellItem）
     if (isItemLocked(itemId)) return;   // 鎖定的道具露天商店也不賣
     removeItem(itemId, 1);
     const price = Math.round(def.sell * sellMult);
@@ -11204,6 +12042,7 @@ function changeMap(mapId) {
   // 回安全區全隊免費滿血復活（#83）——不然倒地的隊友只能靠天地樹葉子
   if ((map.monsters || []).length === 0) reviveAlliesInTown();
   ensureCodex().maps[mapId] = 1; // 探索成就用
+  resetRelicRevive();            // 牧師遺物的復活次數換圖回滿（#113）
   state.monsters = [];
   state.monster = null;
   logMsg(`前往「${map.name}」。`);
@@ -11241,6 +12080,17 @@ function saveGameThrottled() {
 }
 function saveGame() {
   if (!state) return;
+  /* 換身期間（withAlly）**絕對不能存**（#105）：那時候的 `state` 是隊友快照，
+     存下去等於把玩家的存檔格整個換成隊友——名字、職業、等級、背包全部變成他的。
+
+     `withAlly()` 的註解本來就寫著「不要在 fn 裡呼叫 saveGame()」，但那是靠自律，
+     而隊友跑的是**同一支 `playerAttack()`**：裡面的 `tryAutoSpells()` 打到卡片的
+     自動念咒就會 `castSkill()`，castSkill 尾端有 saveGame()。
+     實測隊友裝一張牛蛙卡（普攻機率放毒刃），普攻五下就把玩家的角色蓋掉了。
+
+     隊友的狀態不會因此漏存：隊友快照住在 `state.allies` 裡，
+     換回玩家之後的任何一次正常存檔都會把它一起寫進去。 */
+  if (_allyActing) return;
   try {
     state.lastActiveAt = Date.now();
     /* 隊友快照跟主角**共用**同一個 state.monsters 陣列（withAlly 塞的），
@@ -11272,6 +12122,12 @@ function loadGame() {
     if (typeof state.autoReviveAlly !== 'boolean') state.autoReviveAlly = true;
     if (!state.allyPotion) state.allyPotion = { enabled: true, primary: '', fallback: ALLY_POTION_FALLBACK, hpThreshold: 50 };
     if (typeof state.autoBuyAllyPotion !== 'boolean') state.autoBuyAllyPotion = true;
+    // 打寶模式（#110）：舊存檔補 0（關閉）；不是進階二轉的話一律關掉
+    if (typeof state.farmMode !== 'number') state.farmMode = 0;
+    if (state.farmMode && !farmModeUnlocked()) state.farmMode = 0;
+    // 隊友藍水（#105）：舊存檔補上預設，不然隊友放完技能就再也沒 SP
+    if (!state.allySpPotion) state.allySpPotion = { enabled: true, primary: '', fallback: ALLY_SP_POTION_FALLBACK, spThreshold: 30 };
+    if (typeof state.autoBuyAllySpPotion !== 'boolean') state.autoBuyAllySpPotion = true;
     if (typeof state.autoBuyAllyArrow !== 'boolean') state.autoBuyAllyArrow = true;
     if (typeof state.allySfxRatio !== 'number') state.allySfxRatio = 0.5;
     if (typeof state.allySfxOff !== 'boolean') state.allySfxOff = false;
@@ -11344,6 +12200,10 @@ function loadGame() {
     if (!state.equip.accessory2) state.equip.accessory2 = null;
     if (!state.equip.ammo) state.equip.ammo = null;
     if (!state.equipSkin) state.equipSkin = 'grid';
+    /* 遺物欄（#113）。舊存檔沒有這個欄位，補成八格空的；
+       已經有的話只補缺少的格子，不要整個覆蓋掉玩家穿好的遺物。 */
+    if (!state.relics) state.relics = emptyRelicSlots();
+    RELIC_SLOTS.forEach(s => { if (state.relics[s] === undefined) state.relics[s] = null; });
     if (!state.refinement) state.refinement = {};
     if (!state.equippedCards) state.equippedCards = {};
     if (!state.instances) state.instances = {};

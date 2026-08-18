@@ -647,6 +647,169 @@ const JOB_TREE = {
     // 官方 4 個技能全數到齊（#79），四個都是被動，跟 #70 武僧整條線一致
     skills: ['ch_soulcollect', 'ch_palmstrike', 'ch_tigerfist', 'ch_chaincrush'],
     desc: '一拳之後就沒有第二拳了，因為不需要。'
+  },
+
+  /* ---------------- 三轉（tier 3，#111）----------------
+     使用者 2026-08-16 決定：**先只做外觀**——名字、立繪、職業樹上的那一格，
+     沒有任何自己的技能（官方三轉的傷害公式換了一套，照抄倍率會失衡）。
+     它真正的作用是解鎖「基礎等級 200」與「素質上限 130」。
+     數值（atkMod/matkMod/bonusLevels/HP-SP/ASPD）一律沿用母職，轉了不會變弱也不會變強。
+     之後要補技能的話，往各自的 skills 陣列填就好，其餘不用動。 */
+  runeknight: {
+    id: 'runeknight', name: '盧恩騎士', tier: 3, icon: '🗡️', parent: 'lordknight',
+    baseLevelReq: 99, jobLevelReq: 70, jobLevelMax: 70,
+    atkMod: 1.8, matkMod: 0.7,
+    hpSpFrom: 'lordknight', aspdFrom: 'lordknight',
+    // 沒有自己的技能，母職那份整份借過來（見上面的區塊說明）
+    borrowSkillsFrom: ['lordknight'],
+    next: [], nextLocked: [],
+    bonusLevels: { str:[1,6,7,8,19,25,33,41,46,47,52,56,57,64,70], agi:[2,10,14,17,37,53,60,65], vit:[5,12,22,29,40,43,58,68], int:[13,67], dex:[4,11,16,28,31,36,44,49,62], luk:[3,27,38] },
+    skills: [],
+    desc: '龍與符文的繼承者。劍上刻著看不懂的字，但敵人看得懂。'
+  },
+  royalguard: {
+    id: 'royalguard', name: '皇家禁衛', tier: 3, icon: '🛡️', parent: 'paladin',
+    baseLevelReq: 99, jobLevelReq: 70, jobLevelMax: 70,
+    atkMod: 1.65, matkMod: 1.0,
+    hpSpFrom: 'paladin', aspdFrom: 'paladin',
+    // 沒有自己的技能，母職那份整份借過來（見上面的區塊說明）
+    borrowSkillsFrom: ['paladin'],
+    next: [], nextLocked: [],
+    bonusLevels: { str:[2,10,18,26,33,40,48,55,64], agi:[3,8,16,24,37,52,60,70], vit:[1,9,15,21,30,42,49,53,63,69], int:[7,14,29,43,54,61,65], dex:[6,12,17,23,36,45,57,68], luk:[39,59,67] },
+    skills: [],
+    desc: '站在王座前面的那一個。他不倒，後面就沒事。'
+  },
+  warlock: {
+    id: 'warlock', name: '魔導士', tier: 3, icon: '🌌', parent: 'highwizard',
+    baseLevelReq: 99, jobLevelReq: 70, jobLevelMax: 70,
+    atkMod: 0.5, matkMod: 2.0,
+    hpSpFrom: 'highwizard', aspdFrom: 'highwizard',
+    // 沒有自己的技能，母職那份整份借過來（見上面的區塊說明）
+    borrowSkillsFrom: ['highwizard'],
+    next: [], nextLocked: [],
+    bonusLevels: { str:[20,40,60], agi:[8,18,26,34,50,56,65,69], vit:[3,29,47,53,66], int:[1,5,10,14,19,24,28,32,37,38,39,46,49,55,59,62,70], dex:[2,9,17,22,23,31,43,61,67], luk:[12,41,57] },
+    skills: [],
+    desc: '把咒文寫成公式的人。世界照著他的算式崩塌。'
+  },
+  sorcerer: {
+    id: 'sorcerer', name: '元素使', tier: 3, icon: '🌪️', parent: 'professor',
+    baseLevelReq: 99, jobLevelReq: 70, jobLevelMax: 70,
+    atkMod: 1.0, matkMod: 1.6,
+    hpSpFrom: 'professor', aspdFrom: 'professor',
+    // 沒有自己的技能，母職那份整份借過來（見上面的區塊說明）
+    borrowSkillsFrom: ['professor'],
+    next: [], nextLocked: [],
+    bonusLevels: { str:[5,18,27,36,45,56], agi:[3,12,23,32,43,50,54,60,69], vit:[7,24,39,63], int:[1,2,11,14,22,30,38,41,49,57,64,68,70], dex:[8,16,20,26,29,34,37,46,52,55,62], luk:[21,66] },
+    skills: [],
+    desc: '四大元素在他手上不是力量，是同事。'
+  },
+  ranger: {
+    id: 'ranger', name: '遊俠', tier: 3, icon: '🏹', parent: 'sniper',
+    baseLevelReq: 99, jobLevelReq: 70, jobLevelMax: 70,
+    atkMod: 1.6, matkMod: 0.8,
+    hpSpFrom: 'sniper', aspdFrom: 'sniper',
+    // 沒有自己的技能，母職那份整份借過來（見上面的區塊說明）
+    borrowSkillsFrom: ['sniper'],
+    next: [], nextLocked: [],
+    bonusLevels: { str:[8,24,45,61], agi:[2,6,10,11,21,28,33,38,43,48,58], vit:[12,32,55], int:[5,20,42,54,65], dex:[1,3,4,16,17,22,26,30,35,40,46,51,60,69], luk:[14,25,31,36,50,57,62,70] },
+    skills: [],
+    desc: '箭離弦的那一刻，獵物才知道自己一直在陷阱裡。'
+  },
+  minstrel: {
+    id: 'minstrel', name: '樂團', tier: 3, icon: '🎻', parent: 'clown',
+    baseLevelReq: 99, jobLevelReq: 70, jobLevelMax: 70,
+    atkMod: 1.65, matkMod: 0.9,
+    hpSpFrom: 'clown', aspdFrom: 'clown',
+    // 沒有自己的技能，母職那份整份借過來（見上面的區塊說明）
+    borrowSkillsFrom: ['clown'],
+    next: [], nextLocked: [],
+    bonusLevels: { str:[5,10,19,33,45,54,62,70], agi:[1,4,9,13,24,32,36,49,53,58,65,68], vit:[16,59], int:[8,21,28,41,69], dex:[2,7,15,23,30,39,40,43,50,56,57,61,63,66], luk:[11,18,26,47] },
+    skills: [],
+    desc: '一個人就是一整支樂隊，安可是必須的。'
+  },
+  wanderer: {
+    id: 'wanderer', name: '漂流者', tier: 3, icon: '💃', parent: 'gypsy',
+    baseLevelReq: 99, jobLevelReq: 70, jobLevelMax: 70,
+    atkMod: 1.65, matkMod: 0.9,
+    hpSpFrom: 'gypsy', aspdFrom: 'gypsy',
+    // 沒有自己的技能，母職那份整份借過來（見上面的區塊說明）
+    borrowSkillsFrom: ['gypsy'],
+    next: [], nextLocked: [],
+    bonusLevels: { str:[2,6,20,35,50,66], agi:[4,11,12,13,25,31,38,47,52,57,61,62,67,70], vit:[17,54], int:[8,26,39,53,60], dex:[1,9,14,15,18,22,23,28,33,41,43,45,49,58,65,69], luk:[27,63] },
+    skills: [],
+    desc: '舞步走到哪，戰場的節奏就改到哪。'
+  },
+  mechanic: {
+    id: 'mechanic', name: '機工士', tier: 3, icon: '⚙️', parent: 'whitesmith',
+    baseLevelReq: 99, jobLevelReq: 70, jobLevelMax: 70,
+    atkMod: 1.75, matkMod: 0.7,
+    hpSpFrom: 'whitesmith', aspdFrom: 'whitesmith',
+    // 沒有自己的技能，母職那份整份借過來（見上面的區塊說明）
+    borrowSkillsFrom: ['whitesmith'],
+    next: [], nextLocked: [],
+    bonusLevels: { str:[2,3,17,26,33,52], agi:[7,19,20,31,36,58,64], vit:[9,13,29,48,60,65], int:[4,15,22,34,50,61], dex:[1,6,12,23,32,38,41,47,55,56,62,70], luk:[8,16,28,39,44,45,66,67] },
+    skills: [],
+    desc: '鐵鎚換成了扳手，敲的東西變大台了。'
+  },
+  geneticist: {
+    id: 'geneticist', name: '基因學者', tier: 3, icon: '🧪', parent: 'creator',
+    baseLevelReq: 99, jobLevelReq: 70, jobLevelMax: 70,
+    atkMod: 1.55, matkMod: 0.9,
+    hpSpFrom: 'creator', aspdFrom: 'creator',
+    // 沒有自己的技能，母職那份整份借過來（見上面的區塊說明）
+    borrowSkillsFrom: ['creator'],
+    next: [], nextLocked: [],
+    bonusLevels: { str:[6,31,53,66], agi:[5,18,27,38,54,67], vit:[9,33,61], int:[7,13,22,30,46,59,68], dex:[1,10,15,23,35,41,42,43,47,49,56,57,63,70], luk:[3,8,20,25,34,45,51,52,60,64,69] },
+    skills: [],
+    desc: '已經不滿足於製藥，開始改寫配方本身。'
+  },
+  guillotinecross: {
+    id: 'guillotinecross', name: '十字斬首者', tier: 3, icon: '🗡️', parent: 'assassincross',
+    baseLevelReq: 99, jobLevelReq: 70, jobLevelMax: 70,
+    atkMod: 1.75, matkMod: 0.7,
+    hpSpFrom: 'assassincross', aspdFrom: 'assassincross',
+    // 沒有自己的技能，母職那份整份借過來（見上面的區塊說明）
+    borrowSkillsFrom: ['assassincross'],
+    next: [], nextLocked: [],
+    bonusLevels: { str:[2,7,12,21,29,38,50,54,66], agi:[1,4,5,15,20,24,25,31,32,33,42,46,51,56,62], vit:[9,47,69], int:[], dex:[10,23,37,39,43,53,57,61,64,70], luk:[3,8,16,18,26,34,48,65] },
+    skills: [],
+    desc: '影子裡的影子。你連他來過都不會知道。'
+  },
+  shadowchaser: {
+    id: 'shadowchaser', name: '影武者', tier: 3, icon: '🌑', parent: 'stalker',
+    baseLevelReq: 99, jobLevelReq: 70, jobLevelMax: 70,
+    atkMod: 1.75, matkMod: 0.7,
+    hpSpFrom: 'stalker', aspdFrom: 'stalker',
+    // 沒有自己的技能，母職那份整份借過來（見上面的區塊說明）
+    borrowSkillsFrom: ['stalker'],
+    next: [], nextLocked: [],
+    bonusLevels: { str:[1,11,22,32,43,47,53,62,67], agi:[2,9,12,21,27,34,41,45,58,64,70], vit:[6,15,42,63], int:[5,44,57], dex:[10,16,17,26,29,37,38,49,52,56,60,66], luk:[4,20,24,31,50,59] },
+    skills: [],
+    desc: '偷來的不只是技能，還有你的名字。'
+  },
+  archbishop: {
+    id: 'archbishop', name: '大主教', tier: 3, icon: '✝️', parent: 'highpriest',
+    baseLevelReq: 99, jobLevelReq: 70, jobLevelMax: 70,
+    atkMod: 0.6, matkMod: 1.4,
+    hpSpFrom: 'highpriest', aspdFrom: 'highpriest',
+    // 沒有自己的技能，母職那份整份借過來（見上面的區塊說明）
+    borrowSkillsFrom: ['highpriest'],
+    next: [], nextLocked: [],
+    bonusLevels: { str:[5,12,21,31,38,45,60], agi:[3,8,19,29,42,55,65,68], vit:[4,22,30,50,51,58,67], int:[1,7,11,20,23,24,34,47,57,61,66,70], dex:[13,16,26,28,37,43,46,56,62], luk:[40,49] },
+    skills: [],
+    desc: '神的話由他轉述，所以他說的就是。'
+  },
+  sura: {
+    id: 'sura', name: '修羅', tier: 3, icon: '👊', parent: 'champion',
+    baseLevelReq: 99, jobLevelReq: 70, jobLevelMax: 70,
+    atkMod: 1.85, matkMod: 0.8,
+    hpSpFrom: 'champion', aspdFrom: 'champion',
+    // 沒有自己的技能，母職那份整份借過來（見上面的區塊說明）
+    borrowSkillsFrom: ['champion'],
+    next: [], nextLocked: [],
+    bonusLevels: { str:[1,9,17,27,37,48,59,65,66], agi:[4,12,20,21,29,45,52,62,70], vit:[3,15,24,39,42,58,68], int:[2,11,33,47,56,64,69], dex:[6,16,22,30,38,44,50,53,60,67], luk:[13,34,46] },
+    skills: [],
+    desc: '拳頭之後不需要解釋。'
   }
 };
 
@@ -718,18 +881,5 @@ const JOBS_TIER2_PENDING = [];
 const JOBS_TRANS_PENDING = [];
 
 // 三、三轉（tier 3）。官方一律從轉生二轉接上去，所以 parent 全在上面那份清單裡
-const JOBS_TIER3_PENDING = [
-  { id: 'runeknight',      name: '盧恩騎士',     parent: 'lordknight' },
-  { id: 'royalguard',      name: '皇家禁衛',     parent: 'paladin' },
-  { id: 'warlock',         name: '魔導士',       parent: 'highwizard' },
-  { id: 'sorcerer',        name: '元素使',       parent: 'professor' },
-  { id: 'ranger',          name: '遊俠',         parent: 'sniper' },
-  { id: 'minstrel',        name: '樂團',         parent: 'clown' },
-  { id: 'wanderer',        name: '漂流者',       parent: 'gypsy' },
-  { id: 'mechanic',        name: '機工士',       parent: 'whitesmith' },
-  { id: 'geneticist',      name: '基因學者',     parent: 'creator' },
-  { id: 'guillotinecross', name: '十字斬首者',   parent: 'assassincross' },
-  { id: 'shadowchaser',    name: '影武者',       parent: 'stalker' },
-  { id: 'archbishop',      name: '大主教',       parent: 'highpriest' },
-  { id: 'sura',            name: '修羅',         parent: 'champion' },
-];
+/* 三轉已於 #111 全部進 JOB_TREE（純外觀、無技能），這份待辦清單清空。 */
+const JOBS_TIER3_PENDING = [];
