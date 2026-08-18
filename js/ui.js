@@ -1015,7 +1015,17 @@ function frameBBox(frame) {
   const cx = c.getContext('2d', { willReadFrequently: true });
   cx.drawImage(frame, 0, 0);
   let d;
-  try { d = cx.getImageData(0, 0, c.width, c.height).data; } catch (e) { return null; }
+  /* 讀不到像素時**退回「整張圖就是邊界框」**，不要回 null（#124）。
+
+     `file://`（單機版雙擊 index.html 就是這個）底下，本地圖片會把 canvas 汙染，
+     `getImageData` 直接丟 SecurityError。以前回 null 會一路傳到 sizeAnimCanvas，
+     那邊的保底是「填滿整個框、固定 160px」——立繪會變形又對不準位置，
+     使用者回報的「動畫定位不正確」就是這個。
+
+     這些圖本來就是裁緊的（例：107×87 的圖裡人就佔 87px 高），
+     拿整張圖當邊界框只會差一點邊距，比整個排版垮掉好得多。 */
+  const whole = { x0: 0, y0: 0, bw: c.width, bh: c.height, cw: c.width, ch: c.height };
+  try { d = cx.getImageData(0, 0, c.width, c.height).data; } catch (e) { return whole; }
   let x0 = c.width, y0 = c.height, x1 = -1, y1 = -1;
   for (let y = 0; y < c.height; y++) {
     for (let x = 0; x < c.width; x++) {
@@ -1025,7 +1035,7 @@ function frameBBox(frame) {
       }
     }
   }
-  if (x1 < 0) return null;
+  if (x1 < 0) return whole;   // 整張全透明：同上，別讓它變成 null
   return { x0, y0, bw: x1 - x0 + 1, bh: y1 - y0 + 1, cw: c.width, ch: c.height };
 }
 /* 縮放同時吃兩個條件，取比較小的那個：
@@ -1310,10 +1320,17 @@ function updateSkillAura() {
    同一個音效可能連續觸發（箭術連放、AoE 一次打好幾隻），
    單一個 Audio 元素會互相打斷，所以每個檔案開一個小的輪替池。
 ------------------------------------------------- */
-const SFX_DIR_SWING = 'WAV/物理攻擊揮空/';
-const SFX_DIR_HIT = 'WAV/物理攻擊命中/';
-const SFX_DIR_MAGIC = 'WAV/魔法傷害/';
-const SFX_DIR_STATUS = 'WAV/異常狀態/';
+/* 資料夾名稱是中文，**路徑的每一段都要編碼**（#124）。
+
+   以前只有 `sfxUrl()` 編了檔名、資料夾維持原文，而暴擊那條是寫死的
+   `'WAV/' + encodeURIComponent('爆擊') + '/Critical.ogg'`——只有它編了資料夾。
+   結果就是**只有暴擊有聲音**：http 伺服器多半會自己把原文 UTF-8 補上編碼，
+   但 `file://`（單機版就是雙擊 index.html 打開的）不會，那四個資料夾整批 404。 */
+const enc = seg => encodeURIComponent(seg);
+const SFX_DIR_SWING = 'WAV/' + enc('物理攻擊揮空') + '/';
+const SFX_DIR_HIT = 'WAV/' + enc('物理攻擊命中') + '/';
+const SFX_DIR_MAGIC = 'WAV/' + enc('魔法傷害') + '/';
+const SFX_DIR_STATUS = 'WAV/' + enc('異常狀態') + '/';
 
 // 武器分類（aspdCategoryOf 的回傳值）→ 揮空／命中要放哪個檔
 // 揮空 null 代表那個分類沒有對應的檔（空手、拳套、槍械），只放命中音
