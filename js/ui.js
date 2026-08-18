@@ -31,6 +31,7 @@ function initApp() {
   bindSearchComposition();
   renderDisclaimers();          // 免責聲明（#118）：四個位置一次填好
   showScreen('screen-title');
+  maybeShowConsent();           // 首次開啟才出現的一次性確認（#121）
 }
 
 /* ---------------- 免責聲明（#118）----------------
@@ -69,6 +70,7 @@ function openAboutModal() {
         <p>${LICENSE_NOTE}</p>
         <p><a href="${LICENSE_URL}" target="_blank" rel="noopener noreferrer">閱讀完整授權條款</a></p>
       </div>
+      ${legalSectionsHtml()}
       <div class="about-sec">
         <h4>🙏 ${CREDIT_TITLE}</h4>
         ${CREDIT_LINES.map(t => `<p>${t}</p>`).join('')}
@@ -82,6 +84,56 @@ function openAboutModal() {
 function closeAboutModal() {
   const m = document.getElementById('about-modal');
   if (m) m.classList.add('hidden');
+}
+
+/* 三段法律聲明。關於視窗與首次確認視窗共用 */
+function legalSectionsHtml() {
+  return `<div class="about-sec legal-sec">
+    <h4>⚖️ 法律免責與著作權聲明</h4>
+    <ol class="legal-list">
+      ${LEGAL_SECTIONS.map(sec =>
+        `<li><b>${sec.title}</b>${sec.body.map(t => `<p>${t}</p>`).join('')}</li>`).join('')}
+    </ol>
+  </div>`;
+}
+
+/* ---- 首次開啟的一次性確認（#121）----
+   勾過就記住，之後不再出現。**不是每次都擋的同意閘**——見 js/about.js 的說明。
+   讀寫 localStorage 包 try：無痕模式或停用儲存時會丟例外，
+   那種情況就當成「沒同意過」每次問，也比整個畫面掛掉好。 */
+function legalConsentGiven() {
+  try { return localStorage.getItem(CONSENT_KEY) === '1'; } catch (e) { return false; }
+}
+function setLegalConsent() {
+  try { localStorage.setItem(CONSENT_KEY, '1'); } catch (e) { /* 存不了就算了 */ }
+}
+function onConsentCheck(el) {
+  const btn = document.getElementById('consent-enter');
+  if (btn) btn.disabled = !el.checked;
+}
+function acceptLegalConsent() {
+  const box = document.getElementById('consent-check');
+  if (!box || !box.checked) return;
+  setLegalConsent();
+  const m = document.getElementById('consent-modal');
+  if (m) m.classList.add('hidden');
+}
+/* 標題畫面載入時叫一次。已經同意過就什麼都不做 */
+function maybeShowConsent() {
+  if (legalConsentGiven()) return;
+  const body = document.getElementById('consent-modal-body');
+  if (body) {
+    body.innerHTML = `
+      <div class="disclaimer-badge">💚 完全免費　🚫 禁止販售　🕹️ 純為懷舊</div>
+      <div class="about-lines">${DISCLAIMER_LINES.map(t => `<p>${t}</p>`).join('')}</div>
+      ${legalSectionsHtml()}
+      <div class="about-sec">
+        <h4>📄 授權條款　${LICENSE_NAME}</h4>
+        <p>${LICENSE_NOTE}</p>
+      </div>`;
+  }
+  const m = document.getElementById('consent-modal');
+  if (m) m.classList.remove('hidden');
 }
 
 

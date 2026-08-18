@@ -1816,3 +1816,16 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-deep); co
 
 /* 回安全區鈕（#120）：貼在「選擇地區」標題右邊 */
 .map-home-btn { float: right; font-size: 12px; }
+
+/* 首次確認視窗與法律聲明（#121）*/
+.modal-box-tall { max-width: 620px; max-height: 82vh; overflow-y: auto; }
+.consent-row {
+  display: flex; align-items: center; gap: 8px; justify-content: center;
+  margin: 14px 0 4px; font-size: 13px; cursor: pointer;
+}
+.consent-row input { width: 16px; height: 16px; cursor: pointer; }
+#consent-enter[disabled] { opacity: .45; cursor: not-allowed; }
+.legal-list { margin: 6px 0 0; padding-left: 20px; }
+.legal-list > li { margin-bottom: 8px; }
+.legal-list > li > b { color: var(--ink); }
+.legal-list p { margin: 3px 0; font-size: 12px; line-height: 1.65; color: var(--ink-dim); }

@@ -141,7 +141,15 @@ ro_items_data/
 ro_monster_data/
 ro_npcshop_data/
 ro_skills_data/
-tools/
+# tools/ 大多是一次性的資料搬遷腳本（add_* / backfill_* / fix_* 那 190 多支），
+# 跑完就沒用了，而且都依賴不在版控裡的原始資料檔——留著只會誤導 fork 的人。
+# 只把「別人真的用得到」的三樣加回版控：測試治具、測試套件、打包腳本。
+tools/*
+!tools/harness.js
+!tools/test.js
+!tools/test_*.js
+!tools/pack_release.js
+!tools/README.md
 暴擊特效/
 職業攻擊圖/
 
@@ -151,3 +159,6 @@ frames_png/
 
 # 參考用的另一個專案完整副本（533MB），只供查閱不進版控
 參考用/
+
+# 打包產物
+dist/

@@ -222,6 +222,22 @@
   </div>
 </div>
 
+<!-- ===================== 首次開啟的一次性確認（#121）=====================
+     只在沒勾過的瀏覽器出現一次；勾過就記在 localStorage。
+     刻意不做「每次都擋」的同意閘——理由見 js/about.js -->
+<div id="consent-modal" class="modal-overlay hidden">
+  <div class="modal-box modal-box-tall">
+    <h3 class="modal-title">歡迎來到諸神放置錄</h3>
+    <div id="consent-modal-body"></div>
+    <label class="consent-row">
+      <input type="checkbox" id="consent-check" onchange="onConsentCheck(this)">
+      我已閱讀並同意上述免責與授權聲明
+    </label>
+    <button class="btn btn-primary modal-confirm" id="consent-enter" disabled
+            onclick="acceptLegalConsent()">進入遊戲</button>
+  </div>
+</div>
+
 <!-- ===================== 關於本作／免責聲明 ===================== -->
 <div id="about-modal" class="modal-overlay hidden">
   <div class="modal-box">

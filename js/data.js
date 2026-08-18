@@ -32257,8 +32257,39 @@ const JOB_EXP_COEF = {
   2: [[40, 268], [50, 495], [70, 515]],  // 二轉／進階二轉共用（實測兩者產出只差一成）
 };
 const JOB_EXP_POW = 1.35;
+
+/* ---- 三轉的職業經驗（#122）----
+
+   三轉沿用二轉那條 `coef × level^1.35` 的話，job 1→70 總共只要 404 萬，
+   而基礎 99→200 要 34.07 億——**職業等級佔基礎的 0.12%**，
+   等於一進三轉就在第一個小時內把 job 點滿，剩下三個月完全沒有職業成長。
+
+   所以三轉自己一條，形狀**照抄基礎 99→200 那條**（見 expToNextBaseLevel）：
+   一樣是分段的等比成長，段落佔比也一樣（30.7% / 19.8% / 29.7% / 19.8%）。
+   差別只在要把 101 級的曲線壓進 69 級，所以每段的比率提高到 ^(101/69)：
+     1.045 → 1.0666、1.06 → 1.089、1.085 → 1.1268、1.1313 → 1.1979
+
+   總量對齊：實測 Lv120 以上、真的出現在地圖上的怪，jobExp/exp 中位數是 0.77，
+   所以 job 的總需求抓基礎的 0.8 倍（27.25 億）。起始值回推得 295,000。
+   實際總量 27.27 億，差 0.1%。
+
+   結果是 job 69→70 要 4.29 億、base 199→200 要 3.76 億——
+   最後一級的職業與基礎花的力氣差不多，兩條線會在差不多的時間一起走完。 */
+const JOB3_EXP_L1 = 295000;
+const JOB3_EXP_SEGS = [[22, 1.0666], [36, 1.089], [56, 1.1268], [70, 1.1979]];
+function expToNextJob3Level(level) {
+  let need = JOB3_EXP_L1;
+  let cur = 1;
+  for (const [to, r] of JOB3_EXP_SEGS) {
+    while (cur < to && cur < level) { need *= r; cur++; }
+    if (cur >= level) break;
+  }
+  return Math.floor(need);
+}
+
 function expToNextJobLevel(level, tier) {
   if (!tier) return Math.floor(15 * Math.pow(level, 1.4) + 10);   // 新手
+  if (tier >= 3) return expToNextJob3Level(level);                // 三轉自己一條（#122）
   const segs = JOB_EXP_COEF[tier >= 2 ? 2 : 1];
   let coef = segs[segs.length - 1][1];
   for (const [cap, c] of segs) if (level < cap) { coef = c; break; }
