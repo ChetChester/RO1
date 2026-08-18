@@ -1038,68 +1038,67 @@ function frameBBox(frame) {
   if (x1 < 0) return whole;   // 整張全透明：同上，別讓它變成 null
   return { x0, y0, bw: x1 - x0 + 1, bh: y1 - y0 + 1, cw: c.width, ch: c.height };
 }
-/* 縮放同時吃兩個條件，取比較小的那個：
+/* 倍率與對齊**整組共用一份，不逐格算**（#125）。
 
-     待機格縮到 SPRITE_CHAR_H 高      —— 讓「站著的人」大小一致
-     整組最高的那一格不超過 SPRITE_MAX_H —— 免得某一格暴衝
+   同一個 key 的每一格 PNG 都是同尺寸畫布（領主騎士 9 格全是 175×170，
+   祭司 9 格全是 91×100），美術已經把人在畫布裡對齊好了——
+   **畫布本身就是正確的對位基準**。
 
-   只用待機格算會出事：領主騎士待機 92px，但 frame_004 大幅揮擊有 161px，
-   實測那一格畫出來是 **147px**，其餘每一格都是 72~85px——打起來就是
-   「偶爾突然變大一隻」（使用者 2026-08-15 連續兩次反映太大，就是這一格）。
-   只用最高格算也不行，那會把待機縮到 48px。兩個條件一起夾才對。
+   逐格量邊界框再把畫布拉回置中，等於把美術畫的位移抵銷掉，還會反過來製造抖動：
+   領主騎士 frame_004 舉劍那格，邊界框中心右移 60px、框高 92→161，
+   逐格算的話那一格會突然縮小 32%、左右跳 40px、上下跳 22px，下一格又跳回來。
+   全庫 138 組裡有 106 組的邊界框中心位移超過 8px——所以是「每個職業都會亂動」。
 
-   動作溫和的職業（祭司最高格 93px）不受上限影響，待機維持 84px；
-   有大幅揮擊的（領主騎士）整體縮到 0.807，待機 74px、最高格剛好 130px。 */
-const SPRITE_MAX_H_BASE = 100;
-function spriteMaxH() { return SPRITE_MAX_H_BASE; }
+   為什麼單機版看不到：`file://` 底下本地圖片會汙染 canvas，`getImageData` 丟
+   SecurityError，frameBBox 直接回「整張畫布」，逐格那條路根本沒跑到。
+   只有 http://（GitHub Pages）才量得到真的邊界框，也才會抖。
+
+   邊界框留下來只做兩件事，而且**只看待機格**：
+     · 把「人」統一縮到 SPRITE_CHAR_H 高（留白多少不影響）
+     · 算出腳底與身體中心，把畫布擺成「腳貼框底、身體置中」
+   格與格之間的位移交還給美術。 */
+const SPRITE_BOX_H = 160;
 function measureSprite(key, frame) {
   if (spriteMetrics[key] || !frame || !frame.naturalWidth) return spriteMetrics[key];
   const b = frameBBox(frame);
   if (!b) return null;
-  let scale = spriteCharH() / b.bh;
+  // 整張畫布不超過立繪框，免得留白特別多的素材整個爆出去
+  let scale = Math.min(spriteCharH() / b.bh, SPRITE_BOX_H / b.ch);
   /* 施放姿勢**直接沿用基本姿勢算出來的畫面身高**。
-     各自算的話會差一截：領主騎士的基本姿勢因為有大幅揮擊那格被夾到 0.807
-     （待機 74px），施放姿勢沒有那種格子就維持 0.923（84px）——同一個人一放技能
-     大 13%。同一個角色本來就該一樣高。 */
+     各自算的話會差一截：領主騎士基本姿勢是 175×170、施放姿勢只有 62×99，
+     兩張圖的留白比例不同，同一個人一放技能就大一號。 */
   const baseKey = key.endsWith('_skill') ? key.slice(0, -6) : null;
   const bm = baseKey ? spriteMetrics[baseKey] : null;
   if (bm) scale = (bm.bh * bm.scale) / b.bh;
-  /* 每一格自己的邊界框也先量好。同一組動作裡的落差可以很大：
-     騎士待機是 89px、但 frame_004 大幅揮擊有 161px（劍舉起來），
-     照同一個倍率畫的話那一格會是待機的 1.8 倍。 */
-  const frames = (animFrameImages[key] || []).map(f => frameBBox(f) || b);
-  spriteMetrics[key] = { scale, frames, x0: b.x0, y0: b.y0, bw: b.bw, bh: b.bh, cw: b.cw, ch: b.ch };
+  spriteMetrics[key] = { scale, x0: b.x0, y0: b.y0, bw: b.bw, bh: b.bh, cw: b.cw, ch: b.ch };
   return spriteMetrics[key];
 }
-/* 每一格各自算倍率：平常就是這個 key 的基準倍率，只有**畫出來會超過
-   SPRITE_MAX_H 的那幾格**才另外縮小。這樣待機維持該有的大小，
-   而大幅揮擊那一格不會突然變成兩倍（使用者連續三次反映「太大」就是這個）。
-   不往上放大——`Math.min` 保證了縮放只會變小。 */
-function frameScaleOf(m, idx) {
-  const fb = (m.frames && m.frames[idx]) || m;
-  return Math.min(m.scale, spriteMaxH() / fb.bh);
-}
-function sizeAnimCanvas(key, frame, idx) {
+/* 一組動作只排版一次。逐格重排的話每禎要寫四個 CSS 長度又重設 canvas.width
+   （重設會清空畫布），而算出來的值完全一樣。 */
+let animSizedKey = '';
+function sizeAnimCanvas(key, frame) {
   if (!animCanvas || !frame) return;
-  animCanvas.width = frame.naturalWidth;
-  animCanvas.height = frame.naturalHeight;
+  if (animCanvas.width !== frame.naturalWidth || animCanvas.height !== frame.naturalHeight) {
+    animCanvas.width = frame.naturalWidth;
+    animCanvas.height = frame.naturalHeight;
+  }
+  if (animSizedKey === key) return;
   const m = measureSprite(key, frame);
-  if (!m) {   // 量不到（跨網域之類）就退回填滿整個框
+  if (!m) {   // 量不到（圖還沒載完之類）就退回填滿整個框，下一禎再試
     animCanvas.style.width = SPRITE_BOX_W + 'px';
-    animCanvas.style.height = '160px';
+    animCanvas.style.height = SPRITE_BOX_H + 'px';
     animCanvas.style.left = '50%'; animCanvas.style.bottom = '0';
     animCanvas.style.marginLeft = -(SPRITE_BOX_W / 2) + 'px';
     return;
   }
-  const i = idx || 0;
-  const fb = (m.frames && m.frames[i]) || m;
-  const sc = frameScaleOf(m, i);
-  animCanvas.style.width = Math.round(fb.cw * sc) + 'px';
-  animCanvas.style.height = Math.round(fb.ch * sc) + 'px';
-  // 這一格的人：水平中心對齊框中心、腳底對齊框底
+  animSizedKey = key;
+  const sc = m.scale;
+  animCanvas.style.width = Math.round(m.cw * sc) + 'px';
+  animCanvas.style.height = Math.round(m.ch * sc) + 'px';
+  // 待機格的人：水平中心對齊框中心、腳底對齊框底。整組沿用，格與格之間不再動
   animCanvas.style.left = '50%';
-  animCanvas.style.marginLeft = -Math.round((fb.x0 + fb.bw / 2) * sc) + 'px';
-  animCanvas.style.bottom = -Math.round((fb.ch - fb.y0 - fb.bh) * sc) + 'px';
+  animCanvas.style.marginLeft = -Math.round((m.x0 + m.bw / 2) * sc) + 'px';
+  animCanvas.style.bottom = -Math.round((m.ch - m.y0 - m.bh) * sc) + 'px';
 }
 
 function showAnimCanvas(key) {
@@ -1129,8 +1128,8 @@ function drawAnimFrame() {
   const frames = animFrameImages[currentAnimKey];
   if (!frames || !frames.length) return;
   const idx = Math.min(animFrameIdx, frames.length - 1);
-  // 每一格都重新排一次版：倍率與對齊是逐格算的（見 sizeAnimCanvas）
-  sizeAnimCanvas(currentAnimKey, frames[idx], idx);
+  // 排版整組共用，換 key 才真的重算（見 sizeAnimCanvas）
+  sizeAnimCanvas(currentAnimKey, frames[idx]);
   animCanvasCtx = animCanvas.getContext('2d');
   animCanvasCtx.clearRect(0, 0, animCanvas.width, animCanvas.height);
   animCanvasCtx.drawImage(frames[idx], 0, 0);
