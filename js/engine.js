@@ -62,6 +62,54 @@ function importWarehouse(obj) {
   saveWarehouse(wh);
   return { ok: true };
 }
+/* ---------------- 全體備份（所有存檔欄位＋倉庫＋傭兵帳本）----------------
+   匯出：把 12 個欄位、跨角色倉庫、傭兵經驗帳本打包成一個物件。
+   匯入：逐欄位寫回 localStorage（空欄位清掉、格式錯的略過），
+   不跑 loadGame——個別存檔的相容性遷移在使用者進該欄位時才跑，
+   跟現有的舊存檔一樣。 */
+function buildFullBackup() {
+  const slots = {};
+  for (let i = 0; i < MAX_SLOTS; i++) {
+    const raw = localStorage.getItem(getSlotKey(i));
+    if (!raw) { slots[i] = null; continue; }
+    try { slots[i] = JSON.parse(raw); } catch (e) { slots[i] = null; }
+  }
+  const whRaw = localStorage.getItem(WAREHOUSE_KEY);
+  const out = {
+    app: 'ro-idle', type: 'backup', version: 1, exportedAt: Date.now(),
+    slots: slots,
+    warehouse: whRaw ? JSON.parse(whRaw) : { items: [], gold: 0 }
+  };
+  const ledgerRaw = localStorage.getItem(MERC_LEDGER_KEY);
+  if (ledgerRaw) { try { out.mercLedger = JSON.parse(ledgerRaw); } catch (e) { /* 損壞就略過 */ } }
+  return out;
+}
+function importFullBackup(obj) {
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
+    return { ok: false, msg: '檔案內容不是有效的備份檔。' };
+  }
+  if (obj.app !== 'ro-idle' || obj.type !== 'backup') {
+    return { ok: false, msg: '不是本遊戲的全體備份檔。' };
+  }
+  if (!obj.slots || typeof obj.slots !== 'object' || Array.isArray(obj.slots)) {
+    return { ok: false, msg: '備份檔缺少存檔欄位資料。' };
+  }
+  let wrote = 0;
+  Object.keys(obj.slots).forEach(k => {
+    const idx = parseInt(k, 10);
+    const v = obj.slots[k];
+    if (!Number.isInteger(idx) || idx < 0 || idx >= MAX_SLOTS) return;
+    if (v === null) { localStorage.removeItem(getSlotKey(idx)); return; }
+    if (typeof v !== 'object' || typeof v.name !== 'string' || typeof v.jobId !== 'string') return;
+    localStorage.setItem(getSlotKey(idx), JSON.stringify(v));
+    wrote++;
+  });
+  if (obj.warehouse && typeof obj.warehouse === 'object') importWarehouse(obj.warehouse);
+  if (obj.mercLedger && typeof obj.mercLedger === 'object') {
+    try { localStorage.setItem(MERC_LEDGER_KEY, JSON.stringify(obj.mercLedger)); } catch (e) { /* 略過 */ }
+  }
+  return { ok: true, wrote: wrote };
+}
 function depositToWarehouse(itemId, qty) {
   const row = state.inventory.find(r => r.item === itemId && !r.instanceId);
   if (!row || row.qty < qty) return false;

@@ -35,6 +35,10 @@
         <h3 class="slot-title">選擇存檔欄位</h3>
         <div id="slot-list" class="slot-list"></div>
         <div id="slot-pagination" class="slot-pagination"></div>
+        <div class="slot-backup-btns">
+          <button class="btn-small" onclick="exportFullBackupFile()" title="把全部存檔欄位＋倉庫打包成一個 JSON 檔">匯出全部（含倉庫）</button>
+          <button class="btn-small" onclick="importFullBackupFile()" title="從備份檔還原全部存檔欄位與倉庫（會覆蓋）">匯入全部（含倉庫）</button>
+        </div>
       </div>
     </div>
     <div id="title-disclaimer-box" class="disclaimer-box">

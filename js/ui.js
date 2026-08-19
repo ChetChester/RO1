@@ -5458,6 +5458,54 @@ function onWarehouseImportChosen(ev) {
   reader.readAsText(file);
 }
 
+/* ---------------- 全體備份（含倉庫）匯出 / 匯入 ---------------- */
+function exportFullBackupFile() {
+  const raw = JSON.stringify(buildFullBackup(), null, 2);
+  const d = new Date();
+  const stamp = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  const filename = `ro-idle-backup-${stamp}.json`;
+  const blob = new Blob([raw], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  showToast('📤 已匯出全體備份（含倉庫）：' + filename);
+}
+
+let _backupImportInput = null;
+function importFullBackupFile() {
+  if (!confirm('匯入會覆蓋所有存檔欄位與倉庫，確定嗎？')) return;
+  if (!_backupImportInput) {
+    _backupImportInput = document.createElement('input');
+    _backupImportInput.type = 'file';
+    _backupImportInput.accept = '.json,application/json';
+    _backupImportInput.style.display = 'none';
+    _backupImportInput.addEventListener('change', onBackupImportChosen);
+    document.body.appendChild(_backupImportInput);
+  }
+  _backupImportInput.value = '';
+  _backupImportInput.click();
+}
+function onBackupImportChosen(ev) {
+  const file = ev.target.files && ev.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    let obj = null;
+    try { obj = JSON.parse(reader.result); } catch (e) { showToast('⚠️ 檔案不是有效的 JSON'); return; }
+    const res = importFullBackup(obj);
+    showToast(res.ok
+      ? `📥 全體備份匯入成功，寫入 ${res.wrote} 個欄位＋倉庫`
+      : '⚠️ ' + res.msg);
+    if (res.ok) renderSlotList();
+  };
+  reader.readAsText(file);
+}
+
 // 讓 handle 可以拖曳 frame；拖曳後改用 left/top 定位，所以要先解掉置中的 transform
 function makeDraggable(handle, frame) {
   if (!handle || !frame) return;

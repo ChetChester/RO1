@@ -76,4 +76,38 @@ const rw3 = g.importWarehouse({ foo: 1 });
 t.ok('非倉庫檔案被拒絕', !rw3.ok);
 t.eq('拒絕後倉庫原樣不動', JSON.parse(g.localStorage.getItem(WH_KEY)).gold, 1);
 
+/* ---------------- 全體備份（所有欄位＋倉庫＋傭兵帳本） ---------------- */
+// 準備：欄位 0 角色「甲」、欄位 1 空、欄位 2 角色「丙」（用匯入建立，會跑遷移）、倉庫有東西、傭兵帳本有紀錄
+g.localStorage.removeItem(key(0));
+g.localStorage.removeItem(key(1));                   // 前段覆寫測試把「甲」留在這，清掉
+g.importSaveToSlot(0, s0);                              // 欄位 0 角色「甲」
+g.importSaveToSlot(2, Object.assign({}, s0, { name: '丙' }));  // 欄位 2 角色「丙」
+g.importWarehouse({ gold: 7777, items: [{ item: 'red_potion', qty: 5 }] });
+g.localStorage.setItem('ro_idle_merc_ledger_v1', JSON.stringify({ 0: { baseExp: 100, jobExp: 50 } }));
+
+const backup = g.buildFullBackup();
+t.eq('備份標記正確', backup.app + '/' + backup.type + '/' + backup.version, 'ro-idle/backup/1');
+t.eq('欄位 0 打包進去', backup.slots[0].name, '甲');
+t.eq('欄位 1 是空欄位', backup.slots[1], null);
+t.eq('欄位 2 打包進去', backup.slots[2].name, '丙');
+t.eq('倉庫鋅幣打包', backup.warehouse.gold, 7777);
+t.eq('傭兵帳本打包', backup.mercLedger[0].baseExp, 100);
+
+// 清空後從備份還原
+g.localStorage.clear();
+const rb = g.importFullBackup(backup);
+t.ok('全體備份匯入成功', rb.ok);
+t.eq('還原後欄位 0 名字', JSON.parse(g.localStorage.getItem(key(0))).name, '甲');
+t.eq('還原後欄位 2 名字', JSON.parse(g.localStorage.getItem(key(2))).name, '丙');
+t.eq('還原後欄位 1 保持空', g.localStorage.getItem(key(1)), null);
+t.eq('還原後倉庫鋅幣', JSON.parse(g.localStorage.getItem(WH_KEY)).gold, 7777);
+t.eq('還原後傭兵帳本', JSON.parse(g.localStorage.getItem('ro_idle_merc_ledger_v1'))[0].baseExp, 100);
+
+// 壞檔防護：非備份檔、缺少 slots 都會被拒絕且不動原資料
+const rb2 = g.importFullBackup({ app: 'ro-idle', type: 'other' });
+t.ok('非備份檔被拒絕', !rb2.ok);
+const rb3 = g.importFullBackup({ app: 'ro-idle', type: 'backup', slots: 'oops' });
+t.ok('缺少欄位資料被拒絕', !rb3.ok);
+t.eq('拒絕後欄位 0 仍在', JSON.parse(g.localStorage.getItem(key(0))).name, '甲');
+
 process.exit(t.report('存檔匯出/匯入'));

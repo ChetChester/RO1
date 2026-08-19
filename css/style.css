@@ -91,6 +91,7 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-deep); co
 .slot-item.empty-slot { opacity: 0.5; border-style: dashed; }
 .slot-pagination { display: flex; justify-content: center; gap: 6px; margin-top: 12px; }
 .slot-pagination .btn-small.active { background: var(--gold); color: var(--bg-deep); }
+.slot-backup-btns { display: flex; justify-content: center; gap: 8px; margin-top: 12px; }
 
 .title-disclaimer {
   position: relative; z-index: 1;
