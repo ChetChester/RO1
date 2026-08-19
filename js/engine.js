@@ -36,6 +36,32 @@ function loadWarehouse() {
 function saveWarehouse(wh) {
   try { localStorage.setItem(WAREHOUSE_KEY, JSON.stringify(wh)); } catch (e) { /* 忽略儲存失敗 */ }
 }
+/* 倉庫匯入：外部 JSON 寫進全帳號倉庫（WAREHOUSE_KEY）。
+   只做形狀檢查＋白名單清洗，不跑 loadGame 那套角色遷移——倉庫沒有角色欄位。
+   個體裝備（instanceId）的精煉與卡片原樣帶入；不存在的道具直接丟掉不帶入。 */
+function importWarehouse(obj) {
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
+    return { ok: false, msg: '檔案內容不是有效的倉庫資料。' };
+  }
+  if (!Array.isArray(obj.items)) {
+    return { ok: false, msg: '不是本遊戲的倉庫匯出檔（缺少物品清單）。' };
+  }
+  const wh = { items: [], gold: 0 };
+  obj.items.forEach(r => {
+    if (!r || typeof r.item !== 'string' || typeof r.qty !== 'number' || r.qty < 1) return;
+    if (!ITEMS[r.item]) return;   // 已不存在的道具，丟掉不帶入
+    const row = { item: r.item, qty: Math.floor(r.qty) };
+    if (r.instanceId) {
+      row.instanceId = 'wh_' + r.item + '_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+      row.refine = r.refine || 0;
+      row.cards = Array.isArray(r.cards) ? r.cards.slice() : [];
+    }
+    wh.items.push(row);
+  });
+  if (typeof obj.gold === 'number' && obj.gold > 0) wh.gold = Math.floor(obj.gold);
+  saveWarehouse(wh);
+  return { ok: true };
+}
 function depositToWarehouse(itemId, qty) {
   const row = state.inventory.find(r => r.item === itemId && !r.instanceId);
   if (!row || row.qty < qty) return false;
@@ -12411,6 +12437,30 @@ function computeOfflineProgress() {
 }
 function hasSave() {
   return !!localStorage.getItem(getSlotKey(currentSlot));
+}
+/* 存檔匯入：把外部 JSON 物件寫進指定欄位，並用 loadGame() 的相容性遷移
+   驗證過才保留。失敗時把原存檔（若原本有）原封不動還原。 */
+function importSaveToSlot(slot, obj) {
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
+    return { ok: false, msg: '檔案內容不是有效的存檔物件。' };
+  }
+  if (typeof obj.name !== 'string' || typeof obj.jobId !== 'string') {
+    return { ok: false, msg: '不是本遊戲的存檔（缺少角色名稱或職業）。' };
+  }
+  const prevSlot = currentSlot;
+  const prevRaw = localStorage.getItem(getSlotKey(slot));
+  localStorage.setItem(getSlotKey(slot), JSON.stringify(obj));
+  currentSlot = slot;
+  let ok = false;
+  try { ok = loadGame(); } catch (e) { ok = false; }
+  if (!ok) {
+    currentSlot = prevSlot;
+    if (prevRaw === null) localStorage.removeItem(getSlotKey(slot));
+    else localStorage.setItem(getSlotKey(slot), prevRaw);
+    return { ok: false, msg: '存檔無法通過相容性檢查，已取消匯入（原有存檔未被覆蓋）。' };
+  }
+  saveGame();   // 把遷移後的正常化版本寫回去
+  return { ok: true, slot: slot };
 }
 function deleteSave() {
   localStorage.removeItem(getSlotKey(currentSlot));

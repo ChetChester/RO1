@@ -39,6 +39,7 @@ const SUITES = [
   'test_priest.js',      // 祭司 19 技能：全體輔助／防禦屬性／中毒免疫／普攻沉默／隊友復活（#95）
   'test_hpsp.js',        // HP/SP 官方公式：拿掉 hpMod/spMod、轉生 ×1.25（#92）
   'test_relics.js',      // 遺物系統：2/3/5 門檻、互斥倍率、濺射、掉落閘門、遺物券（#113）
+  'test_saveio.js',      // 存檔匯出/匯入：序列化、遷移、覆寫與失敗還原
 ];
 
 let failed = 0;

@@ -213,6 +213,8 @@ function renderSlotList() {
         html += `<div class="slot-item has-save" onclick="selectSlot(${i})">
           <div class="slot-header">欄位 ${i + 1}</div>
           <div class="slot-info">${job.icon} ${s.name || '無名'} Lv.${s.baseLevel || '?'} ${job.name}</div>
+          <button class="btn-small ghost" onclick="event.stopPropagation();exportSlotSave(${i})" title="把這個存檔匯出成 JSON 檔">匯出</button>
+          <button class="btn-small ghost" onclick="event.stopPropagation();importSlotFile(${i})" title="從 JSON 檔匯入到這個欄位（會覆蓋）">匯入</button>
           <button class="btn-small ghost" onclick="event.stopPropagation();deleteSlotConfirm(${i})">刪除</button>
         </div>`;
       } catch(e) {
@@ -222,6 +224,7 @@ function renderSlotList() {
       html += `<div class="slot-item empty-slot" onclick="selectSlot(${i})">
         <div class="slot-header">欄位 ${i + 1}</div>
         <div class="slot-info">空欄位</div>
+        <button class="btn-small ghost" onclick="event.stopPropagation();importSlotFile(${i})" title="從 JSON 檔匯入到這個欄位">匯入</button>
       </div>`;
     }
   }
@@ -251,6 +254,65 @@ function deleteSlotConfirm(slot) {
     localStorage.removeItem(getSlotKey(slot));
     renderSlotList();
   }
+}
+
+/* ---------------- 存檔匯出 / 匯入 ---------------- */
+function exportSlotSave(slot) {
+  const raw = localStorage.getItem(getSlotKey(slot));
+  if (!raw) { showToast('⚠️ 這個欄位沒有存檔可匯出'); return; }
+  let name = '角色', jobName = '';
+  try {
+    const s = JSON.parse(raw);
+    if (s.name) name = s.name;
+    const jd = JOB_TREE[s.jobId] || {};
+    jobName = jd.name || s.jobId || '';
+  } catch (e) { /* 用預設檔名 */ }
+  const safe = (name + (jobName ? '-' + jobName : '')).replace(/[\\/:*?"<>|\s]+/g, '_') || '角色';
+  const filename = `ro-idle-${safe}-slot${slot + 1}.json`;
+  const blob = new Blob([raw], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  showToast('📤 已匯出存檔：' + filename);
+}
+
+let _importTargetSlot = null;
+let _importFileInput = null;
+function ensureImportInput() {
+  if (_importFileInput) return _importFileInput;
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json,application/json';
+  input.style.display = 'none';
+  input.addEventListener('change', onImportFileChosen);
+  document.body.appendChild(input);
+  _importFileInput = input;
+  return input;
+}
+function importSlotFile(slot) {
+  if (localStorage.getItem(getSlotKey(slot)) && !confirm('欄位 ' + (slot + 1) + ' 已有存檔，匯入會覆蓋它。確定嗎？')) return;
+  _importTargetSlot = slot;
+  const input = ensureImportInput();
+  input.value = '';
+  input.click();
+}
+function onImportFileChosen(ev) {
+  const file = ev.target.files && ev.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    let obj = null;
+    try { obj = JSON.parse(reader.result); } catch (e) { showToast('⚠️ 檔案不是有效的 JSON'); return; }
+    const res = importSaveToSlot(_importTargetSlot, obj);
+    showToast(res.ok ? '📥 匯入成功，已寫入欄位 ' + (_importTargetSlot + 1) : '⚠️ ' + res.msg);
+    renderSlotList();
+  };
+  reader.readAsText(file);
 }
 
 function goCreateNew() {
@@ -5327,7 +5389,11 @@ function openWarehouse() {
     win.innerHTML = `<div id="warehouse-frame" class="wh-frame">
         <header id="warehouse-drag" class="wh-header">
           <div><h3>📦 倉庫</h3><span class="wh-sub">跨角色共用，所有存檔通用</span></div>
-          <button class="btn-small ghost" onclick="closeWarehouse()">✕ 關閉</button>
+          <div class="wh-header-btns">
+            <button class="btn-small ghost" onclick="exportWarehouse()" title="把倉庫匯出成 JSON 檔">匯出</button>
+            <button class="btn-small ghost" onclick="importWarehouseFile()" title="從 JSON 檔匯入倉庫（會覆蓋目前倉庫）">匯入</button>
+            <button class="btn-small ghost" onclick="closeWarehouse()">✕ 關閉</button>
+          </div>
         </header>
         <div id="warehouse-body" class="wh-body"></div>
       </div>`;
@@ -5340,6 +5406,56 @@ function openWarehouse() {
 function closeWarehouse() {
   const win = document.getElementById('warehouse-window');
   if (win) win.classList.add('hidden');
+}
+
+/* ---------------- 倉庫匯出 / 匯入 ---------------- */
+function exportWarehouse() {
+  const raw = localStorage.getItem(WAREHOUSE_KEY);
+  if (!raw) { showToast('⚠️ 倉庫是空的，沒有東西可匯出'); return; }
+  const d = new Date();
+  const stamp = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  const filename = `ro-idle-warehouse-${stamp}.json`;
+  const blob = new Blob([raw], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  showToast('📤 已匯出倉庫：' + filename);
+}
+
+let _whImportFileInput = null;
+function importWarehouseFile() {
+  const wh = loadWarehouse();
+  if ((wh.items && wh.items.length) || (wh.gold || 0) > 0) {
+    if (!confirm('目前倉庫裡有物品或鋅幣，匯入會覆蓋掉。確定嗎？')) return;
+  }
+  if (!_whImportFileInput) {
+    _whImportFileInput = document.createElement('input');
+    _whImportFileInput.type = 'file';
+    _whImportFileInput.accept = '.json,application/json';
+    _whImportFileInput.style.display = 'none';
+    _whImportFileInput.addEventListener('change', onWarehouseImportChosen);
+    document.body.appendChild(_whImportFileInput);
+  }
+  _whImportFileInput.value = '';
+  _whImportFileInput.click();
+}
+function onWarehouseImportChosen(ev) {
+  const file = ev.target.files && ev.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    let obj = null;
+    try { obj = JSON.parse(reader.result); } catch (e) { showToast('⚠️ 檔案不是有效的 JSON'); return; }
+    const res = importWarehouse(obj);
+    showToast(res.ok ? '📥 倉庫匯入成功' : '⚠️ ' + res.msg);
+    if (res.ok) renderWarehouse();
+  };
+  reader.readAsText(file);
 }
 
 // 讓 handle 可以拖曳 frame；拖曳後改用 left/top 定位，所以要先解掉置中的 transform
