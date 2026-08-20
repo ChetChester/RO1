@@ -4312,7 +4312,7 @@ function renderInventoryTab() {
     const autoSellHtml = `<div class="autosell-panel">
       <h3 class="panel-title">🏷️ 自動販賣</h3>
       <div class="empty-hint">${autoSellCfg.enabled ? `已啟用，已選 ${autoSellCfg.items.length} 種道具，每30秒自動賣出` : '尚未啟用'}</div>
-      <button class="btn-small" onclick="showAutoSellPanel()">設定自動販賣</button>
+      <button class="btn-small" onclick="showAutoSellWindow()">設定自動販賣</button>
     </div>`;
 
     el.innerHTML = `${vendingHtml}${craftingHtml}${warehouseHtml}${autoSellHtml}`
@@ -5623,48 +5623,135 @@ function renderWarehouse() {
 }
 
 /* ---------------- 自動販賣 UI ---------------- */
-function showAutoSellPanel() {
-  const el = document.getElementById('tab-inventory');
-  if (!el) return;
+/* 跟倉庫同一套「非阻斷浮動視窗」：外層 pointer-events:none、中間 frame 收事件，
+   掛機照跑、分頁照點。左邊＝不會被自動賣的道具，右邊＝要自動賣的道具。
+   點左邊 → 移去右邊（開始自動賣）；點右邊 → 移回左邊（不再自動賣）。 */
+let asCategory = 'all';
+let asSearch = '';
+function setAsCategory(c) { asCategory = c; renderAutoSellWindow(); }
+function onAsSearch(v, ev) {
+  if (imeComposing(ev)) return;
+  asSearch = (v || '').trim().toLowerCase();
+  renderAutoSellWindow();
+  refocusSearch('as-search');
+}
+// 把道具移進「要自動賣」（點左邊那格）
+function asAdd(itemId) {
+  if (isItemLocked(itemId)) { showToast('🔒 已鎖定，無法加入自動販賣。'); return; }
+  toggleAutoSellItem(itemId);
+  renderAutoSellWindow();
+}
+// 把道具移出「要自動賣」（點右邊那格）
+function asRemove(itemId) { toggleAutoSellItem(itemId); renderAutoSellWindow(); }
+// 取消全部自動賣：清空清單
+function asClearAll() {
+  if (!state.autoSellConfig) state.autoSellConfig = { enabled: false, items: [] };
+  state.autoSellConfig.items = [];
+  saveGame();
+  renderAutoSellWindow();
+}
+
+function showAutoSellWindow() {
+  let win = document.getElementById('autosell-window');
+  if (!win) {
+    win = document.createElement('div');
+    win.id = 'autosell-window';
+    win.className = 'wh-window';
+    win.innerHTML = `<div id="autosell-frame" class="wh-frame">
+        <header id="autosell-drag" class="wh-header">
+          <div><h3>🏷️ 自動販賣</h3><span class="wh-sub">左邊不會賣，點一下移右邊＝開始自動賣（每30秒）</span></div>
+          <div class="wh-header-btns">
+            <button class="btn-small ghost" onclick="runAutoSellNow();renderAutoSellWindow();renderTopBar();" title="立即賣出右邊選定道具">立即賣出</button>
+            <button class="btn-small ghost" onclick="closeAutoSellWindow()">✕ 關閉</button>
+          </div>
+        </header>
+        <div id="autosell-body" class="wh-body"></div>
+      </div>`;
+    document.body.appendChild(win);
+    makeDraggable(document.getElementById('autosell-drag'), document.getElementById('autosell-frame'));
+  }
+  win.classList.remove('hidden');
+  renderAutoSellWindow();
+}
+function closeAutoSellWindow() {
+  const win = document.getElementById('autosell-window');
+  if (win) win.classList.add('hidden');
+}
+
+function renderAutoSellWindow() {
+  const body = document.getElementById('autosell-body');
+  if (!body || !state) return;
   if (!state.autoSellConfig) state.autoSellConfig = { enabled: false, items: [] };
   const cfg = state.autoSellConfig;
-
-  let html = `<h3 class="panel-title">🏷️ 自動販賣</h3>`;
-  html += `<button class="btn-small" onclick="renderInventoryTab()">← 返回</button>`;
-
   const readyIn = Math.max(0, Math.ceil(((state.autoSellReadyAt || 0) - Date.now()) / 1000));
-  html += `<div class="empty-hint">
-    勾選要自動販賣的道具，啟用後每30秒自動賣出背包內所有已勾選道具（依原價）。
-    ${cfg.enabled ? `目前已啟用，下次自動販賣倒數 ${readyIn}s。` : '目前尚未啟用。'}
-  </div>`;
-  html += `<div class="card-row">
-    <label><input type="checkbox" ${cfg.enabled ? 'checked' : ''} onchange="setAutoSellEnabled(this.checked);showAutoSellPanel();"> 啟用自動販賣（每30秒）</label>
-  </div>`;
-  html += `<div class="card-row">
-    <button class="btn-small" onclick="runAutoSellNow();showAutoSellPanel();renderTopBar();">立即手動販賣已選道具</button>
-  </div>`;
 
-  html += `<h3 class="panel-title">選擇要自動販賣的道具</h3>`;
-  const invRows = state.inventory.filter(row => !row.instanceId && ITEMS[row.item] && ITEMS[row.item].sell > 0);
-  if (invRows.length === 0) {
-    html += `<div class="empty-hint">背包內沒有可販賣的道具。</div>`;
-  } else {
-    html += '<div class="card-list">';
-    invRows.forEach(row => {
-      const def = ITEMS[row.item];
-      const name = getItemDisplayName(row.item);
-      const checked = cfg.items.includes(row.item);
-      html += `<div class="card-row">
-        <label style="flex:1;display:flex;align-items:center;gap:6px">
-          <input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleAutoSellItem('${row.item}');showAutoSellPanel();">
-          <span class="card-icon">${def.icon || '📦'}</span>
-          <span class="card-name">${name} x${row.qty}（單價 ${def.sell}）</span>
-        </label>
-      </div>`;
-    });
-    html += '</div>';
-  }
-  el.innerHTML = html;
+  // 左邊：背包裡可賣、而且**不在**自動賣清單的道具（還留著）
+  const all = state.inventory.filter(r => !r.instanceId && ITEMS[r.item] && (ITEMS[r.item].sell || 0) > 0);
+  const left = all.filter(r => !cfg.items.includes(r.item));
+  /* 右邊＝自動賣清單的「紀錄」：就算已經賣光、背包暫時沒有，也照樣列著，
+     之後再打到就會被自動賣掉。點一下才移回左邊（取消自動賣）。 */
+  const right = cfg.items
+    .map(id => ({ item: id, qty: (state.inventory.find(r => r.item === id && !r.instanceId) || {}).qty || 0 }))
+    .filter(r => ITEMS[r.item] && (ITEMS[r.item].sell || 0) > 0);
+  const inCat = list => asCategory === 'all' ? list
+    : list.filter(r => invCategoryOf(r.item) === asCategory);
+  const apply = list => {
+    let out = inCat(list);
+    if (asSearch) out = out.filter(r => (ITEMS[r.item].name || '').toLowerCase().includes(asSearch));
+    return out.sort((a, b) => (ITEMS[a.item].name || '').localeCompare(ITEMS[b.item].name || '', 'zh-Hant'));
+  };
+
+  const listHtml = (rows, side) => rows.length
+    ? rows.map(r => {
+        const d = ITEMS[r.item];
+        const locked = side === 'left' && isItemLocked(r.item);
+        const action = side === 'left' ? `asAdd('${r.item}')` : `asRemove('${r.item}')`;
+        const hint = side === 'left' ? (locked ? '（已鎖定）' : '＋') : '✕';
+        const qtyText = side === 'right' && r.qty <= 0 ? '已售完' : `×${r.qty}`;
+        return `<div class="wh-row" onclick="${action}" title="${side === 'left' ? '點一下＝移去右邊開始自動賣' : '點一下＝移回左邊不再自動賣'}">
+          <img src="${itemImgSrc(r.item)}" onerror="this.onerror=null;this.src='${placeholderImgSrc(itemPlaceholderKind(d))}'">
+          <span class="wh-row-name">${locked ? '🔒 ' : ''}${getItemDisplayName(r.item)}</span>
+          <span class="wh-row-qty">${qtyText}　<span style="color:var(--ink-dim)">${hint}</span></span>
+        </div>`;
+      }).join('')
+    : `<div class="empty-hint">${side === 'left' ? '左邊沒有可留的道具。' : '右邊沒有要自動賣的道具。'}</div>`;
+
+  const catCount = {};
+  INV_CATEGORIES.forEach(c => { catCount[c.key] = 0; });
+  all.forEach(r => { catCount[invCategoryOf(r.item)]++; });
+
+  body.innerHTML = `
+    <div class="card-row" style="margin-bottom:8px">
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink)">
+        <input type="checkbox" ${cfg.enabled ? 'checked' : ''} onchange="setAutoSellEnabled(this.checked);renderAutoSellWindow();">
+        啟用自動販賣 ${cfg.enabled ? `（下次 ${readyIn}s）` : '（尚未啟用）'}
+      </label>
+    </div>
+
+    <div class="inv-cats">
+      <button class="btn-small ${asCategory === 'all' ? 'active' : ''}" onclick="setAsCategory('all')">全部 <span class="inv-cat-n">${all.length}</span></button>
+      ${INV_CATEGORIES.filter(c => catCount[c.key] > 0).map(c =>
+        `<button class="btn-small ${asCategory === c.key ? 'active' : ''}" onclick="setAsCategory('${c.key}')">${c.icon} ${c.name} <span class="inv-cat-n">${catCount[c.key]}</span></button>`
+      ).join('')}
+    </div>
+
+    <div class="wh-toolbar">
+      <input id="as-search" class="codex-search" type="text" placeholder="🔍 搜尋名稱…"
+        value="${asSearch.replace(/"/g, '&quot;')}" oninput="onAsSearch(this.value, event)">
+    </div>
+
+    <div class="wh-cols">
+      <div class="wh-col">
+        <div class="wh-col-head">不會自動賣（點一下移右邊 ▶）　${left.length}</div>
+        <div class="wh-list">${listHtml(apply(left), 'left')}</div>
+      </div>
+      <div class="wh-col">
+        <div class="wh-col-head">要自動賣（點一下移回左邊 ✕）
+          ${right.length ? `<button class="btn-small ghost" style="float:right" onclick="asClearAll()">取消全部</button>` : ''}　${right.length} 種</div>
+        <div class="wh-list">${listHtml(apply(right), 'right')}</div>
+      </div>
+    </div>
+  `;
 }
 
 /* ---------------- 卡片系統 UI ---------------- */

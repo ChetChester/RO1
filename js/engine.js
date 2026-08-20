@@ -376,7 +376,10 @@ function createCharacter(name, statAlloc, gender) {
 function currentJob() { return JOB_TREE[state.jobId]; }
 
 // 可雙持單手武器的職業（左手欄位可放武器而非盾牌）
-function canDualWield(jobId) { return jobId === 'assassin'; }
+// 刺客系全部都可以：刺客（二轉）／十字刺客（進階二轉）／十字斬首者（三轉）
+function canDualWield(jobId) {
+  return jobId === 'assassin' || jobId === 'assassincross' || jobId === 'guillotinecross';
+}
 
 // 長矛類武器判定（矛限定技能共用）：道具資料的weaponType欄位對矛類武器標示很乾淨，直接用它判斷
 /* ---------------- 箭矢／彈藥系統 ----------------
@@ -8453,8 +8456,24 @@ function findSkillJob(skillId) {
    會需要這支，是因為**轉生曾經把技能留在身上卻照樣發點**（見 doRebirth 的註解）：
    新手四個技能已經點滿 20 點了，又拿到 11 點，等於憑空多出 20 點。
    doRebirth 那邊已經修成「清空技能」，但**已經壞掉的存檔修不回來**——
-   所以 resetSkills() 兼任修復入口：重置時算出上限，多的直接砍掉。 */
+   所以 resetSkills() 兼任修復入口：重置時算出上限，多的直接砍掉。
+
+   **進階二轉取代二轉（#116）**：官方進階二轉是把二轉整個換掉（領主騎士取代騎士），
+   不是「在騎士之上再疊一個」。沿線上同時有騎士與領主騎士時，騎士那 49 點
+   （JOB50）就不該再算——不然滿級會 20+49+49+69=187，玩家重置時卻只拿得到
+   lordknight 的 69 點，白白少掉騎士那筆。正確是 20（新手）+49（一轉）+
+   69（進階二轉）=138，三轉再 +69=207。 */
+function advancedReplacementOf(jobId) {
+  const jd = JOB_TREE[jobId];
+  if (!jd || jd.tier !== 2) return null;
+  return getAllLearnedJobs().find(j => {
+    const jj = JOB_TREE[j];
+    return jj && jj.tier === 2.5 && jj.parent === jobId;
+  }) || null;
+}
 function earnedSkillPoints(jobId) {
+  // 這個二轉已被沿線上的進階二轉取代 → 它的點數由進階那格承接，不再單獨算
+  if (advancedReplacementOf(jobId)) return 0;
   const lv = (jobId === state.jobId) ? state.jobLevel : ((state.jobLevelHistory || {})[jobId] || 0);
   let pts = Math.max(0, lv - 1);
   // 轉生後的新手多一筆，湊到「JOB10 時剛好點滿新手全部技能」
@@ -8463,36 +8482,60 @@ function earnedSkillPoints(jobId) {
 }
 
 function resetSkills() {
+  if (!state.jobSkillPoints) state.jobSkillPoints = {};
+  const allJobs = getAllLearnedJobs();
   let totalSpent = 0;
   let totalTrimmed = 0;
-  const allJobs = getAllLearnedJobs();
-  for (const jobId of allJobs) {
-    const job = JOB_TREE[jobId];
-    if (!job) continue;
-    let jobSpent = 0;
-    job.skills.forEach(sk => {
-      const lv = state.learnedSkills[sk.id] || 0;
-      if (!sk.isQuest && lv > 0) {
-        jobSpent += lv;
-        delete state.learnedSkills[sk.id];
-      }
-    });
-    // 歸還到對應職業的點數池
-    if (!state.jobSkillPoints) state.jobSkillPoints = {};
-    state.jobSkillPoints[jobId] = (state.jobSkillPoints[jobId] || 0) + jobSpent;
-    totalSpent += jobSpent;
 
-    /* 全部收回來之後才是唯一算得準的時機（沒有點數還投在技能上），
-       這時候池子裡的數字就該正好等於這個職業賺到的點數。多的是舊 bug 的殘留，砍掉。 */
-    const cap = earnedSkillPoints(jobId);
-    if (state.jobSkillPoints[jobId] > cap) {
-      totalTrimmed += state.jobSkillPoints[jobId] - cap;
-      state.jobSkillPoints[jobId] = cap;
+  /* 1) 收技能：每個技能 id 只算一次。進階二轉借二轉、三轉借進階（borrowSkillsFrom），
+     同一招會出現在好幾格的 skills 陣列裡——照職業陣列去收會重複計算、又扣錯池子。
+     改用 findSkillJob 決定它歸哪個職業的池，並把「被進階二轉取代的二轉」的點
+     還給進階那格（#116）。 */
+  const spentByJob = {};
+  for (const skId of Object.keys(state.learnedSkills || {})) {
+    const lv = state.learnedSkills[skId] || 0;
+    if (lv <= 0) continue;
+    const sk = findSkillById(skId);
+    // 任務技能是轉職直接送的 1 級、無法用點升級（isQuest），重置要保留，不能刪
+    if (sk && sk.isQuest) continue;
+    const owner = (sk && findSkillJob(skId)) || state.jobId;
+    const target = advancedReplacementOf(owner) || owner;
+    spentByJob[target] = (spentByJob[target] || 0) + lv;
+    totalSpent += lv;
+    delete state.learnedSkills[skId];
+  }
+  Object.keys(spentByJob).forEach(j => {
+    state.jobSkillPoints[j] = (state.jobSkillPoints[j] || 0) + spentByJob[j];
+  });
+
+  /* 2) 共用池上限：二轉／進階二轉／三轉是同一池（#101、#111），
+     池內路線上的職業 earned 加總才是一次重置該有的量。
+     進階二轉+三轉同一池 → 上限 69+69=138，不能各自拿 earned 去砍。 */
+  const seenPools = new Set();
+  for (const jobId of allJobs) {
+    const pool = skillPointPoolJobs(jobId).filter(j => allJobs.includes(j)).sort();
+    const key = pool.join(',');
+    if (seenPools.has(key) || !pool.length) continue;
+    seenPools.add(key);
+    const cap = pool.reduce((s, j) => s + earnedSkillPoints(j), 0);
+    const total = pool.reduce((s, j) => s + (state.jobSkillPoints[j] || 0), 0);
+    if (total <= cap) continue;
+    let over = total - cap;
+    for (const j of pool) {
+      const have = state.jobSkillPoints[j] || 0;
+      const cut = Math.min(have, over);
+      if (cut > 0) {
+        state.jobSkillPoints[j] = have - cut;
+        totalTrimmed += cut;
+        over -= cut;
+        if (over <= 0) break;
+      }
     }
   }
-  /* 已經不在路線上的職業也要掃——pruneOtherJobLines 漏掉、或舊存檔殘留的池子
+
+  /* 3) 已經不在路線上的職業也要掃——pruneOtherJobLines 漏掉、或舊存檔殘留的池子
      都會被 skillPoints 加總進去，看起來就是「有點卻沒地方點」。 */
-  Object.keys(state.jobSkillPoints || {}).forEach(j => {
+  Object.keys(state.jobSkillPoints).forEach(j => {
     if (allJobs.includes(j)) return;
     totalTrimmed += state.jobSkillPoints[j] || 0;
     delete state.jobSkillPoints[j];
@@ -8505,6 +8548,64 @@ function resetSkills() {
   }
   recomputeDerived(true);
   saveGame();
+}
+
+/* 補回被舊重置 bug 吃掉的技能點（#116）。
+
+   舊版 resetSkills 對進階二轉／三轉會少還點數（騎士那 49 點被誤算進總量、
+   又被各自的 earned 上限砍掉），導致玩家滿級只剩 69 點而不是 138（進階二轉）
+   ／207（三轉）。這支在讀檔時跑一次：照**目前職業與 JOB 等級**算出該有的總點數，
+   跟「池子剩點＋已投資在技能上的點」比較，少了就把差額補進目前職業的池子。
+
+   只補差額、不砍多——多出來的（舊 bug 殘留的溢出）保持原樣，
+   需要時再走「重置技能」由 resetSkills 收尾。 */
+function repairSkillPointDeficit() {
+  if (!state || !state.jobId) return 0;
+  const allJobs = getAllLearnedJobs();
+  if (!allJobs.length) return 0;
+  if (!state.jobSkillPoints) state.jobSkillPoints = {};
+  // 該有的總量：沿線上各職業 earned 加總（進階二轉取代二轉的規則已內建）
+  let correct = 0;
+  allJobs.forEach(j => { correct += earnedSkillPoints(j); });
+  // 現有總量：池子剩點 + 已投資在技能上的點
+  let have = Object.values(state.jobSkillPoints).reduce((a, b) => a + b, 0);
+  Object.keys(state.learnedSkills || {}).forEach(id => {
+    const sk = findSkillById(id);
+    if (sk && sk.isQuest) return;
+    have += state.learnedSkills[id] || 0;
+  });
+  const deficit = correct - have;
+  if (deficit <= 0) return 0;
+  // 補進目前職業的池子
+  state.jobSkillPoints[state.jobId] = (state.jobSkillPoints[state.jobId] || 0) + deficit;
+  state.skillPoints = Object.values(state.jobSkillPoints).reduce((a, b) => a + b, 0);
+  logMsg(`🔧 偵測到舊版重置少還 ${deficit} 點技能點，已補回（依職業等級應得 ${correct} 點）。`);
+  return deficit;
+}
+
+/* 補回被舊重置 bug 刪掉的任務技能（#116）。
+   舊版 resetSkills 連任務技能（isQuest，轉職自帶 1 級、無法用點升級）也一起刪了，
+   而任務技能只在 doJobChange 補發、讀檔不會補，所以會永久消失、顯示 0 級。
+   這支在讀檔時掃沿線上所有職業的任務技能，缺了／是 0 就補回 1 級。 */
+function repairQuestSkills() {
+  if (!state || !state.jobId) return 0;
+  const allJobs = getAllLearnedJobs();
+  if (!allJobs.length) return 0;
+  if (!state.learnedSkills) state.learnedSkills = {};
+  let fixed = 0;
+  allJobs.forEach(jobId => {
+    const job = JOB_TREE[jobId];
+    if (!job || !job.skills) return;
+    job.skills.forEach(sk => {
+      if (!sk.isQuest) return;
+      if (!state.learnedSkills[sk.id] || state.learnedSkills[sk.id] < 1) {
+        state.learnedSkills[sk.id] = 1;
+        fixed++;
+        logMsg(`🔧 偵測到任務技能「${sk.name}」被舊版重置刪除，已補回 1 級。`);
+      }
+    });
+  });
+  return fixed;
 }
 
 // Keep old function name as alias for compatibility
@@ -12411,6 +12512,10 @@ function loadGame() {
 
     // 舊存檔補發轉職自帶的被動（技能是後來才加的，不補就永遠拿不到）
     if (typeof grantAutoSkills === 'function') grantAutoSkills(false);
+    // 補回舊版重置 bug 吃掉的進階二轉／三轉技能點（#116）
+    repairSkillPointDeficit();
+    // 補回被舊版重置刪掉的任務技能（轉職自帶 1 級，讀檔不會自己補）
+    repairQuestSkills();
     recomputeDerived(false);
     // 這個角色被別人當傭兵帶出去賺的經驗，上線時一次領走（#83）
     claimMercLedger();

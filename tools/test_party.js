@@ -706,4 +706,39 @@ makeSaveSlot(g, 3, ['thief', 'assassin'], 'assassin', 30);
   t.eq('冷卻歸零後可以再放', ready, true);
 }
 
+/* ---------- 服事隊友的天使之賜福要傳給玩家（#116） ----------
+   全體輔助技（party:true）由隊友施放時，buff 必須複製到玩家身上
+   而且玩家那份的重算要真的吃到 STR 加成——不是只在陣列裡多一筆。 */
+{
+  const gg = H.boot();
+  const src = H.boot();
+  H.mkChar(src, { path: ['acolyte'], job: 'acolyte', baseLevel: 50 });
+  H.learn(src, 'blessing', 5);
+  src.state.autoSupportSkills = { blessing: true };
+  src.state.gold = 5000000;
+  src.state.mapId = src.MAPS.filter(m => (m.monsters || []).length === 0)[0].id;
+  gg.localStorage.setItem(gg.getSlotKey(5), JSON.stringify(src.state));
+  // 玩家是騎士，自己沒有天使之賜福，只能靠隊友放
+  H.mkChar(gg, { path: ['swordsman', 'knight'], job: 'knight', baseLevel: 90 });
+  gg.state.gold = 5000000;
+  gg.state.mapId = gg.MAPS.filter(m => (m.monsters || []).length === 0)[0].id;
+  gg.hireAlly('5');
+  const ally = gg.state.allies[0];
+  ally.autoSupportSkills = { blessing: true };
+  ally.sp = 9999;
+  gg.state.sp = 9999;
+  gg.state.buffs = [];
+  ally.buffs = [];
+  const atkBefore = gg.state.atk;
+  gg.withAlly(ally, () => gg.castSkill('blessing'));
+  const has = gg.state.buffs.some(b => b.skillId === 'blessing');
+  t.ok('隊友施放天使之賜福後玩家拿到 buff', has);
+  if (has) {
+    const b = gg.state.buffs.find(x => x.skillId === 'blessing');
+    t.eq('buff 帶 STR 加成（Lv5＝+5）', b.strBonus, 5);
+  }
+  gg.recomputeDerived(false);
+  t.ok('玩家的 ATK 真的因祝福上升', gg.state.atk > atkBefore, `${atkBefore} → ${gg.state.atk}`);
+}
+
 process.exit(t.report('隊友系統'));

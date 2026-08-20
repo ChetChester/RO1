@@ -275,4 +275,123 @@ const LK = { path: ['swordsman', 'knight'], rebirth: true, job: 'lordknight' };
   t.eq('短劍重量是官方原始值 40', g.ITEMS.knife.weight, 40);
 }
 
+/* ---------- 技能點重置（#116）：進階二轉取代二轉 ----------
+   滿級（JOB70）應有 20(新手)+49(一轉)+69(進階二轉)=138 點，
+   三轉再加 69=207。重置不能少還點數——騎士被領主騎士取代，
+   騎士那 49 點不能再算，否則玩家實際只拿得到進階那格而白白損失。 */
+{
+  // 進階二轉滿級重置
+  const g = H.boot();
+  H.mkChar(g, LK);
+  g.state.jobLevel = 70;
+  g.state.jobLevelHistory = { novice: 10, swordsman: 50, knight: 50 };
+  g.state.jobSkillPoints = { novice: 20, swordsman: 49, knight: 0, lordknight: 69 };
+  g.state.skillPoints = 138;
+  g.recomputeDerived(true);
+  // 用實際 levelUpSkill 把點花在技能上（騎士與領主騎士共用池）
+  for (const id of ['twohandquicken', 'spearmastery', 'bowlingbash', 'pierce',
+    'spearboomerang', 'brandishspear', 'counter', 'lk_spiralpierce', 'riding',
+    'charge', 'cavaliermastery', 'bash', 'provoke', 'increasehp', 'anger',
+    'magnumbreak', 'swordmastery', 'onehandquicken', 'berserk']) {
+    const sk = g.SKILLS[id];
+    if (!sk || sk.isQuest) continue;
+    for (let i = (g.state.learnedSkills[id] || 0); i < (sk.maxLv || 1); i++) {
+      const before = g.state.skillPoints;
+      if (!g.levelUpSkill(id)) break;
+      if (g.state.skillPoints === before) break;
+    }
+  }
+  const spent = 138 - g.state.skillPoints;
+  g.resetSkills();
+  const back = Object.values(g.state.jobSkillPoints).reduce((a, b) => a + b, 0);
+  t.eq('進階二轉滿級重置拿回 138（花掉 ' + spent + '）', back, 138);
+  t.eq('騎士那格歸零（被取代）', g.state.jobSkillPoints['knight'], 0);
+
+  // 三轉滿級重置
+  const g3 = H.boot();
+  H.mkChar(g3, { path: ['swordsman', 'knight'], rebirth: true, job: 'lordknight', baseLevel: 99 });
+  g3.state.jobLevel = g3.JOB_TREE.lordknight.jobLevelMax;
+  g3.state.jobSkillPoints.lordknight = 0;
+  t.eq('轉得了盧恩騎士', g3.doJobChange('runeknight'), true);
+  g3.state.jobLevel = 70;
+  g3.state.jobLevelHistory = { novice: 10, swordsman: 50, knight: 50, lordknight: 70 };
+  g3.state.jobSkillPoints = { novice: 20, swordsman: 49, knight: 0, lordknight: 69, runeknight: 69 };
+  g3.state.skillPoints = 207;
+  g3.recomputeDerived(true);
+  for (const id of ['lk_berserk', 'lk_tensionrelax', 'lk_parrying', 'lk_aurablade',
+    'lk_concentration', 'lk_headcrush', 'lk_jointbeat', 'lk_spiralpierce', 'riding',
+    'charge', 'cavaliermastery', 'bowlingbash', 'pierce', 'twohandquicken',
+    'spearmastery', 'spearstab', 'spearboomerang', 'brandishspear', 'counter',
+    'bash', 'provoke', 'increasehp', 'anger', 'magnumbreak', 'swordmastery',
+    'onehandquicken', 'berserk']) {
+    const sk = g3.SKILLS[id];
+    if (!sk || sk.isQuest) continue;
+    for (let i = (g3.state.learnedSkills[id] || 0); i < (sk.maxLv || 1); i++) {
+      const before = g3.state.skillPoints;
+      if (!g3.levelUpSkill(id)) break;
+      if (g3.state.skillPoints === before) break;
+    }
+  }
+  const spent3 = 207 - g3.state.skillPoints;
+  g3.resetSkills();
+  const back3 = Object.values(g3.state.jobSkillPoints).reduce((a, b) => a + b, 0);
+  t.eq('三轉滿級重置拿回 207（花掉 ' + spent3 + '）', back3, 207);
+}
+
+/* ---------- 補回被舊重置吃掉的點數（#116） ----------
+   舊版重置對進階二轉／三轉少還點（騎士那筆被誤算又砍掉），
+   讀檔時 repairSkillPointDeficit() 要照職業與 JOB 等級補足差額。 */
+{
+  // 進階二轉滿級但被吃過：總量只剩 69 而非 138
+  const g = H.boot();
+  H.mkChar(g, LK);
+  g.state.jobLevel = 70;
+  g.state.jobLevelHistory = { novice: 10, swordsman: 50, knight: 50 };
+  g.state.jobSkillPoints = { novice: 0, swordsman: 0, knight: 0, lordknight: 40 };
+  g.state.learnedSkills = { twohandquicken: 10, spearmastery: 10, pierce: 9 };
+  g.state.skillPoints = 40;
+  g.recomputeDerived(true);
+  const def = g.repairSkillPointDeficit();
+  const have = Object.values(g.state.jobSkillPoints).reduce((a, b) => a + b, 0)
+    + Object.values(g.state.learnedSkills).reduce((a, b) => a + b, 0);
+  t.eq('補回缺 69 點', def, 69);
+  t.eq('修補後總量 = 138', have, 138);
+
+  // 健康角色不該被動
+  const g2 = H.boot();
+  H.mkChar(g2, LK);
+  g2.state.jobLevel = 70;
+  g2.state.jobLevelHistory = { novice: 10, swordsman: 50, knight: 50 };
+  g2.state.jobSkillPoints = { novice: 20, swordsman: 49, knight: 0, lordknight: 69 };
+  g2.state.skillPoints = 138;
+  g2.recomputeDerived(true);
+  t.eq('健康角色不補點', g2.repairSkillPointDeficit(), 0);
+}
+
+/* ---------- 任務技能重置後保留 1 級（#116） ----------
+   任務技能是轉職直接送的 1 級、無法用點升級（isQuest），
+   重置時不能刪掉，否則就永久消失。 */
+{
+  const g = H.boot();
+  H.mkChar(g, LK);
+  const quest = g.currentJob().skills.filter(s => s.isQuest).map(s => s.id);
+  t.ok('領主騎士有任務技能', quest.length > 0);
+  g.state.learnedSkills['bowlingbash'] = 5;
+  g.state.jobSkillPoints['lordknight'] = 40;
+  g.state.skillPoints = 40;
+  g.recomputeDerived(true);
+  g.resetSkills();
+  t.ok('任務技能重置後仍為 1 級', quest.every(id => g.state.learnedSkills[id] === 1));
+  t.eq('非任務技能已退款', g.state.jobSkillPoints['lordknight'], 45);
+
+  // 已經被舊版重置刪掉的任務技能（0 級），讀檔時要補回 1 級
+  const g4 = H.boot();
+  H.mkChar(g4, LK);
+  const q4 = g4.currentJob().skills.filter(s => s.isQuest).map(s => s.id);
+  q4.forEach(id => { delete g4.state.learnedSkills[id]; });   // 模擬舊 bug 刪光
+  g4.saveGame();
+  g4.loadGame();
+  t.ok('被刪的任務技能讀檔補回 1 級', q4.every(id => g4.state.learnedSkills[id] === 1));
+}
+
 process.exit(t.report('領主騎士 8 技能'));

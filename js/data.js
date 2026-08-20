@@ -32346,8 +32346,12 @@ function isTwoHanded(itemId) {
   if (!itemId) return false;
   const item = ITEMS[itemId];
   if (!item || item.type !== 'weapon') return false;
+  // 拳刃（katar）官方就是雙手武器，但道具 desc 沒寫「雙手」，要靠 weaponCat 認出來，
+  // 不然刺客會誤判成單手、可以雙持兩把拳刃
+  const cat = item.weaponCat || item.weaponType;
+  if (cat === 'katar') return true;
   const desc = item.desc || '';
-  return desc.includes('雙手') || desc.includes('雙手') || desc.includes('two_hand') || desc.includes('Two-Handed');
+  return desc.includes('雙手') || desc.includes('two_hand') || desc.includes('Two-Handed');
 }
 
 /* ---------------- 武器 → 官方攻速分類 ----------------

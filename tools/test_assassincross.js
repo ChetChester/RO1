@@ -324,4 +324,25 @@ const AX = { path: ['thief', 'assassin'], rebirth: true, job: 'assassincross' };
   t.ok('有拿到第一次的獎勵', exp1 > 0);
 }
 
+/* ---------- 武器欄位（#116）：拳刃雙手、短劍可雙持 ---------- */
+{
+  // 十字刺客也能雙持短劍
+  const g = H.boot();
+  H.mkChar(g, AX);
+  g.addItem('knife', 2);
+  g.equipItem('knife');
+  g.equipItem('knife');
+  t.eq('十字刺客可雙持短劍', g.state.equip.shield, 'knife');
+
+  // 拳刃是雙手武器：只能裝一把
+  const g2 = H.boot();
+  H.mkChar(g2, AX);
+  t.ok('拳刃被判定為雙手武器', g2.isTwoHanded('jur'));
+  g2.addItem('jur', 2);
+  g2.equipItem('jur');
+  g2.equipItem('jur');
+  t.eq('拳刃不能雙持（左手不佔）', g2.state.equip.shield, null);
+  t.ok('拳刃 ASPD 分類仍正確', g2.aspdCategoryOf('jur') === 'katar');
+}
+
 process.exit(t.report('十字刺客 5 技能 + 技能點修復'));
