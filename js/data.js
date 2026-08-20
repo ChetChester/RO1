@@ -28476,6 +28476,7 @@ const CARDS = {
   metaller_card: { id: 'metaller_card', monsterId: 'metaller', name: '重金屬蝗蟲卡片', icon: '⚔️', slot: 'weapon', bonus: {"atk":5}, desc: '攻擊時，有5%的機率使敵人陷入沉默狀態。, ATK+5' },
   cornutus_card: { id: 'cornutus_card', monsterId: 'cornutus', name: '卡那多斯卡片', icon: '🛡️', slot: 'armor', bonus: {"def":1}, desc: '可使鎧甲完全不受損。, DEF+1' },
   anacondaq_card: { id: 'anacondaq_card', monsterId: 'anacondaq', name: '黃蛇卡片', icon: '⚔️', slot: 'weapon', bonus: {"eleDmg_poison":20}, desc: '對毒屬性魔物傷害+20%' },
+  anolian_card: { id: 'anolian_card', monsterId: 'anolian', name: '虎蜥人卡片', icon: '🛡️', slot: 'armor', bonus: {}, desc: '受到物理傷害時，10%機率自動念咒心神凝聚1級；已習得心神凝聚10級時改用10級。', autoSpell: [{"on":"hit","skill":"improveconc","lv":1,"chance":10,"upgradeIf":{"skill":"improveconc","lv":10,"toLv":10}}] },
   zerom_card: { id: 'zerom_card', monsterId: 'zerom', name: '傑洛米卡片', icon: '🃏', slot: 'accessory', bonus: {"dex":3}, desc: 'DEX+3' },
   kaho_card: { id: 'kaho_card', monsterId: 'kaho', name: '卡浩卡片', icon: '⚔️', slot: 'weapon', bonus: {"eleDmg_earth":20}, desc: '對地屬性魔物傷害+20%' },
   megalodon_card: { id: 'megalodon_card', monsterId: 'megalodon', name: '邪骸食人魚卡片', icon: '🛡️', slot: 'shield', bonus: {"def":1}, desc: '受到攻擊時，被冰凍的機率降低20%。, DEF+1' },
