@@ -226,21 +226,23 @@ const anyMon = g => Object.keys(g.MONSTERS)[0];
   t.eq('兩格都空就真的點不動', g.levelUpSkill('mo_ironhand'), false);
 }
 
-/* ---- 6. 一轉的點重置後還回一轉的池（#121） ----
+/* ---- 6. 修羅滿級重置：一轉／二轉各還各的池（#121） ----
    修羅整份借走母職的技能，findSkillJob 現職優先會把服事的招全判給修羅——
-   重置時服事的點被灌進 tier≥2 的共用池，又依 earned 封頂，等於服事那一轉
-   應得的點直接蒸發，重置完服事那格歸零。歸還目標要追到真主（服事）。 */
+   舊版重置把服事的點灌進 tier≥2 的共用池又依 earned 封頂，服事那格歸零、
+   二轉技能點也湊不滿應得的 138。重置改成「各池歸還到應得」後，
+   服事 49、二轉線（武術宗師+修羅）138，互不侵蝕。 */
 {
-  const g = CH();
+  const g = H.boot();
+  H.mkChar(g, { path: ['acolyte', 'monk', 'champion'], rebirth: true, job: 'sura' });
+  g.state.jobLevel = 70;
   g.state.jobLevelHistory = { novice: 10, acolyte: 50, monk: 50, champion: 70 };
-  g.state.jobSkillPoints = { novice: 0, acolyte: 0, monk: 0, champion: 0 };
-  g.state.learnedSkills = { heal: 5, increaseagi: 5 };
+  g.state.jobSkillPoints = { novice: 0, acolyte: 0, monk: 0, champion: 0, sura: 0 };
+  g.state.learnedSkills = { heal: 5, increaseagi: 5, ch_soulcollect: 5, ch_tigerfist: 5 };
   g.state.skillPoints = 0;
   g.recomputeDerived(true);
   g.resetSkills();
-  // 服事的治癒術／加速術退進服事的池，不是修羅的共用池
-  t.eq('治癒術還進服事的池', g.state.jobSkillPoints.acolyte, 10);
-  t.eq('tier≥2 的池沒吃走一轉的點', g.state.jobSkillPoints.champion, 0);
+  t.eq('一轉（服事）的點還回服事的池', g.state.jobSkillPoints.acolyte, 49);
+  t.eq('二轉線應得 138（武宗69+修羅69）', (g.state.jobSkillPoints.monk || 0) + g.state.jobSkillPoints.champion + (g.state.jobSkillPoints.sura || 0), 138);
 }
 
 t.report('神行太保 4 + 武術宗師 4 技能');

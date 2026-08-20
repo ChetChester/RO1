@@ -8481,69 +8481,44 @@ function earnedSkillPoints(jobId) {
   return pts;
 }
 
-/* 重置時把點還到「真正擁有這招」的職業的池子。
-
-   `findSkillJob()` 現職優先，三轉修羅把整條母職線的技能都借走了——照它還的話，
-   服事的點會全部灌進修羅（tier ≥ 2）的共用池，而共用池又依 earned 封頂，
-   等於服事那一轉（tier 1）應得的點直接蒸發，重置完服事那格歸零（#121）。
-
-   `skillOriginJob()` 找得到真主（治癒術 → 服事、武僧自己的招 → 武僧），
-   就還給真主；找不到（超級新手借了沿線上沒學過的職業）才退回 findSkillJob。 */
-function resetRefundTarget(skId) {
-  const src = skillOriginJob(skId);
-  if (src && getAllLearnedJobs().includes(src.id)) return src.id;
-  return findSkillJob(skId) || state.jobId;
-}
-
 function resetSkills() {
   if (!state.jobSkillPoints) state.jobSkillPoints = {};
   const allJobs = getAllLearnedJobs();
   let totalSpent = 0;
   let totalTrimmed = 0;
 
-  /* 1) 收技能：每個技能 id 只算一次。進階二轉借二轉、三轉借進階（borrowSkillsFrom），
-     同一招會出現在好幾格的 skills 陣列裡——照職業陣列去收會重複計算、又扣錯池子。
-     改用 resetRefundTarget 決定它歸哪個職業的池，並把「被進階二轉取代的二轉」的點
-     還給進階那格（#116）。 */
-  const spentByJob = {};
+  /* 1) 收技能：每個技能 id 只算一次。任務技能（isQuest）是轉職直接送的 1 級、
+     無法用點升級，重置要保留。其餘技能全部刪掉、算進返還點數。 */
   for (const skId of Object.keys(state.learnedSkills || {})) {
     const lv = state.learnedSkills[skId] || 0;
     if (lv <= 0) continue;
     const sk = findSkillById(skId);
-    // 任務技能是轉職直接送的 1 級、無法用點升級（isQuest），重置要保留，不能刪
     if (sk && sk.isQuest) continue;
-    const owner = resetRefundTarget(skId);
-    const target = advancedReplacementOf(owner) || owner;
-    spentByJob[target] = (spentByJob[target] || 0) + lv;
     totalSpent += lv;
     delete state.learnedSkills[skId];
   }
-  Object.keys(spentByJob).forEach(j => {
-    state.jobSkillPoints[j] = (state.jobSkillPoints[j] || 0) + spentByJob[j];
-  });
 
-  /* 2) 共用池上限：二轉／進階二轉／三轉是同一池（#101、#111），
-     池內路線上的職業 earned 加總才是一次重置該有的量。
-     進階二轉+三轉同一池 → 上限 69+69=138，不能各自拿 earned 去砍。 */
+  /* 2) 各池直接歸還到「應得」的量——earnedSkillPoints 是技能點的唯一真相來源
+     （職業等級每級 1 點，轉生新手再補一筆）。
+
+     不照「點花在哪個技能的池」去還：三轉修羅整份借走母職的技能（findSkillJob
+     現職優先），同一招的點可能是從一轉或二轉的池花出去的，照技能歸還會跨池
+     互搶、又被 cap 砍掉（#121）。改成分池重算後，**一轉（服事）應得 49、
+     二轉線（champion+sura）應得 138**，互不侵蝕——修羅滿級重置後二轉技能點
+     就是 138，服事就是 49。
+
+     多出來的（舊 #116 重生 bug 的溢出）砍掉，少的補足，最後各池恰等於應得。 */
   const seenPools = new Set();
   for (const jobId of allJobs) {
     const pool = skillPointPoolJobs(jobId).filter(j => allJobs.includes(j)).sort();
     const key = pool.join(',');
     if (seenPools.has(key) || !pool.length) continue;
     seenPools.add(key);
-    const cap = pool.reduce((s, j) => s + earnedSkillPoints(j), 0);
-    const total = pool.reduce((s, j) => s + (state.jobSkillPoints[j] || 0), 0);
-    if (total <= cap) continue;
-    let over = total - cap;
     for (const j of pool) {
+      const want = earnedSkillPoints(j);
       const have = state.jobSkillPoints[j] || 0;
-      const cut = Math.min(have, over);
-      if (cut > 0) {
-        state.jobSkillPoints[j] = have - cut;
-        totalTrimmed += cut;
-        over -= cut;
-        if (over <= 0) break;
-      }
+      if (have > want) totalTrimmed += have - want;
+      state.jobSkillPoints[j] = want;
     }
   }
 

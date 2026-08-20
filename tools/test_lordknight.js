@@ -382,7 +382,8 @@ const LK = { path: ['swordsman', 'knight'], rebirth: true, job: 'lordknight' };
   g.recomputeDerived(true);
   g.resetSkills();
   t.ok('任務技能重置後仍為 1 級', quest.every(id => g.state.learnedSkills[id] === 1));
-  t.eq('非任務技能已退款', g.state.jobSkillPoints['lordknight'], 45);
+  /* 重置是「各池歸還到應得」：滿級領主騎士 earned 69，bowingbash 那 5 點也一併還回 */
+  t.eq('非任務技能已退款（池回到應得量）', g.state.jobSkillPoints['lordknight'], 69);
 
   // 已經被舊版重置刪掉的任務技能（0 級），讀檔時要補回 1 級
   const g4 = H.boot();
