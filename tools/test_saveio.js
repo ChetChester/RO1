@@ -110,4 +110,45 @@ const rb3 = g.importFullBackup({ app: 'ro-idle', type: 'backup', slots: 'oops' }
 t.ok('缺少欄位資料被拒絕', !rb3.ok);
 t.eq('拒絕後欄位 0 仍在', JSON.parse(g.localStorage.getItem(key(0))).name, '甲');
 
+/* ---------------- 服事技能 id 遷移冪等（#114） ----------------
+   舊遷移每次 loadGame 都跑、又不判斷是否已搬過：新式存檔的
+   `blessing`（天使之賜福）與 `cure`（治療術）會被併進
+   `increaseagi`／`holywater`，技能點憑空消失（換角色回來就少點）。 */
+// 新式存檔：現役 id 兩次 load 後原封不動、點數不變
+const g3 = H.boot();
+g3.createCharacter('祭司', { str: 0, agi: 0, vit: 0, int: 0, dex: 0, luk: 0 }, 'female');
+g3.state.baseLevel = 99;
+g3.doJobChange('acolyte');
+g3.state.jobLevel = 50;
+g3.state.jobSkillPoints = { novice: 0, acolyte: 49 };
+g3.state.skillPoints = 49;
+const acoBuild = {
+  heal: 10, cure: 1, increaseagi: 10, decreaseagi: 1, divineprotection: 10,
+  angelic: 5, angelusbarrier: 1, blessing: 5, signumcrusis: 1, holywater: 1,
+  ruwach: 1, teleport: 1, warpportal: 1, pneuma: 1, holylight: 1,
+};
+Object.assign(g3.state.learnedSkills, acoBuild);
+const acoTotal = Object.values(acoBuild).reduce((a, b) => a + b, 0);
+g3.saveGame();
+g3.loadGame();
+g3.loadGame();                                        // 換角色回來會再跑一次
+const after = g3.state.learnedSkills;
+const afterTotal = Object.values(after).reduce((a, b) => a + b, 0);
+t.eq('新式存檔兩次讀檔總點數不變', afterTotal, acoTotal);
+t.eq('blessing（天使之賜福）原樣保留', after['blessing'], 5);
+t.eq('cure（治療術）原樣保留', after['cure'], 1);
+t.eq('increaseagi（加速術）原樣保留', after['increaseagi'], 10);
+t.eq('holywater（天使之淚）原樣保留', after['holywater'], 1);
+// 舊式存檔（含 aquabenedicta/curestatus）：仍然會搬成官方 id
+const g4 = H.boot();
+g4.createCharacter('舊檔', { str: 0, agi: 0, vit: 0, int: 0, dex: 0, luk: 0 }, 'male');
+g4.state.learnedSkills = { heal: 10, blessing: 5, cure: 1, curestatus: 3, aquabenedicta: 4 };
+g4.saveGame();
+g4.loadGame();
+const ls4 = g4.state.learnedSkills;
+t.eq('舊式 blessing→increaseagi', ls4['increaseagi'], 5);
+t.eq('舊式 aquabenedicta→blessing', ls4['blessing'], 4);
+t.eq('舊式 cure→holywater', ls4['holywater'], 1);
+t.eq('舊式 curestatus→cure', ls4['cure'], 3);
+
 process.exit(t.report('存檔匯出/匯入'));

@@ -12320,7 +12320,13 @@ function loadGame() {
        讀程式碼時對不上（`blessing` 裝的是加速術、`cure` 裝的是天使之淚）。
 
        這是一個**環**（blessing→increaseagi→…→cure），所以要另建一份再換掉，
-       不能就地改——就地改會讓先換的那支被後換的蓋掉。 */
+       不能就地改——就地改會讓先換的那支被後換的蓋掉。
+
+       **只搬真的還是舊式 id 的存檔**：這支在每次 loadGame 都會執行，而新版
+       `blessing`（天使之賜福）、`cure`（治療術）本身就是合法 id。無條件再跑一次
+       會把它們併進 `increaseagi`／`holywater`，技能點憑空消失。舊式存檔**必定**
+       含 `aquabenedicta`／`curestatus`（新式存檔不會有），用這兩個 key 當指標，
+       沒有就整段跳過，順便避免重複搬。 */
     (function migrateAcolyteSkillIds() {
       const MAP = { blessing: 'increaseagi', aquabenedicta: 'blessing',
         cure: 'holywater', curestatus: 'cure' };
@@ -12331,8 +12337,12 @@ function loadGame() {
         Object.keys(o).forEach(k => { out[conv(k)] = o[k]; });
         return out;
       };
+      const isOldFormat = st => {
+        if (!st || !st.learnedSkills) return false;
+        return st.learnedSkills['aquabenedicta'] != null || st.learnedSkills['curestatus'] != null;
+      };
       const fix = st => {
-        if (!st) return;
+        if (!st || !isOldFormat(st)) return;
         st.learnedSkills = remapObj(st.learnedSkills);
         st.cooldowns = remapObj(st.cooldowns);
         st.autoSupportSkills = remapObj(st.autoSupportSkills);
