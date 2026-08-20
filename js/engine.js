@@ -10441,6 +10441,8 @@ function grantAutoSkills(verbose) {
 function doJobChange(targetId) {
   if (!canJobChange(targetId)) return false;
   const target = JOB_TREE[targetId];
+  // 新手第一次轉職（轉生後不重發）：判斷要在 jobId 被換掉之前做
+  const fromNovice = state.jobId === 'novice' && (state.rebirthCount || 0) === 0;
 
   // 檢查當前職業的技能點是否已全部花完
   if (!state.jobSkillPoints) state.jobSkillPoints = {};
@@ -10481,6 +10483,18 @@ function doJobChange(targetId) {
 
   recomputeDerived(true);
   logMsg(`🎊 恭喜！你轉職成為「${target.icon} ${target.name}」！`);
+  /* 新手第一次轉職禮：紅水 300 人人有；弓箭手多 1000 鋼鐵箭矢，
+     其他職業折現 1 萬鋅幣。轉生後重轉不發。 */
+  if (fromNovice) {
+    addItem('red_potion', 300);
+    if (targetId === 'archer') {
+      addItem('steel_arrow', 1000);
+      logMsg('🎁 新手轉職禮：紅色藥水 ×300、鋼鐵箭矢 ×1000！');
+    } else {
+      state.gold += 10000;
+      logMsg('🎁 新手轉職禮：紅色藥水 ×300、鋅幣 10,000！');
+    }
+  }
   if (typeof updatePlayerSprite === 'function') updatePlayerSprite();
   saveGame();
   return true;
@@ -10495,6 +10509,10 @@ const NPC_SHOPS = {
     name: '武器商人',
     icon: '⚔️',
     items: ['knife', 'cutter', 'main_gauche', 'dirk', 'dagger', 'stiletto', 'gladius', 'damascus', 'cinquedea', 'kindling_dagger', 'obsidian_dagger', 'item_1249', 'jujube_dagger', 'coward', 'sword', 'falchion', 'blade', 'lapier', 'tsurugi', 'haedonggum', 'saber', 'slayer', 'bastard_sword', 'two_hand_sword', 'broad_sword', 'spear', 'pike', 'lance', 'guisarme', 'glaive', 'halberd', 'axe', 'battle_axe', 'hammer', 'buster', 'two_handed_axe', 'club', 'mace', 'smasher', 'flail', 'morning_star', 'sword_mace', 'chain', 'stunner', 'bow', 'composite_bow', 'great_bow', 'cross_bow', 'arbalest', 'kakkung', 'hunter_bow', 'repeting_cross_bow', 'waghnakh', 'knuckle_duster', 'hora', 'fist', 'claw', 'finger', 'violin', 'mandolin', 'lute', 'guitar', 'harp', 'guh_moon_goh',
+      // 樂器／鞭子／法杖的低階線：官方商店同一家武器商人賣的就是這條線
+      'cello', 'contabass', 'electronic_guitar',
+      'rope', 'rope_', 'line', 'line_', 'wire', 'wire_', 'lariat', 'tail', 'tail_', 'whip', 'whip_', 'rante', 'rante_',
+      'rod', 'rod_', 'wand', 'wand_', 'staff', 'staff_', 'survival_rod', 'survival_rod_', 'survival_rod2', 'survival_rod2_', 'arc_wand', 'arc_wand_',
       // 拳刃：刺客專用，官方商店賣的就是這條線
       'jur', 'jur_', 'katar', 'katar_', 'jamadhar', 'jamadhar_',
       // 箭矢：弓箭手系列的消耗品，跟弓放同一家店
@@ -10552,9 +10570,9 @@ function openNpcShop(shopId) {
     const item = ITEMS[id];
     let category = '其他';
     if (item.type === 'weapon') {
-      const weaponType = item.weaponType || 'sword';
-      const typeNames = { dagger: '短劍', sword: '劍', tsword: '雙手劍', bow: '弓', rod: '法杖', mace: '鈍器', katar: '拳刃', spear: '長矛', knuckle: '拳套' };
-      category = typeNames[weaponType] || weaponType;
+      const cat = item.weaponCat || item.weaponType || 'sword';
+      const typeNames = { dagger: '短劍', sword: '劍', tsword: '雙手劍', bow: '弓', rod: '法杖', mace: '鈍器', katar: '拳刃', spear: '長矛', knuckle: '拳套', instrument: '樂器', whip: '鞭子' };
+      category = typeNames[cat] || cat;
     } else if (item.type === 'armor') {
       const armorType = item.armorType || 'cloth';
       const typeNames = { cloth: '衣服', leather: '皮甲', shield: '盾牌', garment: '披風', footgear: '鞋子', accessory: '飾品' };

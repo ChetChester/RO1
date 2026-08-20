@@ -269,4 +269,50 @@ const WS = { path: ['merchant', 'blacksmith'], rebirth: true, job: 'whitesmith' 
   t.eq('神匠鍛得動武器（材料有扣）', before - g.getItemQty('iron'), 5);
 }
 
+/* ---------- 新手第一次轉職禮物 ---------- */
+{
+  const g = H.boot();
+  g.createCharacter('T', { str: 1, agi: 1, vit: 1, int: 1, dex: 1, luk: 1 }, 'male');
+  g.state.baseLevel = 10; g.state.jobLevel = 10;
+  g.state.jobSkillPoints = { novice: 0 };
+  g.state.inventory = []; g.state.gold = 0;
+
+  t.ok('轉職弓箭手', g.doJobChange('archer'));
+  t.eq('弓箭手拿到 300 紅水', g.getItemQty('red_potion'), 300);
+  t.eq('弓箭手拿到 1000 鋼鐵箭矢', g.getItemQty('steel_arrow'), 1000);
+  t.eq('弓箭手不折現鋅幣', g.state.gold, 0);
+}
+
+{
+  const g = H.boot();
+  g.createCharacter('T', { str: 1, agi: 1, vit: 1, int: 1, dex: 1, luk: 1 }, 'male');
+  g.state.baseLevel = 10; g.state.jobLevel = 10;
+  g.state.jobSkillPoints = { novice: 0 };
+  g.state.inventory = []; g.state.gold = 0;
+
+  t.ok('轉職劍士', g.doJobChange('swordsman'));
+  t.eq('劍士拿到 300 紅水', g.getItemQty('red_potion'), 300);
+  t.eq('其他職業折現 1 萬鋅幣', g.state.gold, 10000);
+  t.eq('其他職業沒有鋼鐵箭矢', g.getItemQty('steel_arrow'), 0);
+
+  // 二轉不再發
+  g.state.baseLevel = 40; g.state.jobLevel = 50; g.state.jobSkillPoints.swordsman = 0;
+  t.ok('二轉騎士', g.doJobChange('knight'));
+  t.eq('二轉後紅水還是 300', g.getItemQty('red_potion'), 300);
+  t.eq('二轉後鋅幣沒再加', g.state.gold, 10000);
+}
+
+{
+  const g = H.boot();
+  g.createCharacter('T', { str: 1, agi: 1, vit: 1, int: 1, dex: 1, luk: 1 }, 'male');
+  g.state.baseLevel = 10; g.state.jobLevel = 10;
+  g.state.jobSkillPoints = { novice: 0 };
+  g.state.inventory = []; g.state.gold = 0;
+  g.state.rebirthCount = 1;   // 轉生後重轉：不該重發
+
+  t.ok('轉生後重轉劍士', g.doJobChange('swordsman'));
+  t.eq('轉生後紅水不重發', g.getItemQty('red_potion'), 0);
+  t.eq('轉生後鋅幣不重發', g.state.gold, 0);
+}
+
 process.exit(t.report('神匠 5 技能 + 進階二轉取代二轉'));
