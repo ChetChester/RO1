@@ -332,4 +332,41 @@ const g = H.boot();
   t.ok('一轉曲線沒被動到', g.expToNextJobLevel(30, 1) === Math.floor(41 * Math.pow(30, g.JOB_EXP_COEF ? 1.35 : 1.35)));
 }
 
+/* ---------- 轉職條件（#116）：只有 3轉 要基礎等級 ----------
+   1轉／2轉／進階二轉只看 JOB 滿級＋技能點花完，
+   只有 3轉 額外要求 基礎等級 99（＋JOB70）。 */
+{
+  // 1轉：base=1 就能轉
+  const g = H.boot();
+  g.createCharacter('T', { str: 0, agi: 0, vit: 0, int: 0, dex: 0, luk: 0 }, 'male');
+  g.state.jobLevel = 10; g.state.jobSkillPoints = { novice: 0 }; g.state.baseLevel = 1;
+  t.eq('1轉 base=1 可轉', g.doJobChange('swordsman'), true);
+
+  // 2轉：base=20（低於 baseLevelReq=40）也能轉
+  const g2 = H.boot();
+  g2.createCharacter('T', { str: 0, agi: 0, vit: 0, int: 0, dex: 0, luk: 0 }, 'male');
+  g2.state.jobLevel = 10; g2.state.jobSkillPoints = { novice: 0 };
+  g2.doJobChange('swordsman');
+  g2.state.jobLevel = 50; g2.state.jobSkillPoints = { novice: 0, swordsman: 0 }; g2.state.baseLevel = 20;
+  t.eq('2轉 base=20 可轉', g2.doJobChange('knight'), true);
+
+  // 進階二轉：只看 JOB 滿級，不要求 base=70
+  const g25 = H.boot();
+  g25.createCharacter('T', { str: 0, agi: 0, vit: 0, int: 0, dex: 0, luk: 0 }, 'male');
+  g25.state.jobId = 'knight';
+  g25.state.jobLevel = 50; g25.state.rebirthCount = 1;
+  g25.state.rebirthPath = ['swordsman', 'knight'];
+  g25.state.jobSkillPoints = { novice: 0, swordsman: 0, knight: 0 };
+  g25.state.baseLevel = 40;
+  t.eq('進階二轉 base=40 可轉', g25.doJobChange('lordknight'), true);
+
+  // 3轉：base=50 不能轉，base=99 才給轉
+  const g3 = H.boot();
+  H.mkChar(g3, { path: ['swordsman', 'knight'], rebirth: true, job: 'lordknight', baseLevel: 99 });
+  g3.state.jobLevel = 70; g3.state.jobSkillPoints.lordknight = 0; g3.state.baseLevel = 50;
+  t.eq('3轉 base=50 不能轉', g3.doJobChange('runeknight'), false);
+  g3.state.baseLevel = 99;
+  t.eq('3轉 base=99 可轉', g3.doJobChange('runeknight'), true);
+}
+
 process.exit(t.report('經驗曲線 + GM 測試鈕'));

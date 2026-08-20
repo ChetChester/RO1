@@ -10479,7 +10479,9 @@ function canJobChange(targetId) {
   // 性別鎖（#68 詩人／舞孃）：官方就是依性別二選一
   if (target.genderLock && (state.gender || 'male') !== target.genderLock) return false;
   // 基本條件：等級夠
-  if (state.jobLevel < job.jobLevelMax || state.baseLevel < target.baseLevelReq) return false;
+  // 1轉／2轉／進階二轉只要求 JOB 滿級；只有 3轉 額外要求基礎等級（LV99）
+  if (state.jobLevel < job.jobLevelMax) return false;
+  if ((target.tier >= 3) && state.baseLevel < target.baseLevelReq) return false;
   // 技能點檢查：當前職業的技能點必須花完
   if (!state.jobSkillPoints) state.jobSkillPoints = {};
   if ((state.jobSkillPoints[state.jobId] || 0) > 0) return false;
@@ -10520,7 +10522,8 @@ function jobChangeBlockReason(targetId) {
   if (state.jobLevel < job.jobLevelMax) {
     return `職業等級要滿 ${job.jobLevelMax}（目前 ${state.jobLevel}）。`;
   }
-  if (state.baseLevel < target.baseLevelReq) {
+  // 只有 3轉 才要求基礎等級；1/2/進階二轉只看 JOB 滿級
+  if ((target.tier >= 3) && state.baseLevel < target.baseLevelReq) {
     return `基礎等級要達到 ${target.baseLevelReq}（目前 ${state.baseLevel}）。`;
   }
   const left = (state.jobSkillPoints || {})[state.jobId] || 0;
