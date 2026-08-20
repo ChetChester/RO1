@@ -8481,6 +8481,20 @@ function earnedSkillPoints(jobId) {
   return pts;
 }
 
+/* 重置時把點還到「真正擁有這招」的職業的池子。
+
+   `findSkillJob()` 現職優先，三轉修羅把整條母職線的技能都借走了——照它還的話，
+   服事的點會全部灌進修羅（tier ≥ 2）的共用池，而共用池又依 earned 封頂，
+   等於服事那一轉（tier 1）應得的點直接蒸發，重置完服事那格歸零（#121）。
+
+   `skillOriginJob()` 找得到真主（治癒術 → 服事、武僧自己的招 → 武僧），
+   就還給真主；找不到（超級新手借了沿線上沒學過的職業）才退回 findSkillJob。 */
+function resetRefundTarget(skId) {
+  const src = skillOriginJob(skId);
+  if (src && getAllLearnedJobs().includes(src.id)) return src.id;
+  return findSkillJob(skId) || state.jobId;
+}
+
 function resetSkills() {
   if (!state.jobSkillPoints) state.jobSkillPoints = {};
   const allJobs = getAllLearnedJobs();
@@ -8489,7 +8503,7 @@ function resetSkills() {
 
   /* 1) 收技能：每個技能 id 只算一次。進階二轉借二轉、三轉借進階（borrowSkillsFrom），
      同一招會出現在好幾格的 skills 陣列裡——照職業陣列去收會重複計算、又扣錯池子。
-     改用 findSkillJob 決定它歸哪個職業的池，並把「被進階二轉取代的二轉」的點
+     改用 resetRefundTarget 決定它歸哪個職業的池，並把「被進階二轉取代的二轉」的點
      還給進階那格（#116）。 */
   const spentByJob = {};
   for (const skId of Object.keys(state.learnedSkills || {})) {
@@ -8498,7 +8512,7 @@ function resetSkills() {
     const sk = findSkillById(skId);
     // 任務技能是轉職直接送的 1 級、無法用點升級（isQuest），重置要保留，不能刪
     if (sk && sk.isQuest) continue;
-    const owner = (sk && findSkillJob(skId)) || state.jobId;
+    const owner = resetRefundTarget(skId);
     const target = advancedReplacementOf(owner) || owner;
     spentByJob[target] = (spentByJob[target] || 0) + lv;
     totalSpent += lv;
