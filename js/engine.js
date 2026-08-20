@@ -5207,6 +5207,7 @@ function gameTick() {
      擺到下面那個「借慢心跳」的區塊裡的話，每秒只會扣掉 100ms，
      30 秒的幸運之頌歌會撐成 5 分鐘。 */
   tickAllyBuffs();
+  tickAllyCooldowns();   // 隊友冷卻也要倒數（#116），不然輔助技能只放第一發
   tickPartyAutoCure();   // 治療術（#97）：全隊自動解沉默／混亂／黑暗
 
   if (state.hp <= 0) return; // 等待復活流程
@@ -7890,6 +7891,19 @@ function tickAllyBuffs() {
       return b.msRemaining > 0;
     });
     if (ally.buffs.length !== before) withAlly(ally, () => recomputeDerived(false));
+  });
+}
+
+/* 隊友的冷卻也要倒數——`tickCooldowns()` 只跑玩家那一份，隊友的冷卻
+   存的是 `ally.cooldowns`，沒人扣就永遠卡在原值，`skillReady()` 永遠 false，
+   輔助技能只放得出第一發（每次雇傭一發），buff 時間到也不會補（#116）。 */
+function tickAllyCooldowns() {
+  allyList().forEach(ally => {
+    if (!ally || !ally.cooldowns) return;
+    Object.keys(ally.cooldowns).forEach(k => {
+      ally.cooldowns[k] -= TICK_MS;
+      if (ally.cooldowns[k] <= 0) delete ally.cooldowns[k];
+    });
   });
 }
 

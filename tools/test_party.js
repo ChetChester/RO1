@@ -671,4 +671,39 @@ makeSaveSlot(g, 3, ['thief', 'assassin'], 'assassin', 30);
   t.ok('空表回 null', gg.pickWeightedDrop([]) === null);
 }
 
+/* ---------- 隊友冷卻要倒數（#116） ----------
+   隊友的冷卻存在自己快照的 `cooldowns`，先前只有玩家的冷卻會 tick，
+   隊友放過一次輔助技後 `skillReady()` 永遠 false，buff 時間到也不會補。
+   這支驗證：施放後冷卻寫在隊友身上，且 tick 會把它扣回零。 */
+{
+  const gg = H.boot();
+  // 造一位會幸運之頌歌的祭司，寫進 slot 5（用獨立 context 建角再序列化）
+  const src = H.boot();
+  H.mkChar(src, { path: ['acolyte', 'priest'], job: 'priest', baseLevel: 70 });
+  H.learn(src, 'gloria', 5);
+  src.state.autoSupportSkills = { gloria: true };
+  src.state.gold = 5000000;
+  src.state.mapId = src.MAPS.filter(m => (m.monsters || []).length === 0)[0].id;
+  gg.localStorage.setItem(gg.getSlotKey(5), JSON.stringify(src.state));
+
+  // 玩家
+  H.mkChar(gg, { path: ['swordsman', 'knight'], job: 'knight', baseLevel: 90 });
+  gg.state.gold = 5000000;
+  gg.state.mapId = gg.MAPS.filter(m => (m.monsters || []).length === 0)[0].id;
+  gg.hireAlly('5');
+  const ally = gg.state.allies[0];
+  ally.sp = 9999;
+  t.ok('隊友學過幸運之頌歌', (ally.learnedSkills || {})['gloria'] === 5);
+  const ok = gg.withAlly(ally, () => gg.castSkill('gloria'));
+  t.ok('隊友放得出幸運之頌歌', ok);
+  const cdAtCast = ally.cooldowns['gloria'];
+  t.ok('冷卻寫在隊友自己身上', cdAtCast > 0);
+  t.ok('buff 也上身', ally.buffs.some(b => b.skillId === 'gloria'));
+  // 模擬時間流逝（幸運之頌歌冷卻 30 秒 = 300 ticks）
+  for (let i = 0; i < 301; i++) gg.tickAllyCooldowns();
+  t.eq('隊友冷卻 30 秒後歸零', ally.cooldowns['gloria'], undefined);
+  const ready = gg.withAlly(ally, () => gg.skillReady('gloria'));
+  t.eq('冷卻歸零後可以再放', ready, true);
+}
+
 process.exit(t.report('隊友系統'));
