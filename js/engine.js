@@ -834,12 +834,27 @@ function recomputeDerived(fullHeal) {
      是「轉生過」就有，高等劍士、高等巫師那些中途職業同樣吃得到，不必等轉到進階二轉。
      rAthena 是**先乘 VIT 再乘 25%**，兩段各自取整，這裡照抄。
 
-     `hpSpFrom`：進階二轉沿用本職的成長表（官方轉生職用的就是同一張表）。
-     不寫的職業照舊用自己的 id；查不到才退回新手表。 */
-  const jobId = job.id;
-  const tblKey = job.hpSpFrom || jobId;
-  const hpTable = JOB_BASE_HP[tblKey] || JOB_BASE_HP.novice;
-  const spTable = JOB_BASE_SP[tblKey] || JOB_BASE_SP.novice;
+      `hpSpFrom`：進階二轉沿用本職的成長表（官方轉生職用的就是同一張表）。
+      不寫的職業照舊用自己的 id；查不到才退回新手表。
+      全部三轉 `hpSpFrom` 指向進階二轉 `js/jobs.js:658`，而進階二轉表未建時
+      遞迴追到二轉基表（`guillotinecross→assassincross→assassin`）才正確。 */
+   const jobId = job.id;
+   let tblKey = job.hpSpFrom || jobId;
+   let hpTable = JOB_BASE_HP[tblKey];
+   let spTable = JOB_BASE_SP[tblKey];
+   {
+     const seen = new Set([tblKey]);
+     let cur = JOB_TREE[tblKey];
+     while ((!hpTable || !spTable) && cur && cur.hpSpFrom && !seen.has(cur.hpSpFrom)) {
+       tblKey = cur.hpSpFrom;
+       seen.add(tblKey);
+       hpTable = hpTable || JOB_BASE_HP[tblKey];
+       spTable = spTable || JOB_BASE_SP[tblKey];
+       cur = JOB_TREE[tblKey];
+     }
+   }
+   hpTable = hpTable || JOB_BASE_HP.novice;
+   spTable = spTable || JOB_BASE_SP.novice;
   const baseHP = hpTable[Math.min(bl, 100) - 1] || 35;
   const baseSP = spTable[Math.min(bl, 100) - 1] || 10;
   const effVit = s.vit + jobBonus.vit;
