@@ -12617,18 +12617,95 @@ function computeOfflineProgress() {
   const avgJobExp = wAvg(m => m.jobExp || 1);
   const avgLevel = wAvg(m => m.level || 1);
 
-  // 離線掛機估算的是普通攻擊傷害，官方規則普通攻擊一律用物理ATK（同playerAttack()的修正）
-  const raw = state.atk;
-  const critFactor = 1 + (state.critRate / 100) * 0.5;
-  const hasDmgSkill = currentJob().skills.some(sk => state.learnedSkills[sk.id] && ['damage', 'magic', 'dot'].includes(sk.type));
-  const skillFactor = hasDmgSkill ? 1.15 : 1.0; // 有主動傷害技能時，離線效率略為提升
-  const avgFlee = 80 + avgLevel * 4; // 對應 monsterFleeOf 的平均值
-  const avgHitPct = hitChancePct(effectiveHitWithBuff(), avgFlee) / 100;
-  _dpsPaused = true;   // 離線結算不算進實測 DPS
-  const dmgPerAttack = mitigateDamage(raw * critFactor * skillFactor, avgDef, avgSoftDef) * avgHitPct;
+  // 離線掛機估算：快照後跑 3 秒真實戰鬥外推（方法A），含 MATK/物攻、技能、冷卻、SP
+  const sampleSec = 3;
+  const atkInterval = state.attackInterval || 500;
+  const sampleAttacks = Math.max(12, Math.ceil(sampleSec * 1000 / atkInterval));
+  // 快照需還原的狀態（攻擊會改 buff/sp/冷卻/怪物/背包箭矢）
+  const _snap = {
+    buffs: state.buffs.map(b => ({...b})),
+    sp: state.sp,
+    cooldowns: {...(state.cooldowns||{})},
+    songProcReadyAt: {...(state.songProcReadyAt||{})},
+    monsters: state.monsters ? state.monsters.map(m=>({...m})) : [],
+    inventory: state.inventory.map(r=>({...r})),
+    equipAmmo: state.equip.ammo,
+    attackInterval: state.attackInterval,
+  };
+  const _origLog = logMsg;
+  // 抽樣期間靜音日誌與 DPS，避免刷屏與污染實測
+  logMsg = () => {};
+  _dpsPaused = true;
+  // 用平均怪當假怪，跑真實 playerAttack 循環
+  const avgMonId = pool[0] ? pool[0].id : null;
+  const avgMonDef = avgMonId ? MONSTERS[avgMonId] : null;
+  // 保底：若地圖池無有效怪，用平均屬性造一隻假怪
+  if (!state.monsters || state.monsters.length === 0) {
+    state.monsters = [{ defId: avgMonId || 'poring', hp: avgHp, maxHp: avgHp, id: 999999 }];
+  } else {
+    // 暫用平均血量覆蓋第一隻，確保抽樣穩定
+    state.monsters[0].hp = avgHp;
+    state.monsters[0].maxHp = avgHp;
+  }
+  let sampleKills = 0;
+  let sampleDamage = 0;
+  for (let i = 0; i < sampleAttacks; i++) {
+    const beforeHp = state.monsters[0] ? state.monsters[0].hp : avgHp;
+    // tick buff 3 秒內的到期（每刀按 attackInterval 推進）
+    if (state.buffs.length) {
+      state.buffs.forEach(b => { if (b.msRemaining) b.msRemaining -= atkInterval; });
+      state.buffs = state.buffs.filter(b => !b.msRemaining || b.msRemaining > 0);
+    }
+    // 冷卻也按時間推進（簡化：直接減 attackInterval）
+    for (const k in state.cooldowns) {
+      state.cooldowns[k] = Math.max(0, (state.cooldowns[k]||0) - atkInterval);
+      if (state.cooldowns[k] === 0) delete state.cooldowns[k];
+    }
+    const monBefore = state.monsters[0] ? state.monsters[0].hp : avgHp;
+    // 真實攻擊（含技能、MATK/物攻自動分流）— 先試自動施放再普攻，與線上 tick 一致
+    const hadMon = state.monsters.length;
+    if (state.autoSkill) tryAutoCastSkill();
+    tryAutoCastSupportSkills();
+    playerAttack();
+    // 若怪被擊殺，playerAttack 會移除 state.monsters[0]，計一次擊殺並補一隻同血量假怪
+    if (state.monsters.length < hadMon || (state.monsters[0] && state.monsters[0].hp <= 0)) {
+      sampleKills++;
+      sampleDamage += monBefore;
+      if (state.monsters.length === 0) state.monsters = [{ defId: avgMonId || 'poring', hp: avgHp, maxHp: avgHp, id: 999999 }];
+      else state.monsters[0].hp = avgHp;
+    } else if (state.monsters[0]) {
+      const dealt = monBefore - state.monsters[0].hp;
+      if (dealt > 0) sampleDamage += dealt;
+    }
+    // 箭矢耗盡自動換下一種（與線上一致）
+    if (needsAmmo() && getAmmoCount() === 0) {
+      const nxt = state.inventory.find(r => !r.instanceId && isAmmoItem(r.item) && r.qty > 0);
+      if (nxt) state.equip.ammo = nxt.item;
+    }
+  }
+  // 也可用傷害外推，避免隨機擊殺數為 0 時的 0/0
+  const killsPerSecByDamage = sampleDamage / avgHp / sampleSec;
+  const killsPerSecByCount = sampleKills / sampleSec;
+  let killsPerSec = Math.max(killsPerSecByDamage, killsPerSecByCount);
+  // 保底：若抽樣期間因閃避/未命中導致 0 傷害，退回舊公式保底避免離線 0 收益
+  if (!killsPerSec || !isFinite(killsPerSec)) {
+    const raw = state.atk;
+    const critFactor = 1 + (state.critRate / 100) * 0.5;
+    const avgFlee2 = 80 + avgLevel * 4;
+    const avgHitPct2 = hitChancePct(effectiveHitWithBuff(), avgFlee2) / 100;
+    const dmgPerAttack2 = mitigateDamage(raw * critFactor, avgDef, avgSoftDef) * avgHitPct2;
+    killsPerSec = dmgPerAttack2 / avgHp;
+  }
+  // 還原快照
+  state.buffs = _snap.buffs;
+  state.sp = _snap.sp;
+  state.cooldowns = _snap.cooldowns;
+  state.songProcReadyAt = _snap.songProcReadyAt;
+  state.monsters = _snap.monsters;
+  state.inventory = _snap.inventory;
+  state.equip.ammo = _snap.equipAmmo;
+  logMsg = _origLog;
   _dpsPaused = false;
-
-  const killsPerSec = dmgPerAttack / avgHp;
   const totalKills = killsPerSec * elapsedSec;
 
   const expGained = Math.round(avgExp * totalKills);
