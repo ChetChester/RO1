@@ -5207,12 +5207,15 @@ function confirmVendingSelect() {
    外層鋪滿畫面但 `pointer-events:none`，只有中間的 frame 收事件，
    所以打怪照跑、旁邊的分頁照樣點得到，標題列可拖走。CSS 直接共用 `.wh-*`。 */
 function forgeAvailable() {
-  return typeof isBlacksmithLine === 'function' && isBlacksmithLine(state.jobId)
-    && ((state.unlockedCraftCategories || []).length > 0
-      || (state.unlockedMaterialCrafts || []).length > 0);
+  const hasMat = (state.unlockedMaterialCrafts || []).length > 0;
+  const hasCraft = (state.unlockedCraftCategories || []).length > 0;
+  if (!hasMat && !hasCraft) return false;
+  // 原料鍛造共用（毒藥瓶給十字刺客），武器鍛造限鐵匠系
+  if (hasMat) return true;
+  return typeof isBlacksmithLine === 'function' && isBlacksmithLine(state.jobId);
 }
 
-// 分頁列上那顆「🔨 鍛造」：只有鐵匠系而且真的學會了鍛造技能才出現
+// 分頁列上那顆「🔨 鍛造」：學會鍛造技能就出現（原料共用、武器限鐵匠系）
 function syncForgeTabBtn() {
   const btn = document.getElementById('tab-btn-forge');
   if (!btn) return;
