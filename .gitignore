@@ -150,6 +150,11 @@ tools/*
 !tools/test_*.js
 !tools/pack_release.js
 !tools/README.md
+# 經驗曲線的量測與校準（data.js 的註解會指到這幾支，不進版控的話就是斷掉的指路）
+!tools/exp_simlib.js
+!tools/measure_exp_curve.js
+!tools/measure_exp_100_200.js
+!tools/tune_exp_100_200.js
 暴擊特效/
 職業攻擊圖/
 

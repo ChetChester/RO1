@@ -630,8 +630,16 @@ function buffSourceLabel(b) {
 function cardGrantedSkills() {
   const out = {};
   if (typeof allEquippedCards !== 'function') return out;
-  allEquippedCards().forEach(cardId => {
-    const c = CARDS[cardId];
+  /* 卡片與**裝備本身**都可以給技能（#127）。官方不只卡片會寫「可使用○○」，
+     武器也會（強襲戰矛的連刺攻擊 Lv3、長角之矛的解毒）。兩邊格式相同，走同一段。 */
+  const givers = allEquippedCards().map(id => CARDS[id]);
+  if (typeof EQUIP_SLOTS_ALL !== 'undefined') {
+    EQUIP_SLOTS_ALL.forEach(slot => {
+      const itemId = getEquipBaseItemId(slot);
+      if (itemId && ITEMS[itemId]) givers.push(ITEMS[itemId]);
+    });
+  }
+  givers.forEach(c => {
     if (!c || !c.grantSkill) return;
     c.grantSkill.forEach(g => {
       if (!SKILLS[g.id]) return;                       // 本作沒有這個技能就跳過
@@ -1124,7 +1132,8 @@ function recomputeDerived(fullHeal) {
      等於每跑一次 recomputeDerived() 就再乘一次。升級、換裝、插卡、buff 到期
      都會跑 recomputeDerived，所以是指數成長：實測快速恢復 Lv10（×2）
      的角色玩一陣子之後每秒回 9.3e+220 HP，等於完全不會死。
-     跟 BUGS.md #1 的 DEX 膨脹是同一種病，修法一樣——加總前先歸零。 */
+     跟更早那次 DEX 膨脹是同一種病（加成直接寫回累積欄位、忘了先歸零），
+     修法一樣——加總前先歸零。 */
   state.hpRegenMult = 1;
   state.spRegenMult = 1;
   /* 遺物的特殊效果旗標（#113）。跟上面兩行同一個理由放在歸零區：
@@ -2386,6 +2395,7 @@ function recomputeDerived(fullHeal) {
   state.cardSpawnSpeedPct = getCardBonus('spawnSpeedPct');
   // 無視魔法防禦力（#17）：貝思波只對 BOSS，亡靈巫師對全部。在 defOf() 生效
   state.cardMdefIgnorePct = getCardBonus('mdefIgnorePct');
+  state.cardDefIgnorePct = getCardBonus('defIgnorePct');   // 無視物防（#127）
   state.cardBossMdefIgnorePct = getCardBonus('bossMdefIgnorePct');
   // 每次普攻的 SP 增減（紙妖：攻擊時消耗 1 SP）。可為負，就是代價
   state.cardSpOnAttack = getCardBonus('spOnAttack');
@@ -2409,6 +2419,7 @@ function recomputeDerived(fullHeal) {
   state.cardFamilyDmgBonus = {}; // 打某個魔物家族時增傷（哥布靈族、獸人族…）
   state.cardFamilyDmgTaken = {}; // 被某個魔物家族打時的傷害變動（妖道：殭屍 +100%）
   state.cardMonsterDmgBonus = {}; // 指名單一隻怪的增傷（熔岩巨石卡片）
+  state.cardDefIgnoreRace = {}; // 只對某種族無視物防（#127，天龍短劍那一批）
   state.cardRaceCrit = {};      // 對某種族的 CRI 加點（點數，不是%）
   state.cardExpRace = {};       // 擊殺某種族的經驗加成（比例）
   state.cardSpOnKillRace = {};  // 近戰擊殺某種族回復的 SP（點數）
@@ -2442,6 +2453,27 @@ function recomputeDerived(fullHeal) {
       });
       (c.killDrop || []).forEach(e => { if (pass(e)) state.cardKillDrops.push(e); });
     });
+    /* 裝備**自己**的觸發型特效（#127）。跟卡片走同一組籃子、同一套資料格式——
+       官方有一整批武器寫著「攻擊時有一定機率施展○○」「機率讓敵人中毒」，
+       以前那些字只印在說明上，沒有任何程式讀它。 */
+    EQUIP_SLOTS_ALL.forEach(slot => {
+      const d = lo.slots[slot];
+      const def = d && ITEMS[d.itemId];
+      if (!def) return;
+      const host = { slot, refine: d.refine, itemId: d.itemId };
+      const pass = e => !e.when || condMet(e.when, host, lo);
+      (def.autoSpell || []).forEach(e => {
+        if (!pass(e)) return;
+        const bucket = state.cardAutoSpells[e.on];
+        if (bucket) bucket.push(e);
+      });
+      (def.ailment || []).forEach(e => {
+        if (!pass(e)) return;
+        const bucket = state.cardAilments[e.on];
+        if (bucket) bucket.push(e);
+      });
+      (def.killDrop || []).forEach(e => { if (pass(e)) state.cardKillDrops.push(e); });
+    });
   }
   state.cardHpRegenPct = 0;
   state.cardSpRegenPct = 0;
@@ -2468,6 +2500,12 @@ function recomputeDerived(fullHeal) {
       if (k.startsWith('raceCrit_')) {
         const r = k.slice(9);
         state.cardRaceCrit[r] = (state.cardRaceCrit[r] || 0) + v;
+        continue;
+      }
+      // 無視物防是百分比但**不除以 100**（defOf 那邊自己除），所以不能進下面的通用迴圈
+      if (k.startsWith('defIgnoreRace_')) {
+        const r = k.slice(14);
+        state.cardDefIgnoreRace[r] = (state.cardDefIgnoreRace[r] || 0) + v;
         continue;
       }
       if (k.startsWith('expRace_')) {
@@ -2696,8 +2734,21 @@ function defOf(mon, scale, magic, inst) {
     const ms = s * Math.max(0, 1 - ig / 100) * monDebuffMdef(inst);
     return [(mon.mdef || 0) * ms, (mon.mdefSoft || 0) * ms];
   }
-  const d = s * monDebuffDef(inst);
+  const d = s * monDebuffDef(inst) * Math.max(0, 1 - physDefIgnorePct(mon) / 100);
   return [(mon.def || 0) * d, (mon.defSoft || 0) * d];
+}
+/* 無視**物理**防禦（#127）。魔防那邊本來就有（cardMdefIgnorePct），物防這邊沒有——
+   官方有一整批武器寫著「無視人型系魔物的防禦力」「無視龍族魔物的防禦力」，
+   以前那些字完全沒有作用。做法照抄上面魔防那一段，只是多一個種族維度：
+
+     defIgnorePct           對所有怪都無視 N%
+     defIgnoreRace_<種族>   只對該種族無視 N%（官方絕大多數是這種）
+
+   兩者相加後夾在 100%，硬防與軟防同比例縮——跟 scale 那一路的處理一致。 */
+function physDefIgnorePct(mon) {
+  const all = state.cardDefIgnorePct || 0;
+  const byRace = (state.cardDefIgnoreRace && mon && state.cardDefIgnoreRace[mon.race]) || 0;
+  return Math.min(100, all + byRace);
 }
 
 /* 卡片的「從某個魔物家族受到的傷害 +N%」（妖道：從殭屍受到的傷害 +100%）。
@@ -3658,7 +3709,10 @@ function takeReflectDamage(monDef, amount) {
 /* 鎧甲屬性的優先順序（同時插了兩張以上時取最前面那個）。
    順序是「愈稀有／愈極端的先」——巫婆與天使波利各自免疫一個屬性但對剋星吃雙倍，
    是有明確取捨的選擇；幽靈波利是全面小幅減傷，當墊底的預設比較合理。 */
-const ARMOR_ELEMENT_PRIORITY = ['shadow', 'holy', 'ghost'];
+/* 前三個是原本就有卡片的屬性，順序不能動（同時插兩張時要維持既有結果）。
+   後面補齊其餘屬性：這份清單漏了哪個屬性，`armorEle_<那個屬性>` 就會**默默沒作用**——
+   醬缸章魚卡片（水）就是這樣寫好了卻不生效（#126）。列全比列剛好安全。 */
+const ARMOR_ELEMENT_PRIORITY = ['shadow', 'holy', 'ghost', 'water', 'fire', 'wind', 'earth', 'poison', 'undead'];
 
 function applyPlayerReflect(mon, monDef, dmgTaken) {
   // 反射盾（#66）跟卡片的反射相加：官方兩者本來就是各自獨立的一份比率
@@ -11585,6 +11639,25 @@ function effectiveGearBonuses() {
 
   const total = {};
   const sets = [];
+  /* 裝備**本身**的特效（#127）。這張表以前只吃「卡片 + 套裝 + 遺物」，
+     裝備自己只有 str/atk/def 那幾格平鋪數值進得來——官方描述裡的
+     「對人型系傷害+5%」「無視植物系防禦」「暴擊時傷害+15%」全部只印在說明上，
+     沒有任何程式讀它（使用者 2026-08-21 回報的那 587 筆就是這件事）。
+
+     用的是**跟卡片完全同一套 key**（raceDmg_* / eleDmg_* / skillDmg_* …），
+     所以不必新增任何機制，接上線就有。條件式（精煉、職業）也一併沿用。 */
+  EQUIP_SLOTS_ALL.forEach(slot => {
+    const d = lo.slots[slot];
+    const def = d && ITEMS[d.itemId];
+    if (!def) return;
+    const host = { slot, refine: d.refine, itemId: d.itemId };
+    mergeBonus(total, def.bonus);
+    if (def.perRefine) {
+      const r = def.perRefineCap != null ? Math.min(d.refine, def.perRefineCap) : d.refine;
+      mergeBonus(total, def.perRefine, r);
+    }
+    (def.condBonus || []).forEach(cb => { if (condMet(cb.when, host, lo)) mergeBonus(total, cb.bonus); });
+  });
   lo.cards.forEach(cardId => {
     const card = CARDS[cardId];
     if (!card) return;
@@ -11708,7 +11781,8 @@ function unequipRelic(slot) {
 function rollRelicDrop(def) {
   if (typeof RELIC_PIECE_IDS === 'undefined' || !RELIC_PIECE_IDS.length) return;
   if (!farmMode()) return;
-  const pct = def && def.isBoss ? RELIC_DROP_PCT_BOSS : RELIC_DROP_PCT_NORMAL;
+  // 頭目照等級分段（#127），一般怪一律 RELIC_DROP_PCT_NORMAL
+  const pct = (def && def.isBoss) ? relicBossDropPct(def.level) : RELIC_DROP_PCT_NORMAL;
   if (Math.random() * 100 < pct) {
     const id = RELIC_PIECE_IDS[Math.floor(Math.random() * RELIC_PIECE_IDS.length)];
     addItem(id, 1);
@@ -12769,6 +12843,23 @@ function importSaveToSlot(slot, obj) {
   }
   if (typeof obj.name !== 'string' || typeof obj.jobId !== 'string') {
     return { ok: false, msg: '不是本遊戲的存檔（缺少角色名稱或職業）。' };
+  }
+  /* 結構檢查要**自己做**，不要靠 loadGame() 剛好丟例外來擋（#127）。
+     以前只有 name/jobId 兩個欄位的物件會一路走到 loadGame()，在
+     `allEquippedCards()` 讀 `state.equip[slot]` 時炸掉 TypeError——
+     結果是對的（拒絕匯入），但玩家的 console 會噴一整串紅色堆疊，
+     看起來像遊戲壞了。而且那是**碰巧**炸的：哪天 loadGame 補上
+     `state.equip = state.equip || {}` 這種防呆，壞存檔就會被當成好的收下。 */
+  const REQUIRED = [
+    ['equip', v => v && typeof v === 'object' && !Array.isArray(v)],
+    ['stats', v => v && typeof v === 'object' && !Array.isArray(v)],
+    ['inventory', v => Array.isArray(v)],
+    ['baseLevel', v => typeof v === 'number'],
+    ['jobLevel', v => typeof v === 'number'],
+  ];
+  const missing = REQUIRED.filter(([k, ok]) => !ok(obj[k])).map(([k]) => k);
+  if (missing.length) {
+    return { ok: false, msg: `存檔結構不完整（缺少或格式錯誤：${missing.join('、')}）。` };
   }
   const prevSlot = currentSlot;
   const prevRaw = localStorage.getItem(getSlotKey(slot));

@@ -47,7 +47,20 @@ const RELIC_TIER_NEEDS = [2, 3, 5];
 /* 掉落設定。**瘋狂模式不加成**（使用者指定）：打寶開著就是這個數字，
    一般怪與頭目各自獨立擲兩次——一次遺物、一次遺物券。 */
 const RELIC_DROP_PCT_NORMAL = 0.1;
-const RELIC_DROP_PCT_BOSS = 5;
+/* 頭目改成**照等級分段**（#127）。原本不分等級一律 5%，等於低等頭目
+   （波利王那種 Lv20 上下、又好打又刷得快）跟高等頭目給一樣的遺物，
+   玩家自然全部去輾低等的。分段之後想要好遺物就得往上打。
+   由高到低比對，第一個符合的就是答案。 */
+const RELIC_DROP_BOSS_TIERS = [
+  { minLevel: 80, pct: 3 },
+  { minLevel: 50, pct: 1 },
+  { minLevel: 0, pct: 0.1 },
+];
+function relicBossDropPct(level) {
+  const lv = level || 0;
+  for (const t of RELIC_DROP_BOSS_TIERS) if (lv >= t.minLevel) return t.pct;
+  return RELIC_DROP_PCT_NORMAL;
+}
 const RELIC_TICKET_ID = 'relic_ticket';
 const RELIC_TICKET_COST = 10;      // 背包裡的遺物 10 件 → 1 張券
 

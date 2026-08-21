@@ -252,6 +252,35 @@ g.state.rebirthPath = null; g.state.rebirthCount = 0;
   t.eq('超級新手自己就是起點', g.jobLineRoot('supernovice'), 'supernovice');
 }
 
+/* ---- 資料檔本身：重複的物件鍵 ---- */
+{
+  /* JS 的物件實字是**後面蓋前面**，重複的鍵不會報錯、也不會在執行期留下痕跡——
+     `Object.keys()` 只看得到一份。所以這一條只能對**原始碼文字**檢查。
+
+     2026-08-21 清掉的那批：ITEMS 裡有 2,235 個 id 各定義兩次，前一份是原始匯入的
+     殘骸（type:"material"、icon:"📦"），從來沒有被讀到過。改到前一份等於沒改，
+     這正是它危險的地方——所以留一條測試盯著，別讓它長回來。 */
+  const fs = require('fs');
+  const path = require('path');
+  const RAW = fs.readFileSync(path.join(__dirname, '..', 'js', 'data.js'), 'utf8');
+  const lines = RAW.split(String.fromCharCode(10));   // 不用 regex，避免 CRLF 跳脫的坑
+  const dupOf = name => {
+    const s = lines.findIndex(l => l.startsWith('const ' + name + ' = {'));
+    if (s < 0) return ['(找不到區塊)'];
+    const e = lines.findIndex((l, i) => i > s && l.trim() === '};');
+    const seen = {};
+    for (let i = s + 1; i < e; i++) {
+      const m = lines[i].match(/^\s*"?([A-Za-z0-9_]+)"?\s*:/);
+      if (m) seen[m[1]] = (seen[m[1]] || 0) + 1;
+    }
+    return Object.keys(seen).filter(k => seen[k] > 1);
+  };
+  ['ITEMS', 'MONSTERS', 'CARDS'].forEach(name => {
+    const d = dupOf(name);
+    t.eq(`${name} 沒有重複定義的鍵`, d.length, 0, d.slice(0, 5).join(', '));
+  });
+}
+
 /* ---- 結果 ---- */
 t.eq('全庫掃描零例外', errs.length, 0);
 if (errs.length) {

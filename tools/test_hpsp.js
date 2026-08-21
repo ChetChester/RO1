@@ -174,7 +174,7 @@ H.mkChar(g, { path: ['mage', 'wizard'] });
   /* `hpRegenMult` / `spRegenMult` 兩個都是 `= (舊值 || 1) * val` 寫法，
      但 recomputeDerived() 開頭從來沒有把它們歸零——每跑一次就再乘一次。
      升級、換裝、插卡、buff 到期全都會跑 recomputeDerived，所以是指數成長：
-     使用者截圖上是「9.30830300964712e+220 HP／秒」。跟 BUGS.md #1 的 DEX 膨脹同一種病。 */
+     使用者截圖上是「9.30830300964712e+220 HP／秒」。跟更早那次 DEX 膨脹同一種病。 */
   const gg = H.boot();
   H.mkChar(gg, { path: ['swordsman'], job: 'swordsman', baseLevel: 99 });
   gg.state.jobSkillPoints.swordsman = 100;

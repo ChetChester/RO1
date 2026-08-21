@@ -223,14 +223,23 @@ function field(n) {
   for (let i = 0; i < N; i++) g.rollRelicDrop(def);
   t.near('瘋狂模式不加成掉率', relics() / N * 100, g.RELIC_DROP_PCT_NORMAL, g.RELIC_DROP_PCT_NORMAL * 0.25);
 
-  g.state.inventory = [];
+  /* 頭目照等級分段（#127）。驗的是**邊界**：49/50 與 79/80 各差一級卻要跳一檔，
+     這種 `>=` 寫成 `>` 的錯誤只有貼著邊界打才抓得到。 */
   g.state.farmMode = g.FARM_MODE_NORMAL;
-  for (let i = 0; i < 4000; i++) g.rollRelicDrop(boss);
-  t.near('頭目走另一組掉率', relics() / 4000 * 100, g.RELIC_DROP_PCT_BOSS, g.RELIC_DROP_PCT_BOSS * 0.2);
+  [[49, 0.1], [50, 1], [79, 1], [80, 3], [150, 3]].forEach(([lv, want]) => {
+    t.eq(`Lv${lv} 頭目掉率 ${want}%`, g.relicBossDropPct(lv), want);
+  });
+  t.eq('沒有 level 欄位時退到最低檔', g.relicBossDropPct(undefined), 0.1);
+
+  // 實際擲一輪，確認 rollRelicDrop 真的有照分段走（不是只有查表函式對）
+  g.state.inventory = [];
+  const bigBoss = Object.assign({}, boss, { level: 99 });
+  for (let i = 0; i < 20000; i++) g.rollRelicDrop(bigBoss);
+  t.near('Lv99 頭目實測掉率', relics() / 20000 * 100, 3, 0.6);
 
   // 掉出來的一定要是能穿的東西
   g.state.inventory = [];
-  for (let i = 0; i < 20000; i++) g.rollRelicDrop(boss);
+  for (let i = 0; i < 20000; i++) g.rollRelicDrop(bigBoss);
   const dropped = g.state.inventory.filter(r => g.RELIC_ITEMS[r.item] && g.RELIC_ITEMS[r.item].type === 'relic');
   t.ok('掉落的每一件都對得上一個遺物欄位',
     dropped.length > 0 && dropped.every(r => g.RELIC_SLOTS.includes(g.RELIC_ITEMS[r.item].relicSlot)));
