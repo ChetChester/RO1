@@ -363,6 +363,17 @@ function createCharacter(name, statAlloc, gender) {
   saveGame();
 }
 
+function renameCharacter(newName) {
+  const n = (newName || '').trim();
+  if (!n) { logMsg('⚠️ 名稱不可為空！'); return false; }
+  if (n.length > 12) { logMsg('⚠️ 名稱最多 12 字！'); return false; }
+  if (n === state.name) return true;
+  state.name = n;
+  logMsg(`已更名為「${n}」！`);
+  saveGame();
+  return true;
+}
+
 /* ---------------- 衍生數值計算 ----------------
    六圍的公式參考 RO 正式版(Renewal)的計算邏輯調整而來(非逐位元還原，依放置遊戲步調調整常數)：
      ATK    = STR + floor((STR/10)^2) + floor(DEX/5) + floor(LUK/5)      ← StatusATK 公式

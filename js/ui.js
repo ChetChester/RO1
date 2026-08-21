@@ -4535,7 +4535,7 @@ function renderCharacterTab() {
 
   const jobBonus = computeJobBonuses();
   el.innerHTML = `
-    <h3 class="panel-title">${job.icon} ${state.name}　<span class="job-name">${job.name}</span></h3>
+    <h3 class="panel-title" ondblclick="openRenameWindow()" title="雙擊修改名稱" style="cursor:pointer;">${job.icon} ${state.name}　<span class="job-name">${job.name}</span> <span style="font-size:11px;opacity:0.6;">✎</span></h3>
     <div class="stat-grid">
       ${STAT_KEYS.map(k => {
         const cost = statPointCost(state.stats[k]);
@@ -5349,6 +5349,44 @@ function doCraftMaterial(kind) {
   craftMaterial(kind);
   showCraftingPanel();
   renderTopBar();
+}
+
+function openRenameWindow() {
+  let win = document.getElementById('rename-window');
+  if (!win) {
+    win = document.createElement('div');
+    win.id = 'rename-window';
+    win.innerHTML = `<div id="rename-frame" class="wh-frame" style="max-width:340px;">
+        <header id="rename-drag" class="wh-header">
+          <div><h3>✎ 修改名稱</h3><span class="wh-sub">雙擊名稱可再次開啟</span></div>
+          <button class="btn-small ghost" onclick="closeRenameWindow()">✕ 關閉</button>
+        </header>
+        <div class="wh-body" style="display:flex;flex-direction:column;gap:10px;">
+          <input id="rename-window-input" type="text" maxlength="12" placeholder="新名稱(最多12字)" style="padding:6px 8px;width:100%;box-sizing:border-box;">
+          <div style="display:flex;gap:8px;justify-content:flex-end;">
+            <button class="btn-small ghost" onclick="closeRenameWindow()">取消</button>
+            <button class="btn-small" onclick="confirmRename()">確認</button>
+          </div>
+        </div>
+      </div>`;
+    win.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.35);z-index:1200;';
+    win.addEventListener('click', e => { if (e.target === win) closeRenameWindow(); });
+    document.body.appendChild(win);
+    makeDraggable(document.getElementById('rename-drag'), document.getElementById('rename-frame'));
+  }
+  win.classList.remove('hidden');
+  win.style.display = 'flex';
+  const inp = document.getElementById('rename-window-input');
+  if (inp) { inp.value = state.name; setTimeout(() => { inp.focus(); inp.select(); }, 30); inp.onkeydown = e => { if (e.key === 'Enter') confirmRename(); if (e.key === 'Escape') closeRenameWindow(); }; }
+}
+function closeRenameWindow() {
+  const win = document.getElementById('rename-window');
+  if (win) { win.classList.add('hidden'); win.style.display = 'none'; }
+}
+function confirmRename() {
+  const inp = document.getElementById('rename-window-input');
+  if (!inp) return;
+  if (renameCharacter(inp.value)) { renderTopBar(); renderCharacterTab(); closeRenameWindow(); }
 }
 
 /* ---------------- 跨角色倉庫 UI ---------------- */
