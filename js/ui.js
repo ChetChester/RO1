@@ -2587,14 +2587,20 @@ function renderSkillsTab() {
         const lv = state.learnedSkills[sk.id] || 0;
         const isQuest = sk.isQuest;
         const isMaxed = lv >= sk.maxLv;
-        /* 加點按鈕要看**實際會被扣的那個池子**，不是這個區塊的職業（#99）。
-           借來的技能現在只畫在來源職業底下（例如服事的治癒術），但 `levelUpSkill()`
-           扣的是「現在這個職業」的點數——武僧照樣點得動治癒術，行為跟以前一樣。
-           照區塊的職業判的話，服事那格 0 點時按鈕會鎖住，但引擎其實放行。 */
-        const payJob = (typeof findSkillJob === 'function' && findSkillJob(sk.id)) || jobId;
-        const payPoints = typeof skillPointsAvailable === 'function'
-          ? skillPointsAvailable(payJob) : (state.jobSkillPoints[payJob] || 0);
-        const canLevelUp = !isQuest && !isMaxed && payPoints > 0;
+        /* 加點按鈕要看**實際會被扣的那個池子**（#121 真主優先，源池 0 時回退現職）。
+            借來的技能只畫在來源職業底下（例如服事的治癒術），重置後一轉池 49 應能點動；
+            若源池已空（轉職後未重置），回退到現職共用池，武僧/賢者照樣點得動。 */
+         let payJob = (typeof findSkillJob === 'function' && findSkillJob(sk.id)) || jobId;
+         let payPoints = typeof skillPointsAvailable === 'function'
+           ? skillPointsAvailable(payJob) : (state.jobSkillPoints[payJob] || 0);
+         if (payPoints <= 0 && payJob !== state.jobId) {
+           const cur = JOB_TREE[state.jobId];
+           if (cur && cur.borrowedFrom && cur.borrowedFrom[sk.id]) {
+             const alt = typeof skillPointsAvailable === 'function' ? skillPointsAvailable(state.jobId) : (state.jobSkillPoints[state.jobId] || 0);
+             if (alt > 0) { payJob = state.jobId; payPoints = alt; }
+           }
+         }
+         const canLevelUp = !isQuest && !isMaxed && payPoints > 0;
 
         const spCost = Array.isArray(sk.spCost) ? sk.spCost[Math.max(0, lv - 1)] || sk.spCost[0] : sk.spCost;
         const cd = effectiveCooldownMs(sk.id, Array.isArray(sk.cooldown) ? sk.cooldown[Math.max(0, lv - 1)] || sk.cooldown[0] : sk.cooldown) / 1000;

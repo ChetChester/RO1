@@ -22,7 +22,7 @@ const WS = { path: ['merchant', 'blacksmith'], rebirth: true, job: 'whitesmith' 
   const bsIds = g.JOB_TREE.blacksmith.skills.map(s => s.id);
   t.ok('鐵匠的技能整份借過來', bsIds.every(id => have.has(id)),
     bsIds.filter(id => !have.has(id)).join(','));
-  t.eq('借來的技能記在神匠的點數池', g.findSkillJob('overthrustbuff'), 'whitesmith');
+  t.eq('借來的技能記在來源職業（鐵匠）的點數池', g.findSkillJob('overthrustbuff'), 'blacksmith');
 }
 
 /* ---------- 2. 進階二轉取代二轉（#60 的路線改動）---------- */

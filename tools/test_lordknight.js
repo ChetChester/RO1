@@ -26,7 +26,7 @@ const LK = { path: ['swordsman', 'knight'], rebirth: true, job: 'lordknight' };
   const knightIds = g.JOB_TREE.knight.skills.map(s => s.id);
   t.ok('騎士的技能整份借過來', knightIds.every(id => have.has(id)),
     knightIds.filter(id => !have.has(id)).join(','));
-  t.ok('借來的技能記在領主騎士的點數池', g.findSkillJob('riding') === 'lordknight');
+  t.ok('借來的技能記在來源職業（騎士）的點數池', g.findSkillJob('riding') === 'knight');
   t.eq('轉生路線被鎖住', g.rebirthPathNext(), 'runeknight');
   t.eq('不能再轉生一次', g.rebirthBlockReason(), '每隻角色只能轉生一次。');
 

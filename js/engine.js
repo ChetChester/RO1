@@ -8391,7 +8391,14 @@ function levelUpSkill(skillId) {
 
   // 檢查該職業（含共用池的夥伴）的技能點是否足夠
   if (!state.jobSkillPoints) state.jobSkillPoints = {};
-  const paidJob = spendSkillPoint(skillJobId);
+  let paidJob = spendSkillPoint(skillJobId);
+  // 一轉借來的招（法師/服事）源池為 0 時，回退到現職的共用池，避免轉職後點了卻點不動
+  if (!paidJob && skillJobId !== state.jobId) {
+    const cur = JOB_TREE[state.jobId];
+    if (cur && cur.borrowedFrom && cur.borrowedFrom[skillId]) {
+      paidJob = spendSkillPoint(state.jobId);
+    }
+  }
   if (!paidJob) {
     logMsg(`⚠️ ${JOB_TREE[skillJobId].name} 的技能點不足！`);
     return false;
@@ -8458,14 +8465,22 @@ function spendSkillPoint(jobId) {
 
 // 找出技能所屬的職業 ID
 function findSkillJob(skillId) {
-  /* 現在的職業優先。
+  /* 找「真正擁有這招」的職業——自己的技能才是自己的，借來的不算。
 
-     進階二轉用 `borrowSkillsFrom` 把二轉的技能整份借過來（領主騎士借騎士），
-     而騎士也還在 `getAllLearnedJobs()` 的父鏈上——照舊的順序會判給騎士，
-     可是**轉生後根本沒有當過騎士**，那個池子是 0 點，結果是借來的技能一個都點不動。 */
+     舊版「現職優先」會把借來的招全判給最上層職業（修羅借走整條線、
+     十字刺客借走刺客），導致一轉（服事/法師）的點被算進二轉的池子，
+     重置後一轉那格歸零、一轉點數有卻點不動（#121 法師系同例）。
+     改為先找真主（`borrowedFrom` 排除），找不到（超級新手借了未學職業）
+     才退回現職/沿線掃描。 */
+  const isOwn = j => (j.skills || []).some(s => s.id === skillId && !(j.borrowedFrom || {})[s.id]);
   const cur = JOB_TREE[state.jobId];
-  if (cur && (cur.skills || []).find(s => s.id === skillId)) return state.jobId;
+  if (cur && isOwn(cur)) return state.jobId;
   const allJobs = getAllLearnedJobs();
+  for (const jobId of allJobs) {
+    const job = JOB_TREE[jobId];
+    if (!job) continue;
+    if (isOwn(job)) return jobId;
+  }
   for (const jobId of allJobs) {
     const job = JOB_TREE[jobId];
     if (!job) continue;
@@ -11103,7 +11118,13 @@ function equipItem(itemId) {
   if (!prepareEquipSlot(slot, itemId)) return false;
 
   removeItem(itemId, 1);
+  const hadOldWeapon = !!state.equip[slot] && slot === 'weapon';
   returnEquipToInventory(slot);   // 原本穿的那件（不管普通或個體）連同它的精煉/卡片一起回背包
+  if (hadOldWeapon) {
+    const had = state.buffs.some(b => b.type === 'eleweapon');
+    state.buffs = state.buffs.filter(b => b.type !== 'eleweapon');
+    if (had) logMsg('🔮 更換武器，舊的肯貝特附魔/屬性附加已解除。');
+  }
   state.equip[slot] = itemId;
   recomputeDerived(false);
   logMsg(`裝備了 ${def.name}。`);
@@ -11111,7 +11132,7 @@ function equipItem(itemId) {
   return true;
 }
 
-// 裝備背包裡的個體裝備（精煉過或插過卡的那一件）
+ // 裝備背包裡的個體裝備（精煉過或插過卡的那一件）
 function equipInstance(instanceId) {
   const inst = state.instances && state.instances[instanceId];
   if (!inst) return false;
@@ -11128,7 +11149,13 @@ function equipInstance(instanceId) {
   // 讓位可能動到背包，重新定位這一行再移除
   const idx = state.inventory.findIndex(r => r.instanceId === instanceId);
   if (idx !== -1) state.inventory.splice(idx, 1);
+  const hadOldWeapon2 = !!state.equip[slot] && slot === 'weapon';
   returnEquipToInventory(slot);
+  if (hadOldWeapon2) {
+    const had = state.buffs.some(b => b.type === 'eleweapon');
+    state.buffs = state.buffs.filter(b => b.type !== 'eleweapon');
+    if (had) logMsg('🔮 更換武器，舊的肯貝特附魔/屬性附加已解除。');
+  }
   state.equip[slot] = instanceId;
   recomputeDerived(false);
   logMsg(`裝備了 ${describeInstance(inst)}。`);
@@ -11142,6 +11169,11 @@ function unequipItem(slotKey) {
   const def = ITEMS[baseItemId];
   // 插著卡也能正常卸下——卡片是跟著這一件裝備走的，會一起回到背包，不會變成孤兒
   returnEquipToInventory(slotKey);
+  if (slotKey === 'weapon') {
+    const had = state.buffs.some(b => b.type === 'eleweapon');
+    state.buffs = state.buffs.filter(b => b.type !== 'eleweapon');
+    if (had) logMsg('🔮 武器已卸下，肯貝特武器附魔/屬性附加效果已解除。');
+  }
   recomputeDerived(false);
   logMsg(`卸下了 ${def ? def.name : '裝備'}。`);
   saveGame();
