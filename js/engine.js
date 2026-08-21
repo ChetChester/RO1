@@ -401,7 +401,8 @@ function canDualWield(jobId) {
 // 只有真的弓要箭。樂器在本作的 weaponType 也是 'bow'（分類壓縮的產物），
 // 但官方樂器是詩人專用、不吃箭，所以這裡要看還原後的官方分類而不是 weaponType。
 function isBowWeapon(itemId) {
-  return aspdCategoryOf(itemId) === 'bow';
+  const c = aspdCategoryOf(itemId);
+  return c === 'bow' || c === 'instrument' || c === 'whip';
 }
 function needsAmmo() { return isBowWeapon(getEquipBaseItemId('weapon')); }
 function isAmmoItem(itemId) {
