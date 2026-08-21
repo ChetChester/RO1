@@ -42,6 +42,7 @@ const SUITES = [
   'test_equipfx.js',     // 裝備自身特效：加成表接線、無視物防、觸發型籃子（#127）
   'test_ammo.js',        // 箭矢：整條弓箭手線的自動選種與自動補貨（#129）
   'test_party_buffs.js', // 各職業的隊伍效果：party 旗標涵蓋面與互斥組分享（#130）
+  'test_cardsets.js',    // 職業套卡：單張不白拿、湊齊才生效、套裝標籤（#134）
   'test_saveio.js',      // 存檔匯出/匯入：序列化、遷移、覆寫與失敗還原
 ];
 

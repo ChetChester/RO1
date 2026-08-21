@@ -3317,7 +3317,10 @@ function describeCardBonus(card) {
     const POOL = { food: '食品類道具', elementResist: '屬性抵抗藥水' };
     const what = d.zeny ? `${d.zeny}z`
       : (d.pool ? POOL[d.pool] || d.pool : (d.items || []).map(i => (ITEMS[i] || {}).name || i).join('／'));
-    out.push(`${who}時 ${d.chance}% 額外${d.zeny ? '獲得' : '掉落'}：${what}`);
+    // 條件（套卡湊齊才掉那一批，#134）跟 autoSpell／ailment 一樣要寫出來，
+    // 不然單張卡的說明會宣稱一個要湊齊五張才有的效果
+    const cond = d.when ? describeCondition(d.when) + '，' : '';
+    out.push(`${cond}${who}時 ${d.chance}% 額外${d.zeny ? '獲得' : '掉落'}：${what}`);
   });
   (card.grantSkill || []).forEach(g => {
     const sk = (typeof findSkillAnywhere === 'function') ? findSkillAnywhere(g.id) : null;

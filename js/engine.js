@@ -11818,8 +11818,17 @@ function effectiveGearBonuses() {
         const r = card.perRefineCap != null ? Math.min(host.refine, card.perRefineCap) : host.refine;
         mergeBonus(total, card.perRefine, r);
       }
-      (card.condBonus || []).forEach(cb => {
-        if (condMet(cb.when, host, lo)) mergeBonus(total, cb.bonus);
+      (card.condBonus || []).forEach((cb, ci) => {
+        if (!condMet(cb.when, host, lo)) return;
+        mergeBonus(total, cb.bonus);
+        /* 卡片套裝（#134）。官方的「五張一組」沒有獨立的資料表——整組的效果就寫在
+           其中一張主卡的說明欄裡，所以本作也是掛在那張卡的 condBonus 上。
+           標了 setName 的讓它跟 EQUIP_SETS 一樣進「生效中的套裝」那一排：
+           玩家回報「烏龜套卡沒有實裝」時，加成其實只是**看不到**，畫面上沒有任何
+           回饋能證明它生效了。同一張卡插在兩件裝備上時 id 會重複，所以要去重。 */
+        if (!cb.setName) return;
+        const sid = 'cardset_' + cardId + '_' + ci;
+        if (!sets.some(s => s.id === sid)) sets.push({ id: sid, name: cb.setName, bonus: cb.bonus });
       });
     });
   });
