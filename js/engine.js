@@ -476,8 +476,10 @@ function getSizeMultiplier(monDef) {
   const table = SIZE_MODIFIER[aspdCategoryOf(getEquipBaseItemId('weapon'))] || SIZE_MODIFIER.default;
   const pct = table[monDef.size];
   const mult = pct !== undefined ? pct / 100 : 1;
-  // 海盜之王卡片：無視體型修正，一律照 100% 打（只補到 1，本來就超過 1 的不會被壓下來）
+  /* 無視體型修正，一律照 100% 打（只補到 1，本來就超過 1 的不會被壓下來）。
+     兩個來源：海盜之王卡片，以及鐵匠的無視體型攻擊（#131，官方的武器完全定義）。 */
   if (state.cardIgnoreSizePenalty) return Math.max(1, mult);
+  if (state.buffs && state.buffs.some(b => b.type === 'ignoresize')) return Math.max(1, mult);
   return mult;
 }
 // 種族固定傷害加成，不受DEF削減：動物殺手（動物/昆蟲）、天使之擊（惡魔/不死）
@@ -4012,7 +4014,15 @@ function tryPriestProcs(target, monDef) {
    兩個機率各擲各的（官方就是兩個獨立數字），所以可能一次同時中兩個。 */
 function tryMeltdown(target, monDef) {
   if (!target || target.hp <= 0) return;
-  const b = state.buffs.find(x => x.type === 'meltdown');
+  /* 來源有兩個（#133）：野蠻凶砍那個主動 buff，以及卡片。
+     官方寫「破壞武器／鎧甲」的卡片（闇●神工匠 哈沃得）在本作走同一條路——
+     裝備損壞永久 N/A，照 #60 訂下的慣例換成降對方物攻／物防。
+     兩個來源的機率各自獨立，同時有就都擲。 */
+  const fromCard = (getCardBonus('meltdownAtkChance') || getCardBonus('meltdownDefChance'))
+    ? { atkChance: getCardBonus('meltdownAtkChance'), defChance: getCardBonus('meltdownDefChance'),
+        debuffMult: 0.8, debuffSec: 10 }
+    : null;
+  const b = state.buffs.find(x => x.type === 'meltdown') || fromCard;
   if (!b) return;
   const ms = (b.debuffSec || 10) * 1000;
   if (Math.random() * 100 < (b.atkChance || 0)) {
@@ -5074,6 +5084,13 @@ function gospelTick(f) {
     const e = GOSPEL_BLESSINGS[Math.floor(Math.random() * GOSPEL_BLESSINGS.length)];
     const msg = e.run();
     if (msg) logMsg(`${e.icon} 「${f.name}」${e.name}：${msg}。`);
+    /* 官方的聖音是隊伍範圍的祝福（#131）。祝福函式全都是對全域 state 動手，
+       所以換身之後**把同一個祝福再跑一次**就好，不必為了分享把它們改寫成 buff。
+       擲骰型的那個（恩寵）每個人各擲各的，這跟官方一樣。 */
+    if (f.party) {
+      const got = forEachPartyMate(() => { e.run(); });
+      if (got.length) pushCombatLog(`  → 「${f.name}」的${e.name}也及於 ${partyMateNames(got)}。`, 'ally');
+    }
   }
   const mons = (state.monsters || []).filter(m => m.hp > 0);
   if (mons.length && Math.random() * 100 < (f.chance || 0)) {
@@ -5283,6 +5300,123 @@ function startLoop() {
   tickTimer = setInterval(gameTick, TICK_MS);
 }
 
+/* 場域持續效果的一跳：光耀之堂（回血）、十字驅魔攻擊（範圍聖傷）、聖音…
+   抽成獨立一支是因為**隊友也會放這些**（#131）。以前這段長在 gameTick() 裡面，
+   而 gameTick 只跑玩家那一份——隊友祭司放的光耀之堂等於掛上去就沒人理，
+   一跳都不會發生。現在 alliesTick() 會換身進去各跑一次。 */
+function tickFieldEffects() {
+  if (state.activeFieldEffects && state.activeFieldEffects.length > 0) {
+    const now = Date.now();
+    state.activeFieldEffects = state.activeFieldEffects.filter(f => now < f.endsAt);
+    state.activeFieldEffects.forEach(f => {
+      if (now < f.nextTickAt) return;
+      /* **補跳**：這個迴圈住在每秒一次的慢心跳裡，但場域可以宣告比 1 秒更短的間隔
+         （#72 火煙瓶投擲官方就是 0.5 秒）。只推一次時間戳的話，0.5 秒的場域
+         實際上每秒只結算一次，傷害直接砍半。改成算出這一秒該跳幾次，一次補齊。
+         上限 20 跳是保險：分頁切回前景時 now 可能一口氣跳很遠。 */
+      let ticks = 1;
+      if (f.tickIntervalSec > 0) {
+        ticks = Math.min(20, Math.max(1, Math.floor((now - f.nextTickAt) / (f.tickIntervalSec * 1000)) + 1));
+      }
+      f.nextTickAt = now + f.tickIntervalSec * 1000;
+      f.ticksThisRound = ticks;
+      if (f.kind === 'selfheal') {
+        const before = state.hp;
+        state.hp = Math.min(state.maxHp, state.hp + f.amount);
+        if (state.hp > before) logMsg(`💚 「${f.name}」持續恢復了 ${state.hp - before} 點HP。`);
+        /* 光耀之堂是範圍治療，站在裡面的隊友也該回血（#131）。
+           倒地的不算——復活是天使之嘆息那條路，不能靠站在陣裡自己爬起來。 */
+        if (f.party) {
+          const healed = [];
+          forEachPartyMate(mate => {
+            const b = state.hp;
+            state.hp = Math.min(state.maxHp, state.hp + f.amount);
+            if (state.hp > b) healed.push(mate);
+          });
+          if (healed.length) pushCombatLog(`  → 「${f.name}」也治療了 ${partyMateNames(healed)}。`, 'ally');
+        }
+      } else if (f.kind === 'aoe_holydmg') {
+        if (state.monsters && state.monsters.length > 0) {
+          state.monsters.forEach(mon => {
+            const monDef = MONSTERS[mon.defId];
+            const elemMult = getElementMultiplierVsMonster(f.element || 'holy', monDef, mon);
+            const dmg = mitigateDamage(state.matk * f.mult * elemMult, ...defOf(monDef, 1, true)) * (f.ticksThisRound || 1);
+            mon.hp -= dmg;
+            wakeIfFrozen(mon);
+            if (f.stunChance && Math.random() * 100 < f.stunChance) applyStun(mon, f.stunSec || 1, true);
+            pushCombatLog(`  → 「${f.name}」對 ${monDef.name} 造成 ${dmg} 點傷害！`);
+            // 場地魔法（隕石術、十字驅魔…）每一跳也照屬性上色
+            if (typeof showDamageFloatAt === 'function') showDamageFloatAt(mon.id, '-' + dmg, 'normal', f.element || 'holy');
+          });
+          for (let i = state.monsters.length - 1; i >= 0; i--) {
+            const mon = state.monsters[i];
+            if (mon.hp <= 0) killMonster(MONSTERS[mon.defId], mon);
+          }
+          if (typeof renderLog === 'function') renderLog();
+        }
+      /* 鍊金術士（#72）：火煙瓶投擲的物理火場，與生物調撥／生命體召喚的定時攻擊。
+         三者同一個形狀——每隔 N 秒對敵人打一次 ATK 倍率的物理傷害，
+         所以共用一個 kind，差別只在打全體還是單體、有沒有附帶回血。
+         **不是新增召喚實體**：本作玩家側召喚是 0 行，使用者 2026-08-10 指定
+         把「有隻寵物在打」換成「場域定時自動攻擊」。 */
+      } else if (f.kind === 'alchemy_strike') {
+        if (state.monsters && state.monsters.length > 0) {
+          const targets = f.aoe ? state.monsters.slice() : [state.monsters[0]];
+          targets.forEach(mon => {
+            const monDef = MONSTERS[mon.defId];
+            if (!monDef || mon.hp <= 0) return;
+            /* 這三招（火煙瓶投擲／生物調撥／生命體召喚）打的是 ATK，
+               所以照 #76 的規則要判定命中——場域不是免死金牌。 */
+            if (!skillHits(SKILLS[f.skillId], f.skillLv || 1, monDef, mon)) {
+              pushCombatLog(`  → 「${f.name}」被 ${monDef.name} 閃避了！`);
+              return;
+            }
+            const em = getElementMultiplierVsMonster(f.element || 'neutral', monDef, mon);
+            const dmg = (mitigateDamage(
+              weaponChainDamage(monDef, em, false) * f.mult * cardTargetDmgMult(monDef) * ailDmgTakenMult(mon),
+              ...defOf(monDef, 1, false, mon)) + raceFlatBonus(monDef)) * (f.ticksThisRound || 1);
+            mon.hp -= dmg;
+            wakeIfFrozen(mon);
+            pushCombatLog(`  → 「${f.name}」對 ${monDef.name} 造成 ${dmg} 點傷害！`);
+            if (typeof showDamageFloatAt === 'function') showDamageFloatAt(mon.id, '-' + dmg, 'normal', f.element || null);
+          });
+          for (let i = state.monsters.length - 1; i >= 0; i--) {
+            const mon = state.monsters[i];
+            if (mon.hp <= 0) killMonster(MONSTERS[mon.defId], mon);
+          }
+          if (typeof renderLog === 'function') renderLog();
+        }
+        // 生物調撥的回血那半：官方沒有，是使用者 2026-08-10 指定的（打一下補 500）
+        if (f.healFlat) {
+          const before = state.hp;
+          state.hp = Math.min(state.maxHp, state.hp + f.healFlat * (f.ticksThisRound || 1));
+          if (state.hp > before) pushCombatLog(`  → 「${f.name}」回復了 ${state.hp - before} 點HP。`);
+        }
+      } else if (f.kind === 'gospel') {
+        gospelTick(f);                    // 聖殿十字軍（#74）：聖音每 10 秒的隨機祝福與詛咒
+      } else if (f.kind === 'multi_dot') {
+        if (state.monsters && state.monsters.length > 0 && f.targetIds && f.targetIds.length > 0) {
+          const targets = state.monsters.filter(m => f.targetIds.includes(m.id));
+          targets.forEach(mon => {
+            const monDef = MONSTERS[mon.defId];
+            const elemMult = getElementMultiplierVsMonster(f.element || 'none', monDef, mon);
+            const dmg = mitigateDamage(state.matk * f.mult * elemMult, ...defOf(monDef, 1, true)) * (f.ticksThisRound || 1);
+            mon.hp -= dmg;
+            wakeIfFrozen(mon);
+            pushCombatLog(`  → 「${f.name}」對 ${monDef.name} 造成 ${dmg} 點持續傷害！`);
+            if (typeof showDamageFloatAt === 'function') showDamageFloatAt(mon.id, '-' + dmg, 'normal', f.element || null);
+          });
+          for (let i = state.monsters.length - 1; i >= 0; i--) {
+            const mon = state.monsters[i];
+            if (f.targetIds.includes(mon.id) && mon.hp <= 0) killMonster(MONSTERS[mon.defId], mon);
+          }
+          if (typeof renderLog === 'function') renderLog();
+        }
+      }
+    });
+  }
+}
+
 function gameTick() {
   if (!state) return;
   tickCooldowns();
@@ -5343,6 +5477,10 @@ function gameTick() {
     tryAutoVending();
     // 自動販賣：玩家勾選的道具，每30秒自動以原價賣出全部
     tryAutoSell();
+    /* 沒選箭種就先挑一種（#129）。**不能只放在 tryAutoBuyArrow() 裡面**：
+       那支第一行問的是 `state.autoBuyArrow`，玩家把自動購買關掉之後，
+       連背包裡現成的箭都會用不到。 */
+    ensurePlayerAmmo();
     // 自動補箭：弓箭手掛機時箭快見底就自動補貨
     tryAutoBuyArrow();
     // 隊友的箭也由玩家出（#93）。**要排在 alliesTick 前面**，這一秒買的這一秒就射得到
@@ -5375,106 +5513,7 @@ function gameTick() {
         }
       }
     }
-    // 場域持續效果：光耀之堂(自身補血)、十字驅魔攻擊(範圍聖屬性傷害)等每隔一段時間觸發一次
-    if (state.activeFieldEffects && state.activeFieldEffects.length > 0) {
-      const now = Date.now();
-      state.activeFieldEffects = state.activeFieldEffects.filter(f => now < f.endsAt);
-      state.activeFieldEffects.forEach(f => {
-        if (now < f.nextTickAt) return;
-        /* **補跳**：這個迴圈住在每秒一次的慢心跳裡，但場域可以宣告比 1 秒更短的間隔
-           （#72 火煙瓶投擲官方就是 0.5 秒）。只推一次時間戳的話，0.5 秒的場域
-           實際上每秒只結算一次，傷害直接砍半。改成算出這一秒該跳幾次，一次補齊。
-           上限 20 跳是保險：分頁切回前景時 now 可能一口氣跳很遠。 */
-        let ticks = 1;
-        if (f.tickIntervalSec > 0) {
-          ticks = Math.min(20, Math.max(1, Math.floor((now - f.nextTickAt) / (f.tickIntervalSec * 1000)) + 1));
-        }
-        f.nextTickAt = now + f.tickIntervalSec * 1000;
-        f.ticksThisRound = ticks;
-        if (f.kind === 'selfheal') {
-          const before = state.hp;
-          state.hp = Math.min(state.maxHp, state.hp + f.amount);
-          if (state.hp > before) logMsg(`💚 「${f.name}」持續恢復了 ${state.hp - before} 點HP。`);
-        } else if (f.kind === 'aoe_holydmg') {
-          if (state.monsters && state.monsters.length > 0) {
-            state.monsters.forEach(mon => {
-              const monDef = MONSTERS[mon.defId];
-              const elemMult = getElementMultiplierVsMonster(f.element || 'holy', monDef, mon);
-              const dmg = mitigateDamage(state.matk * f.mult * elemMult, ...defOf(monDef, 1, true)) * (f.ticksThisRound || 1);
-              mon.hp -= dmg;
-              wakeIfFrozen(mon);
-              if (f.stunChance && Math.random() * 100 < f.stunChance) applyStun(mon, f.stunSec || 1, true);
-              pushCombatLog(`  → 「${f.name}」對 ${monDef.name} 造成 ${dmg} 點傷害！`);
-              // 場地魔法（隕石術、十字驅魔…）每一跳也照屬性上色
-              if (typeof showDamageFloatAt === 'function') showDamageFloatAt(mon.id, '-' + dmg, 'normal', f.element || 'holy');
-            });
-            for (let i = state.monsters.length - 1; i >= 0; i--) {
-              const mon = state.monsters[i];
-              if (mon.hp <= 0) killMonster(MONSTERS[mon.defId], mon);
-            }
-            if (typeof renderLog === 'function') renderLog();
-          }
-        /* 鍊金術士（#72）：火煙瓶投擲的物理火場，與生物調撥／生命體召喚的定時攻擊。
-           三者同一個形狀——每隔 N 秒對敵人打一次 ATK 倍率的物理傷害，
-           所以共用一個 kind，差別只在打全體還是單體、有沒有附帶回血。
-           **不是新增召喚實體**：本作玩家側召喚是 0 行，使用者 2026-08-10 指定
-           把「有隻寵物在打」換成「場域定時自動攻擊」。 */
-        } else if (f.kind === 'alchemy_strike') {
-          if (state.monsters && state.monsters.length > 0) {
-            const targets = f.aoe ? state.monsters.slice() : [state.monsters[0]];
-            targets.forEach(mon => {
-              const monDef = MONSTERS[mon.defId];
-              if (!monDef || mon.hp <= 0) return;
-              /* 這三招（火煙瓶投擲／生物調撥／生命體召喚）打的是 ATK，
-                 所以照 #76 的規則要判定命中——場域不是免死金牌。 */
-              if (!skillHits(SKILLS[f.skillId], f.skillLv || 1, monDef, mon)) {
-                pushCombatLog(`  → 「${f.name}」被 ${monDef.name} 閃避了！`);
-                return;
-              }
-              const em = getElementMultiplierVsMonster(f.element || 'neutral', monDef, mon);
-              const dmg = (mitigateDamage(
-                weaponChainDamage(monDef, em, false) * f.mult * cardTargetDmgMult(monDef) * ailDmgTakenMult(mon),
-                ...defOf(monDef, 1, false, mon)) + raceFlatBonus(monDef)) * (f.ticksThisRound || 1);
-              mon.hp -= dmg;
-              wakeIfFrozen(mon);
-              pushCombatLog(`  → 「${f.name}」對 ${monDef.name} 造成 ${dmg} 點傷害！`);
-              if (typeof showDamageFloatAt === 'function') showDamageFloatAt(mon.id, '-' + dmg, 'normal', f.element || null);
-            });
-            for (let i = state.monsters.length - 1; i >= 0; i--) {
-              const mon = state.monsters[i];
-              if (mon.hp <= 0) killMonster(MONSTERS[mon.defId], mon);
-            }
-            if (typeof renderLog === 'function') renderLog();
-          }
-          // 生物調撥的回血那半：官方沒有，是使用者 2026-08-10 指定的（打一下補 500）
-          if (f.healFlat) {
-            const before = state.hp;
-            state.hp = Math.min(state.maxHp, state.hp + f.healFlat * (f.ticksThisRound || 1));
-            if (state.hp > before) pushCombatLog(`  → 「${f.name}」回復了 ${state.hp - before} 點HP。`);
-          }
-        } else if (f.kind === 'gospel') {
-          gospelTick(f);                    // 聖殿十字軍（#74）：聖音每 10 秒的隨機祝福與詛咒
-        } else if (f.kind === 'multi_dot') {
-          if (state.monsters && state.monsters.length > 0 && f.targetIds && f.targetIds.length > 0) {
-            const targets = state.monsters.filter(m => f.targetIds.includes(m.id));
-            targets.forEach(mon => {
-              const monDef = MONSTERS[mon.defId];
-              const elemMult = getElementMultiplierVsMonster(f.element || 'none', monDef, mon);
-              const dmg = mitigateDamage(state.matk * f.mult * elemMult, ...defOf(monDef, 1, true)) * (f.ticksThisRound || 1);
-              mon.hp -= dmg;
-              wakeIfFrozen(mon);
-              pushCombatLog(`  → 「${f.name}」對 ${monDef.name} 造成 ${dmg} 點持續傷害！`);
-              if (typeof showDamageFloatAt === 'function') showDamageFloatAt(mon.id, '-' + dmg, 'normal', f.element || null);
-            });
-            for (let i = state.monsters.length - 1; i >= 0; i--) {
-              const mon = state.monsters[i];
-              if (f.targetIds.includes(mon.id) && mon.hp <= 0) killMonster(MONSTERS[mon.defId], mon);
-            }
-            if (typeof renderLog === 'function') renderLog();
-          }
-        }
-      });
-    }
+    tickFieldEffects();   // 場域持續效果（光耀之堂、十字驅魔攻擊、聖音…）
   }
 
   /* 合奏／歌曲類的維持費（#77 落花伴著月光下的水車小屋）：每 N 秒扣一次 SP。
@@ -5796,6 +5835,32 @@ function setAutoSpPotionFallback(v) { state.autoSpPotion.fallback = v; saveGame(
 function setAutoSpPotionThreshold(v) { state.autoSpPotion.spThreshold = Math.max(10, Math.min(90, parseInt(v) || 30)); saveGame(); }
 function setAutoBuySpPotion(v) { state.autoBuySpPotion = !!v; saveGame(); }
 
+/* 沒選箭種時自動挑一種（#129）。
+
+   `state.equip.ammo` 是「選了哪一種箭」，箭本體放在背包。以前**沒有任何地方
+   會自動填這個欄位**：弓箭手轉職拿到 1000 支鋼鐵箭矢，背包裡有箭，
+   `getAmmoCount()` 卻回 0，攻擊時只印「沒有箭矢」；而自動補箭第一行就是
+   `if (!id) return`，等於整條路被自己鎖死——買不了，也用不到手上的箭。
+
+   隊友那邊 2026-08-15 就修過同一個症狀（`ensureAllyAmmo()`），玩家這邊漏了。
+   這支是它的玩家版，規則一模一樣：
+     背包有箭就挑一種裝上；一種都沒有就保留原本的箭種（沒有就退回鋼鐵箭矢），
+     留著欄位讓 `tryAutoBuyArrow()` 知道要買什麼。
+
+   弓、樂器、鞭都算（見 isBowWeapon），所以整條弓箭手線都吃得到。 */
+const PLAYER_ARROW_FALLBACK = 'steel_arrow';
+function ensurePlayerAmmo() {
+  if (!state || !state.equip || !needsAmmo()) return;
+  const cur = state.equip.ammo;
+  if (cur && getItemQty(cur) > 0) return;          // 現在這種還有，不動
+  const row = (state.inventory || []).find(r => !r.instanceId && isAmmoItem(r.item) && r.qty > 0);
+  const next = row ? row.item : (cur || PLAYER_ARROW_FALLBACK);
+  if (next === cur) return;
+  state.equip.ammo = next;
+  recomputeDerived(false);
+  if (row) logMsg(`🏹 自動裝上了 ${ITEMS[next].name}（剩餘 ${getItemQty(next)}）。`);
+}
+
 /* 自動補箭：掛機時箭快用完就自動買同一種（只在城鎮外也能買，比照自動買藥水的做法）。
    買不起或那種箭商店沒賣就安靜跳過，playerAttack() 那邊會提示沒箭。 */
 const AUTO_BUY_ARROW_QTY = 500;
@@ -5803,6 +5868,7 @@ const AUTO_BUY_ARROW_THRESHOLD = 50;
 function tryAutoBuyArrow() {
   if (!state.autoBuyArrow) return;
   if (!needsAmmo()) return;
+  ensurePlayerAmmo();                 // 沒選箭種的話先挑一種，不然下一行就 return 了
   const id = getEquippedAmmoId();
   if (!id) return;
   if (getItemQty(id) > AUTO_BUY_ARROW_THRESHOLD) return;
@@ -7841,6 +7907,10 @@ function alliesTick() {
       withAlly(ally, () => {
         if (state.autoSkill) tryAutoCastSkill();
         tryAutoCastSupportSkills();
+        /* 隊友自己掛上的場域效果也要跳（#131）。以前這段只長在 gameTick() 裡，
+           而 gameTick 只跑玩家那一份——隊友祭司放的光耀之堂掛上去就沒人理，
+           一跳都不會發生（放了完全沒作用，連他自己都沒回到血）。 */
+        tickFieldEffects();
       });
     } catch (e) { console.error('隊友施法失敗', ally && ally._allyName, e); }
     if (ally._downed) return;   // 自傷類技能（聖十字審判、HP轉換）可能把自己放倒
@@ -7903,15 +7973,52 @@ function allyNeedsAmmo(ally) {
    那是「隊友還不會施放技能」年代的保險絲。現在隊友跑完整的自動戰鬥，
    祭司隊友的聖母之頌歌當然要發給玩家與另一位隊友。
    不會無限廣播——這支只是**複製已經算好的 buff**，不會再觸發一次施放。 */
+/* 對「隊上除了施術者以外的每個人」跑一段程式，期間 state 換成他們自己的（#131）。
+
+   `shareBuffsWithAllies()` 只搬得動 buff 陣列，但有三支技能不是靠 buff 生效的：
+     痊癒術   直接清 state.playerAil
+     光耀之堂 每跳直接加 state.hp
+     聖音     每跳隨機跑一個祝福函式，函式裡什麼都改
+
+   這三支共通的解法是「**換身之後把同一段程式再跑一次**」——不必為了分享
+   把它們全部改寫成 buff。換身的規則跟隊友自己戰鬥時同一套，所以
+   `recomputeDerived()`、`logMsg()` 這些在裡面都會落在正確的人身上。
+
+   倒地的人不算（跟 shareBuffsWithAllies 同一條規則）。 */
+function forEachPartyMate(fn) {
+  const actor = _allyActing;                  // null＝現在動的是玩家
+  const owner = allyOwnerState();
+  const mates = [];
+  if (actor) mates.push(owner);
+  (owner.allies || []).forEach(a => { if (a && !a._downed && a !== actor) mates.push(a); });
+  mates.forEach(m => {
+    if (m === owner) withOwner(() => fn(m));
+    else withAlly(m, () => fn(m));
+  });
+  return mates;
+}
+// 顯示用：這些人在訊息裡怎麼稱呼
+function partyMateNames(mates) {
+  const owner = allyOwnerState();
+  return mates.map(m => (m === owner ? '你' : m._allyName)).join('、');
+}
+
 function shareBuffsWithAllies(fresh, freshShields, sk) {
   if (!fresh.length && !freshShields.length) return;
   const caster = _allyActing;                 // null＝玩家自己放的
   const owner = allyOwnerState();             // 換身中時的「真正的玩家」
   /* 收 buff 的人＝全隊扣掉施術者自己（他那份在 castSkill 裡已經推好了）。
      隊友放的時候玩家也在收禮名單上，這就是以前少掉的那一半。 */
-  const targets = [];
-  if (caster) targets.push(owner);
-  (owner.allies || []).forEach(a => { if (a && !a._downed && a !== caster) targets.push(a); });
+  const everyone = [];
+  if (caster) everyone.push(owner);
+  (owner.allies || []).forEach(a => { if (a && !a._downed && a !== caster) everyone.push(a); });
+  /* 有些全體技**只對拿對武器的人生效**（#131）：官方的速度激發只讓隊上
+     拿斧或鈍器的人加速，拿劍的站在旁邊也沒有用。施術者那邊已經被
+     `requiresWeapon` 擋過一次了，這裡擋的是**收禮的人**。 */
+  const gate = sk.partyRequiresWeapon;
+  const targets = gate ? everyone.filter(tg => (tg === owner
+    ? withOwner(() => weaponReqMet(gate))
+    : withAlly(tg, () => weaponReqMet(gate)))) : everyone;
   if (!targets.length) return;
   const lv = skillLv(sk.id);
   targets.forEach(tg => {
@@ -7920,6 +8027,21 @@ function shareBuffsWithAllies(fresh, freshShields, sk) {
     // 同一支技能重放時先清掉自己上一次推的，跟玩家那邊同一條規則
     tg.buffs = tg.buffs.filter(b => b.skillId !== sk.id);
     tg.shields = tg.shields.filter(sh => sh.id !== sk.id);
+    /* 互斥組也要照做（#130）。演奏／舞蹈／合奏／元素領域同時只能開一個，
+       施術者那邊 castSkill 會把同組的舊 buff 換掉，收禮的人這裡不做的話
+       就會一路疊著——吹口哨換成刺客的黃昏，隊友身上會兩首歌同時在響。
+
+       **不能只看 `b.exclusiveGroup`**：只有演奏那一類會把組別寫進 buff 物件，
+       元素領域那批沒寫（施術者那邊是用別的規則換掉的）。所以兩條都查：
+       buff 自己帶的組別，以及「推這個 buff 的技能」屬於哪一組。 */
+    const grp = sk.exclusiveGroup;
+    if (grp) {
+      tg.buffs = tg.buffs.filter(b => {
+        if (b.exclusiveGroup === grp) return false;
+        const from = b.skillId && SKILLS[b.skillId];
+        return !(from && from.exclusiveGroup === grp);
+      });
+    }
     fresh.forEach(b => tg.buffs.push(Object.assign({}, b)));
     /* 護盾的耐久要照**收禮那個人自己的** maxHp 重算——霸邪之陣寫的是「最大HP 的 12~30%」，
        照抄施術者那份的話，血薄的祭司會發給坦克一面只有自己血量三成的盾。 */
@@ -9296,11 +9418,24 @@ function castSkillInner(skillId, opts) {
     }
     // 痊癒術：清掉玩家身上全部的異常狀態（#30 的 state.playerAil）
     case 'cure': {
-      const had = (typeof playerAilList === 'function') ? playerAilList() : [];
-      if (!had.length) { logMsg(`💊 「${sk.name}」Lv${lv} 發動，但你身上沒有異常狀態。`); break; }
-      state.playerAil = {};
-      delete state.playerAilTick;
-      logMsg(`💊 「${sk.name}」Lv${lv} 解除了：${had.map(t => PLAYER_AILMENTS[t].icon + PLAYER_AILMENTS[t].name).join('、')}`);
+      const clear = () => {
+        const list = (typeof playerAilList === 'function') ? playerAilList() : [];
+        state.playerAil = {};
+        delete state.playerAilTick;
+        return list;
+      };
+      const had = clear();
+      /* 官方的痊癒術是對隊友施放的（#131）。這支不推 buff，所以 `party: true`
+         那條路搬不動它——改成換身之後把同一段清除再跑一次。 */
+      const cured = [];
+      if (sk.party) {
+        forEachPartyMate(mate => { if (clear().length) cured.push(mate); });
+      }
+      if (!had.length && !cured.length) { logMsg(`💊 「${sk.name}」Lv${lv} 發動，但隊上沒有人身上有異常狀態。`); break; }
+      if (had.length) {
+        logMsg(`💊 「${sk.name}」Lv${lv} 解除了：${had.map(t => PLAYER_AILMENTS[t].icon + PLAYER_AILMENTS[t].name).join('、')}`);
+      }
+      if (cured.length) pushCombatLog(`  → 「${sk.name}」也解除了 ${partyMateNames(cured)} 的異常狀態。`, 'ally');
       break;
     }
 
@@ -9606,7 +9741,7 @@ function castSkillInner(skillId, opts) {
       if (!state.activeFieldEffects) state.activeFieldEffects = [];
       state.activeFieldEffects = state.activeFieldEffects.filter(f => f.skillId !== sk.id);
       state.activeFieldEffects.push({
-        kind: 'gospel', skillId: sk.id, name: sk.name,
+        kind: 'gospel', skillId: sk.id, name: sk.name, party: !!sk.party,
         chance: at('chance', 55), hpDrain: at('hpDrain', 30), spDrain: at('spDrain', 20),
         // 第一跳就在施放的當下，不然玩家會覺得「放了什麼事都沒發生」
         tickIntervalSec: tickSec, nextTickAt: Date.now(), endsAt: Date.now() + dur * 1000,
@@ -9625,13 +9760,24 @@ function castSkillInner(skillId, opts) {
       logMsg(`🛡️ 「${sk.name}」Lv${lv} 發動，護盾展開！（耐久${capacity}，可擋${charges}次）`);
       break;
     }
+    /* 無視體型攻擊（#131）。官方是武器完全定義 Weapon Perfection：
+       期間攻擊不再吃體型懲罰，神匠版本及於整隊。
+       本作原本把它做成 passive 且**完全沒有效果**（技能說明自己寫著
+       「暫時擱置、無實際效果」），這裡改成真的會動的限時強化。 */
+    case 'buff_ignoresize': {
+      const dur = Array.isArray(sk.duration) ? sk.duration[lv - 1] : sk.duration;
+      state.buffs.push({ type: 'ignoresize', mult: 1, msRemaining: dur * 1000, skillId: sk.id });
+      logMsg(`🔨 「${sk.name}」Lv${lv} 發動！攻擊不再受體型影響，持續 ${dur} 秒。`);
+      break;
+    }
     case 'field_heal': {
       const dur = Array.isArray(sk.duration) ? sk.duration[lv - 1] : sk.duration;
       // 光耀之堂那類的每跳回復，一樣吃治癒量加成（#64）
       const healAmt = Math.round((Array.isArray(sk.healPerTick) ? sk.healPerTick[lv - 1] : sk.healPerTick) * healOutputMult());
       const tickSec = sk.fieldTickIntervalSec || 1;
       if (!state.activeFieldEffects) state.activeFieldEffects = [];
-      state.activeFieldEffects.push({ kind: 'selfheal', name: sk.name, amount: healAmt, tickIntervalSec: tickSec, nextTickAt: Date.now(), endsAt: Date.now() + dur * 1000 });
+      // party 的話每一跳也回給隊友（#131）。回復量記施術者的，跟官方的範圍治療一致
+      state.activeFieldEffects.push({ kind: 'selfheal', name: sk.name, amount: healAmt, party: !!sk.party, tickIntervalSec: tickSec, nextTickAt: Date.now(), endsAt: Date.now() + dur * 1000 });
       logMsg(`✨ 「${sk.name}」Lv${lv} 發動！`);
       break;
     }
@@ -11183,6 +11329,8 @@ function equipItem(itemId) {
   state.equip[slot] = itemId;
   recomputeDerived(false);
   logMsg(`裝備了 ${def.name}。`);
+  // 換上弓／樂器／鞭時順手把箭種挑好，不用等下一次心跳（#129）
+  if (slot === 'weapon') ensurePlayerAmmo();
   saveGame();
   return true;
 }

@@ -252,6 +252,67 @@ g.state.rebirthPath = null; g.state.rebirthCount = 0;
   t.eq('超級新手自己就是起點', g.jobLineRoot('supernovice'), 'supernovice');
 }
 
+/* ---- 簡轉繁的一簡對多繁錯字 ---- */
+{
+  /* 來源資料是簡體轉繁體來的，「一個簡體字對到多個繁體字」的那幾個全部挑錯邊
+     （#128 修掉 949 處）：发→發/髮、斗→斗/鬥、表→表/錶。
+     只能逐詞比對——同一個「發」在「發光」「榴彈發射器」是對的。
+
+     這種錯不會壞任何功能，只有玩家看得到，所以測試是唯一擋得住它回來的地方。 */
+  const WRONG = [
+    '發圈', '發箍', '發網', '發飾', '發色', '長發', '短發', '直發',
+    '假發', '頭發', '蛇發', '美發', '鬥篷', '菸鬥', '鬥笠', '懷表',
+  ];
+  const bad = [];
+  Object.values(g.ITEMS).forEach(it => {
+    const text = (it.name || '') + (it.desc || '');
+    WRONG.forEach(w => { if (text.includes(w)) bad.push(w + '@' + it.id); });
+  });
+  t.eq('道具名稱與描述沒有簡轉繁挑錯邊的字', bad.length, 0, bad.slice(0, 5).join(', '));
+}
+
+/* ---- 可達怪的掉落表 ---- */
+{
+  /* 來源資料有一種系統性的抓取失敗：整張掉落表被抓成「蘋果 0.01%」一列
+     （#128 修掉 11 隻，含整個甲蟲家族——卡米達隧道與斯卡勒伯熔巖兩張
+     Lv125~139 的圖等於完全沒有產出）。空表與單一佔位表都要擋。
+
+     只看**玩家真的打得到的怪**：掛在沒配進地圖的怪身上的爛資料先不算，
+     那是另一件事（2,100 隻怪還沒被配進地圖）。
+
+     **MVP 走的是另一條路**（`MVP_MAP_DATA[地圖id] = [BOSS id…]`，BOSS 模式下
+     20% 機率生），第一版只掃 MAPS[*].monsters，女王甲蟲就是這樣漏掉的（#129）。
+     兩條路都要算進來。 */
+  const onMap = new Set();
+  g.MAPS.forEach(m => (m.monsters || []).forEach(x => onMap.add(x.id || x)));
+  if (typeof g.MVP_MAP_DATA !== 'undefined') {
+    Object.values(g.MVP_MAP_DATA).forEach(list => (list || []).forEach(id => onMap.add(id)));
+  }
+  const reachable = [...onMap].map(i => g.MONSTERS[i]).filter(Boolean);
+  const empty = reachable.filter(m => !m.drops || !m.drops.length);
+  t.eq('可達怪沒有空的掉落表', empty.length, 0, empty.map(m => m.name).slice(0, 5).join(', '));
+  /* 「蘋果 0.10%」擺在表尾是來源資料的正常填充，很多完好的表也有；
+     只有當它是整張表**唯一**的東西才代表這隻怪的掉落表沒抓到。 */
+  const filler = reachable.filter(m => m.drops && m.drops.length === 1 && m.drops[0].item === 'apple');
+  t.eq('可達怪沒有「只掉一顆蘋果」的佔位表', filler.length, 0,
+    filler.map(m => m.name + '(Lv' + m.level + ')').slice(0, 5).join(', '));
+  /* MVP 的掉落表裡不該出現蘋果那種佔位。
+     **不能用「至少幾樣」當條件**：傭兵團的守護者版本（騎士領主賽依連那六隻）
+     官方就是只有「混沌金屬 0.5% + 神秘紫箱 0.05%」兩樣——牠們是召喚出來的分身，
+     exp 也是 1。少不等於壞，混進蘋果才是壞（#133）。 */
+  const mvpIds = new Set();
+  if (typeof g.MVP_MAP_DATA !== 'undefined') {
+    Object.values(g.MVP_MAP_DATA).forEach(list => (list || []).forEach(id => mvpIds.add(id)));
+  }
+  const junkMvp = [...mvpIds].map(i => g.MONSTERS[i])
+    .filter(m => m && (m.drops || []).length <= 2 && (m.drops || []).some(d => d.item === 'apple'));
+  t.eq('MVP 的掉落表沒有只剩佔位物', junkMvp.length, 0,
+    junkMvp.map(m => m.name + '(Lv' + m.level + ')').slice(0, 5).join(', '));
+  // 掉落機率要是合理的比例（0~1），不是百分比數字
+  const badRate = reachable.filter(m => (m.drops || []).some(d => !(d.chance > 0 && d.chance <= 1)));
+  t.eq('掉落機率都在 0~1 之間', badRate.length, 0, badRate.map(m => m.name).slice(0, 5).join(', '));
+}
+
 /* ---- 資料檔本身：重複的物件鍵 ---- */
 {
   /* JS 的物件實字是**後面蓋前面**，重複的鍵不會報錯、也不會在執行期留下痕跡——

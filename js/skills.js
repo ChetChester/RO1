@@ -46,7 +46,7 @@ const SKILLS = {
   arrowshower: {"id":"arrowshower","name":"箭雨","maxLv":10,"type":"damage_aoe","element":"neutral","spCost":[15,15,15,15,15,18,18,18,18,18],"cooldown":[4,4,4,4,4,4,4,4,4,4],"mult":[1,1.2,1.4,1.6,1.8,2,2.2,2.4,2.6,2.8],"desc":"向天空射出箭雨，造成範圍物理傷害。"},
   vending: {"id":"vending","name":"露天商店","maxLv":1,"isQuest":true,"type":"passive","passiveStat":"vending","spCost":[0],"cooldown":[0],"internalCooldown":60,"sellMultiplier":10,"desc":"被動技能，可在背包頁面選最多3樣道具，每60秒自動以10倍價格賣出各1個。"},
   itemappraisal: {"id":"itemappraisal","name":"物品鑑定","maxLv":1,"isQuest":true,"type":"passive","passiveStat":"triStatBonus","spCost":[0],"cooldown":[0],"mult":[5],"desc":"被動技能，永久提升STR+5、INT+5、DEX+5。"},
-  loudexclamation: {"id":"loudexclamation","name":"大聲吶喊","maxLv":1,"isQuest":true,"type":"buff_flatstat","spCost":[0],"cooldown":[30],"strBonus":[4],"mult":[30],"duration":[300],"desc":"短暫提升STR+4、ATK+30，持續300秒（隊伍效果暫不支援，待未來擴充）。"},
+  loudexclamation: {"id":"loudexclamation","name":"大聲吶喊","maxLv":1,"isQuest":true,"type":"buff_flatstat","party":true,"spCost":[0],"cooldown":[30],"strBonus":[4],"mult":[30],"duration":[300],"desc":"使**全體**STR+4、ATK+30，持續300秒。"},
   cartattack: {"id":"cartattack","name":"手推車攻擊","maxLv":1,"isQuest":true,"type":"damage_aoe","alwaysHit":true,"element":"neutral","spCost":[8],"cooldown":[3],"mult":[1.5],"desc":"轉職自動習得，用手推車撞擊敵人與周圍怪物，固定造成ATK150%範圍傷害。"},
   discount: {"id":"discount","name":"低價買進","maxLv":10,"type":"passive","passiveStat":"discount","element":"neutral","spCost":[0],"cooldown":[0],"mult":[0.93,0.91,0.89,0.87,0.85,0.83,0.81,0.79,0.77,0.76],"desc":"永久降低商店購買價格7%~24%（依等級）。"},
   overcharge: {"id":"overcharge","name":"高價賣出","maxLv":10,"type":"passive","passiveStat":"overcharge","element":"neutral","spCost":[0],"cooldown":[0],"mult":[1.07,1.09,1.11,1.13,1.15,1.17,1.19,1.21,1.23,1.24],"desc":"永久提升販售價格7%~24%（依等級）。"},
@@ -130,10 +130,10 @@ const SKILLS = {
   spearcraft: {"id":"spearcraft","name":"長矛製作","maxLv":1,"type":"passive","passiveStat":"weaponCraft","craftCategory":"spear","spCost":[0],"cooldown":[0],"mult":[1],"desc":"被動技能，解鎖單手長矛與雙手長矛鍛造，基礎成功率15%（依DEX/LUK/神之金屬研究提升）。"},
   weaponresearch: {"id":"weaponresearch","name":"武器研究","maxLv":10,"type":"passive","passiveStat":"atkFlat","element":"neutral","spCost":[0],"cooldown":[0],"mult":[2,4,6,8,10,12,14,16,18,20],"hitBonus":[2,4,6,8,10,12,14,16,18,20],"craftBonusExtra":[1,2,3,4,5,6,7,8,9,10],"desc":"永久提升ATK與HIT各+2~20，並提升鍛造武器成功率+1%~10%（依等級）。"},
   hammerfall: {"id":"hammerfall","name":"大地之擊","maxLv":5,"type":"passive","passiveStat":"hammerfallProc","element":"earth","spCost":[0],"cooldown":[0],"singleStunChance":[10,12,15,18,20],"aoeStunChance":[5,6,7,8,10],"stunSec":[1,1,1,1,1],"requiresWeapon":"axemace","desc":"被動技能，裝備斧頭或鈍器攻擊時，10%~20%機率使目前敵人暈眩1秒，另有5%~10%機率使全體敵人暈眩1秒（依等級）。"},
-  adrenaline: {"id":"adrenaline","name":"速度激發","maxLv":5,"type":"buff_aspd","spCost":[20,23,26,29,32],"cooldown":[30,60,90,120,150],"mult":[1.25,1.25,1.25,1.25,1.25],"bonusHit":[8,11,14,17,20],"duration":[30,60,90,120,150],"requiresWeapon":"axemace","desc":"斧頭／鈍器專用技能，使自身攻擊速度固定+25%，並提升HIT+8~20，持續30~150秒（依等級，需裝備斧頭或鈍器才能施放）。"},
+  adrenaline: {"id":"adrenaline","name":"速度激發","maxLv":5,"type":"buff_aspd","party":true,"spCost":[20,23,26,29,32],"cooldown":[30,60,90,120,150],"mult":[1.25,1.25,1.25,1.25,1.25],"bonusHit":[8,11,14,17,20],"duration":[30,60,90,120,150],"requiresWeapon":"axemace","partyRequiresWeapon":"axemace","desc":"斧頭／鈍器專用技能，使**全體拿斧頭或鈍器的人**攻擊速度固定+25%，並提升HIT+8~20，持續30~150秒（依等級）。拿其他武器的隊友不受影響。"},
   skintemper: {"id":"skintemper","name":"強化火屬性","maxLv":5,"type":"passive","passiveStat":"fireResist","spCost":[0],"cooldown":[0],"mult":[4,8,12,16,20],"neutralResistMult":[1,2,3,4,5],"desc":"被動技能，增加對火屬性傷害的耐性+4%~20%，對無屬性傷害的耐性+1%~5%（依等級）。"},
   cartrevo: {"id":"cartrevo","name":"手推車衝撞","maxLv":5,"type":"damage","element":"neutral","spCost":[22,22,22,22,22],"cooldown":[4,4,4,4,4],"mult":[1.5,1.8,2.1,2.4,2.7],"desc":"以滿載的推車強力衝撞（繼承自商人，非鐵匠本身技能，維持原樣）。"},
-  overthrust: {"id":"overthrust","name":"無視體型攻擊","maxLv":5,"type":"passive","passiveStat":"sizeDamage","element":"neutral","spCost":[0],"cooldown":[0],"mult":[1.05,1.1,1.15,1.2,1.25],"desc":"永久提升對大型怪物的傷害。（遊戲內尚無怪物體型判定機制，暫時擱置、無實際效果，保留供未來擴充）"},
+  overthrust: {"id":"overthrust","name":"無視體型攻擊","maxLv":5,"type":"buff_ignoresize","party":true,"element":"neutral","spCost":[15,18,21,24,27],"cooldown":[30,40,50,60,70],"duration":[30,45,60,75,90],"desc":"使**全體**的攻擊不再受體型修正影響（只拿掉懲罰，本來就有的加成照留），持續30~90秒（依等級）。（官方為武器完全定義 Weapon Perfection）"},
   overthrustbuff: {"id":"overthrustbuff","name":"凶砍","maxLv":5,"type":"buff_atk","spCost":[18,16,14,12,10],"cooldown":[20,40,60,80,100],"mult":[1.05,1.1,1.15,1.2,1.25],"duration":[20,40,60,80,100],"desc":"短暫提升自身攻擊力+5%~25%，持續20~100秒（依等級）。"},
   maximize: {"id":"maximize","name":"武器值最大化","maxLv":5,"type":"buff_maxroll","spCost":[10,20,30,40,50],"cooldown":[30,30,30,30,30],"duration":[10,15,20,25,30],"desc":"短暫使武器傷害浮動值固定為最大值，持續10~30秒，消耗SP10~50（依等級）。"},
   weaponfusion: {"id":"weaponfusion","name":"詭計的商術","maxLv":1,"type":"passive","passiveStat":"zenyCostReduction","spCost":[0],"cooldown":[0],"mult":[20],"desc":"被動技能，使金錢攻擊的鋅幣消耗量-20%（手推車終結技留待未來新職業加入後再接上）。"},
@@ -152,7 +152,7 @@ const SKILLS = {
   enchantblade: {"id":"enchantblade","name":"毒刃","maxLv":1,"type":"damage","element":"poison","spCost":[14],"cooldown":[5],"mult":[2],"desc":"用毒刃攻擊敵人。"},
   maceMastery: {"id":"maceMastery","name":"鈍器使用熟練度","maxLv":10,"type":"passive","passiveStat":"atkFlat","element":"neutral","spCost":[0],"cooldown":[0],"mult":[3,6,9,12,15,18,21,24,27,30],"critBonus":[1,2,3,4,5,6,7,8,9,10],"requiresWeapon":"mace","desc":"永久提升鈍器攻擊力+3~30、爆擊率+1%~10%（依等級，需裝備鈍器才生效）。"},
   zenrecovery: {"id":"zenrecovery","name":"禪心","maxLv":10,"type":"passive","passiveStat":"zenRecovery","element":"neutral","spCost":[0],"cooldown":[0],"mult":[3,6,9,12,15,18,21,24,27,30],"spPctBonus":[0.2,0.4,0.6,0.8,1,1.2,1.4,1.6,1.8,2],"itemEffectBonus":[10,20,30,40,50,60,70,80,90,100],"desc":"被動技能。每次SP自然恢復時額外恢復 3~30 點，再加上最大SP的 0.2%~2%；SP恢復道具的效果 +10%~100%。（加的是每次的「恢復量」，不是SP上限——官方 MG_SRECOVERY 就是這樣）"},
-  sanctuary: {"id":"sanctuary","name":"光耀之堂","maxLv":10,"type":"field_heal","fieldTickIntervalSec":1,"spCost":[15,18,21,24,27,30,33,36,39,42],"cooldown":[20,20,20,20,20,20,20,20,20,20],"healPerTick":[100,200,300,400,500,600,777,777,777,777],"duration":[4,7,10,13,16,19,22,25,28,31],"desc":"展開光耀之堂，使自身每秒恢復100~777點HP（依等級），持續4~31秒。（5秒對不死種族造成減半傷害）"},
+  sanctuary: {"id":"sanctuary","name":"光耀之堂","maxLv":10,"type":"field_heal","party":true,"fieldTickIntervalSec":1,"spCost":[15,18,21,24,27,30,33,36,39,42],"cooldown":[20,20,20,20,20,20,20,20,20,20],"healPerTick":[100,200,300,400,500,600,777,777,777,777],"duration":[4,7,10,13,16,19,22,25,28,31],"desc":"展開光耀之堂，使**全體**每秒恢復100~777點HP（依等級），持續4~31秒。（5秒對不死種族造成減半傷害）"},
   magnificat: {"id":"magnificat","name":"聖母之頌歌","maxLv":1,"type":"buff_sprate","party":true,"spCost":[40],"cooldown":[45],"mult":[2],"duration":[30],"desc":"使全體SP自然恢復速度變為2倍，持續30秒。"},
   gloria: {"id":"gloria","name":"幸運之頌歌","maxLv":5,"type":"buff_lukflat","party":true,"spCost":[20,20,20,20,20],"cooldown":[30,30,30,30,30],"lukBonus":[30,30,30,30,30],"duration":[10,15,20,25,30],"desc":"使全體LUK+30，持續10~30秒（依等級）。"},
   kyrie: {"id":"kyrie","name":"霸邪之陣","maxLv":10,"type":"buff_shield","party":true,"spCost":[20,20,20,20,20,20,20,20,20,20],"cooldown":[15,15,15,15,15,15,15,15,15,15],"shieldCapacityPct":[12,14,16,18,20,22,24,26,28,30],"shieldCharges":[5,6,6,7,7,8,8,9,9,10],"duration":[120,120,120,120,120,120,120,120,120,120],"desc":"為全體設置護盾，耐久度為最大HP的12%~30%，可抵擋5~10次物理傷害，最多持續2分鐘（依等級）。"},
@@ -203,7 +203,7 @@ const SKILLS = {
         + '（合計 MATK×420%~1500%），自己也會受到一半傷害（不會因此死亡，最低留 1 HP）。'
   },
   dispell_magic: {"id":"dispell_magic","name":"魔法效果解除","maxLv":5,"type":"dispel_aoe","spCost":[35,35,35,35,35],"cooldown":[20,20,20,20,20],"aoeFromLv":3,"desc":"解除敵人身上的增益效果（力量提升、自動防禦、反射盾那一類）。Lv3以上對全體生效。"},
-  strecovery: {"id":"strecovery","name":"痊癒術","maxLv":1,"type":"cure","spCost":[25],"cooldown":[15],"desc":"解除自身的昏迷、冰凍、石化、睡眠、混亂、沉默、黑暗、詛咒、中毒、出血。"},
+  strecovery: {"id":"strecovery","name":"痊癒術","maxLv":1,"type":"cure","party":true,"spCost":[25],"cooldown":[15],"desc":"解除**全體**的昏迷、冰凍、石化、睡眠、混亂、沉默、黑暗、詛咒、中毒、出血。"},
 
   /* ---------------- 領主騎士（進階二轉，第一批 6 個）----------------
      官方 skill id 對照（用 id 不用中文名——不同版本的譯名會對調）：
@@ -431,7 +431,7 @@ const SKILLS = {
   // 官方：消耗 3000~5000 鋅幣，ATK +20%~100%，持續 3 分鐘
   ws_overthrustmax: {
     id: 'ws_overthrustmax', name: '凶砍最大值 Maximum Overthrust', maxLv: 5,
-    type: 'buff_atk', element: 'neutral',
+    type: 'buff_atk', party: true, element: 'neutral',
     spCost: [15, 15, 15, 15, 15], cooldown: [180, 180, 180, 180, 180],
     mult: [1.2, 1.4, 1.6, 1.8, 2.0],
     duration: [180, 180, 180, 180, 180],
@@ -452,13 +452,13 @@ const SKILLS = {
      改成**生怪加速**，使用者 2026-08-09 指定照做。 */
   sn_windwalk: {
     id: 'sn_windwalk', name: '風之步 Wind Walk', maxLv: 10,
-    type: 'buff_windwalk', element: 'neutral',
+    type: 'buff_windwalk', party: true, element: 'neutral',
     spCost: [46, 52, 58, 64, 70, 76, 82, 88, 94, 100],
     cooldown: [60, 60, 60, 60, 60, 60, 60, 60, 60, 60],
     mult: [1.02, 1.04, 1.06, 1.08, 1.10, 1.12, 1.14, 1.16, 1.18, 1.20],
     fleeFlat: [1, 1, 2, 2, 3, 3, 4, 4, 5, 5],
     duration: [130, 160, 190, 220, 250, 280, 310, 340, 370, 400],
-    desc: '生怪速度 +2%~20%、迴避 +1~5，持續 130~400 秒。（官方是移動速度，本作沒有移動，比照騎乘術改成生怪加速）'
+    desc: '使**全體**生怪速度 +2%~20%、迴避 +1~5，持續 130~400 秒。（官方是移動速度，本作沒有移動，比照騎乘術改成生怪加速）'
   },
 
   /* 官方：遠距離物理範圍技，ATK 600%~1800%，依基本等級遞增，
@@ -605,7 +605,7 @@ const SKILLS = {
   // 官方：聖屬性魔法傷害 +3~15%、對暗/不死屬性目標的物理傷害 +5~25%，持續 60~180 秒
   hp_basilica: {
     id: 'hp_basilica', name: '神聖殿堂 Basilica', maxLv: 5,
-    type: 'buff_basilica', element: 'holy',
+    type: 'buff_basilica', party: true, element: 'holy',
     spCost: [40, 50, 60, 70, 80], cooldown: [60, 60, 60, 60, 60],
     mult: [1.03, 1.06, 1.09, 1.12, 1.15],   // 聖屬性魔法傷害
     physPct: [5, 10, 15, 20, 25],           // 對暗／不死屬性目標的物理傷害
@@ -624,7 +624,7 @@ const SKILLS = {
      使用者 2026-08-09 核對官方公式後決定照官方原值。 */
   hp_assumptio: {
     id: 'hp_assumptio', name: '聖母之祈福 Assumptio', maxLv: 5,
-    type: 'buff_assumptio', element: 'holy',
+    type: 'buff_assumptio', party: true, element: 'holy',
     spCost: [20, 30, 40, 50, 60], cooldown: [30, 30, 30, 30, 30],
     mult: [1.02, 1.04, 1.06, 1.08, 1.10],   // 受到的治癒恢復量
     defFlat: [50, 100, 150, 200, 250],
@@ -743,11 +743,11 @@ const SKILLS = {
      兩個減傷都用既有的欄位（eleReduce_holy / raceDmgReduce_demon），不另開機制。 */
   cr_providence: {
     id: 'cr_providence', name: '神祐之光 Providence', maxLv: 5,
-    type: 'buff_providence', element: 'holy',
+    type: 'buff_providence', party: true, element: 'holy',
     spCost: [30, 30, 30, 30, 30], cooldown: [30, 30, 30, 30, 30],
     reducePct: [5, 10, 15, 20, 25],
     duration: [180, 180, 180, 180, 180],
-    desc: '受到的聖屬性傷害與惡魔種族的傷害 −5%~−25%，持續 180 秒。（官方是對隊友施放，本作沒有隊伍，改成自身）'
+    desc: '使**全體**受到的聖屬性傷害與惡魔種族的傷害 −5%~−25%，持續 180 秒。'
   },
   cr_spearquicken: {
     id: 'cr_spearquicken', name: '長矛加速術 Spear Quicken', maxLv: 10,
@@ -811,7 +811,7 @@ const SKILLS = {
   },
   ba_whistle: {
     id: 'ba_whistle', name: '吹口哨 Whistle', maxLv: 10,
-    type: 'buff_song', exclusiveGroup: 'song', requiresWeapon: 'instrument',
+    type: 'buff_song', party: true, exclusiveGroup: 'song', requiresWeapon: 'instrument',
     spCost: [22, 24, 26, 28, 30, 32, 34, 36, 38, 40],
     cooldown: [10, 10, 10, 10, 10, 10, 10, 10, 10, 10],
     fleeFlat: [20, 22, 24, 26, 28, 30, 32, 34, 36, 40],
@@ -821,7 +821,7 @@ const SKILLS = {
   },
   ba_assassincross: {
     id: 'ba_assassincross', name: '刺客的黃昏 Assassin Cross', maxLv: 10,
-    type: 'buff_song', exclusiveGroup: 'song', requiresWeapon: 'instrument',
+    type: 'buff_song', party: true, exclusiveGroup: 'song', requiresWeapon: 'instrument',
     spCost: [40, 45, 50, 55, 60, 65, 70, 75, 80, 85],
     cooldown: [10, 10, 10, 10, 10, 10, 10, 10, 10, 10],
     aspdPct: [1, 3, 5, 7, 9, 11, 13, 15, 17, 20],
@@ -830,7 +830,7 @@ const SKILLS = {
   },
   ba_poembragi: {
     id: 'ba_poembragi', name: '布萊奇之詩 Poem of Bragi', maxLv: 10,
-    type: 'buff_song', exclusiveGroup: 'song', requiresWeapon: 'instrument',
+    type: 'buff_song', party: true, exclusiveGroup: 'song', requiresWeapon: 'instrument',
     spCost: [65, 70, 75, 80, 85, 90, 95, 100, 105, 110],
     cooldown: [10, 10, 10, 10, 10, 10, 10, 10, 10, 10],
     skillCdPct: [3, 6, 9, 12, 15, 18, 21, 24, 27, 30],
@@ -840,7 +840,7 @@ const SKILLS = {
   },
   ba_appleidun: {
     id: 'ba_appleidun', name: '伊登的蘋果 Apple of Idun', maxLv: 10,
-    type: 'buff_song', exclusiveGroup: 'song', requiresWeapon: 'instrument',
+    type: 'buff_song', party: true, exclusiveGroup: 'song', requiresWeapon: 'instrument',
     spCost: [40, 45, 50, 55, 60, 65, 70, 75, 80, 85],
     cooldown: [10, 10, 10, 10, 10, 10, 10, 10, 10, 10],
     maxHpPct: [10, 11, 12, 13, 14, 15, 16, 17, 18, 20],
@@ -897,7 +897,7 @@ const SKILLS = {
   },
   dc_humming: {
     id: 'dc_humming', name: '哼唱之音 Humming', maxLv: 10,
-    type: 'buff_song', exclusiveGroup: 'song', requiresWeapon: 'whip',
+    type: 'buff_song', party: true, exclusiveGroup: 'song', requiresWeapon: 'whip',
     spCost: [33, 36, 39, 42, 45, 48, 51, 54, 57, 60],
     cooldown: [10, 10, 10, 10, 10, 10, 10, 10, 10, 10],
     hitFlat: [4, 8, 12, 16, 20, 24, 28, 32, 36, 40],
@@ -916,7 +916,7 @@ const SKILLS = {
   },
   dc_fortunekiss: {
     id: 'dc_fortunekiss', name: '女神之吻 Fortune Kiss', maxLv: 10,
-    type: 'buff_song', exclusiveGroup: 'song', requiresWeapon: 'whip',
+    type: 'buff_song', party: true, exclusiveGroup: 'song', requiresWeapon: 'whip',
     spCost: [40, 45, 50, 55, 60, 65, 70, 75, 80, 85],
     cooldown: [10, 10, 10, 10, 10, 10, 10, 10, 10, 10],
     critFlat: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
@@ -926,7 +926,7 @@ const SKILLS = {
   },
   dc_serviceforyou: {
     id: 'dc_serviceforyou', name: '為您服務 Service For You', maxLv: 10,
-    type: 'buff_song', exclusiveGroup: 'song', requiresWeapon: 'whip',
+    type: 'buff_song', party: true, exclusiveGroup: 'song', requiresWeapon: 'whip',
     spCost: [60, 63, 66, 69, 72, 75, 78, 81, 84, 87],
     cooldown: [10, 10, 10, 10, 10, 10, 10, 10, 10, 10],
     maxSpPct: [10, 11, 12, 13, 14, 15, 16, 17, 18, 20],
@@ -955,7 +955,7 @@ const SKILLS = {
   // ---- 詩人與舞孃共用的 BD_ ----
   bd_adaptation: {
     id: 'bd_adaptation', name: '臨機應變 Adaptation', maxLv: 1,
-    type: 'buff_song', exclusiveGroup: 'adapt',
+    type: 'buff_song', party: true, exclusiveGroup: 'adapt',
     spCost: [10], cooldown: [10],
     spCostCutPct: [20], duration: [180],
     desc: '技能SP消耗 −20%，持續 180 秒。（不佔演奏／合奏的名額）'
@@ -975,7 +975,7 @@ const SKILLS = {
   },
   bd_intoabyss: {
     id: 'bd_intoabyss', name: '觸媒之所 Into the Abyss', maxLv: 1,
-    type: 'buff_ensemble', exclusiveGroup: 'ensemble', soloMult: 0.5,
+    type: 'buff_ensemble', party: true, exclusiveGroup: 'ensemble', soloMult: 0.5,
     spCost: [70], cooldown: [15],
     gemFreeChance: [100], duration: [180],
     desc: '使用魔力礦石的技能有機率不消耗礦石，持續 180 秒。'
@@ -997,7 +997,7 @@ const SKILLS = {
   },
   bd_siegfried: {
     id: 'bd_siegfried', name: '不死神齊格弗里德 Siegfried', maxLv: 5,
-    type: 'buff_ensemble', exclusiveGroup: 'ensemble', soloMult: 0.5,
+    type: 'buff_ensemble', party: true, exclusiveGroup: 'ensemble', soloMult: 0.5,
     spCost: [40, 44, 48, 52, 56], cooldown: [15, 15, 15, 15, 15],
     eleResistPct: [3, 6, 9, 12, 15],
     ailResistPct: [5, 10, 15, 20, 25],
@@ -1006,7 +1006,7 @@ const SKILLS = {
   },
   bd_richmankim: {
     id: 'bd_richmankim', name: '經驗值倍增 Mental Sensing', maxLv: 5,
-    type: 'buff_ensemble', exclusiveGroup: 'ensemble', soloMult: 0.5,
+    type: 'buff_ensemble', party: true, exclusiveGroup: 'ensemble', soloMult: 0.5,
     spCost: [62, 68, 74, 80, 86], cooldown: [15, 15, 15, 15, 15],
     expPct: [20, 30, 40, 50, 60],
     duration: [180, 180, 180, 180, 180],
@@ -1014,7 +1014,7 @@ const SKILLS = {
   },
   bd_drumbattlefield: {
     id: 'bd_drumbattlefield', name: '戰鼓震天 Battle Theme', maxLv: 5,
-    type: 'buff_ensemble', exclusiveGroup: 'ensemble', soloMult: 0.5,
+    type: 'buff_ensemble', party: true, exclusiveGroup: 'ensemble', soloMult: 0.5,
     spCost: [50, 54, 58, 62, 66], cooldown: [15, 15, 15, 15, 15],
     atkFlat: [20, 25, 30, 35, 40],
     defFlat: [15, 30, 45, 60, 75],
@@ -1023,7 +1023,7 @@ const SKILLS = {
   },
   bd_ringnibelungen: {
     id: 'bd_ringnibelungen', name: '尼貝隆根之戒指 Ring of Nibelungen', maxLv: 5,
-    type: 'buff_ensemble', exclusiveGroup: 'ensemble', soloMult: 0.5,
+    type: 'buff_ensemble', party: true, exclusiveGroup: 'ensemble', soloMult: 0.5,
     spCost: [64, 60, 56, 52, 48], cooldown: [15, 15, 15, 15, 15],
     atkFlat: [10, 14, 18, 22, 26],
     critFlat: [4, 6, 8, 10, 12],
@@ -1480,7 +1480,7 @@ const SKILLS = {
      碎片本作打不到，所以實務上吃的是礦石——那四種礦石各有 7~13 種怪會掉。 */
   sa_flamelauncher: {
     id: 'sa_flamelauncher', name: '火屬性附加 Flame Launcher', maxLv: 5,
-    type: 'buff_elementweapon', element: 'fire',
+    type: 'buff_elementweapon', party: true, element: 'fire',
     spCost: [40, 40, 40, 40, 40], cooldown: [3, 3, 3, 3, 3],
     requires: { skillId: 'sa_advancedbook', level: 5 },
     mult: [1, 2, 3, 4, 5],
@@ -1490,7 +1490,7 @@ const SKILLS = {
   },
   sa_frostweapon: {
     id: 'sa_frostweapon', name: '水屬性附加 Frost Weapon', maxLv: 5,
-    type: 'buff_elementweapon', element: 'water',
+    type: 'buff_elementweapon', party: true, element: 'water',
     spCost: [40, 40, 40, 40, 40], cooldown: [3, 3, 3, 3, 3],
     requires: { skillId: 'sa_advancedbook', level: 5 },
     mult: [1, 2, 3, 4, 5],
@@ -1500,7 +1500,7 @@ const SKILLS = {
   },
   sa_lightningloader: {
     id: 'sa_lightningloader', name: '風屬性附加 Lightning Loader', maxLv: 5,
-    type: 'buff_elementweapon', element: 'wind',
+    type: 'buff_elementweapon', party: true, element: 'wind',
     spCost: [40, 40, 40, 40, 40], cooldown: [3, 3, 3, 3, 3],
     requires: { skillId: 'sa_advancedbook', level: 5 },
     mult: [1, 2, 3, 4, 5],
@@ -1510,7 +1510,7 @@ const SKILLS = {
   },
   sa_seismicweapon: {
     id: 'sa_seismicweapon', name: '地屬性附加 Seismic Weapon', maxLv: 5,
-    type: 'buff_elementweapon', element: 'earth',
+    type: 'buff_elementweapon', party: true, element: 'earth',
     spCost: [40, 40, 40, 40, 40], cooldown: [3, 3, 3, 3, 3],
     requires: { skillId: 'sa_advancedbook', level: 5 },
     mult: [1, 2, 3, 4, 5],
@@ -1529,7 +1529,7 @@ const SKILLS = {
      **之後開放隊友模式時，這四個要改成全隊加成**（官方就是範圍內所有角色都吃）。 */
   sa_volcano: {
     id: 'sa_volcano', name: '火元素領域 Volcano', maxLv: 5,
-    type: 'buff_elementfield', element: 'fire', exclusiveGroup: 'elefield',
+    type: 'buff_elementfield', party: true, element: 'fire', exclusiveGroup: 'elefield',
     spCost: [48, 46, 44, 42, 40], cooldown: [5, 5, 5, 5, 5],
     requires: { skillId: 'sa_flamelauncher', level: 2 },
     mult: [10, 14, 17, 19, 20],
@@ -1541,7 +1541,7 @@ const SKILLS = {
   },
   sa_deluge: {
     id: 'sa_deluge', name: '水元素領域 Deluge', maxLv: 5,
-    type: 'buff_elementfield', element: 'water', exclusiveGroup: 'elefield',
+    type: 'buff_elementfield', party: true, element: 'water', exclusiveGroup: 'elefield',
     spCost: [48, 46, 44, 42, 40], cooldown: [5, 5, 5, 5, 5],
     requires: { skillId: 'sa_frostweapon', level: 2 },
     mult: [10, 14, 17, 19, 20],
@@ -1553,7 +1553,7 @@ const SKILLS = {
   },
   sa_violentgale: {
     id: 'sa_violentgale', name: '風元素領域 Violent Gale', maxLv: 5,
-    type: 'buff_elementfield', element: 'wind', exclusiveGroup: 'elefield',
+    type: 'buff_elementfield', party: true, element: 'wind', exclusiveGroup: 'elefield',
     spCost: [48, 46, 44, 42, 40], cooldown: [5, 5, 5, 5, 5],
     requires: { skillId: 'sa_lightningloader', level: 2 },
     mult: [10, 14, 17, 19, 20],
@@ -1565,7 +1565,7 @@ const SKILLS = {
   },
   sa_landprotector: {
     id: 'sa_landprotector', name: '地元素領域 Land Protector', maxLv: 5,
-    type: 'buff_elementfield', element: 'earth', exclusiveGroup: 'elefield',
+    type: 'buff_elementfield', party: true, element: 'earth', exclusiveGroup: 'elefield',
     spCost: [66, 62, 58, 54, 50], cooldown: [5, 5, 5, 5, 5],
     requires: { skillId: 'sa_seismicweapon', level: 2 },
     mult: [10, 14, 17, 19, 20],
@@ -1864,7 +1864,7 @@ const SKILLS = {
      使用者 2026-08-10 指定四個各換一種實際的防護效果，全部消耗 5,000 鋅幣。 */
   am_cp_helm: {
     id: 'am_cp_helm', name: '化學頭盔保護 Chemical Protection Helm', maxLv: 5,
-    type: 'buff_chemical',
+    type: 'buff_chemical', party: true,
     spCost: [20, 20, 20, 20, 20], cooldown: [5, 5, 5, 5, 5],
     requires: { skillId: 'am_pharmacy', level: 4 },
     zenyCost: [5000, 5000, 5000, 5000, 5000], alchemyCost: true,
@@ -1874,7 +1874,7 @@ const SKILLS = {
   },
   am_cp_shield: {
     id: 'am_cp_shield', name: '化學盾牌保護 Chemical Protection Shield', maxLv: 5,
-    type: 'buff_chemical', requiresEquip: 'shield',
+    type: 'buff_chemical', party: true, requiresEquip: 'shield',
     spCost: [25, 25, 25, 25, 25], cooldown: [5, 5, 5, 5, 5],
     requires: { skillId: 'am_cp_helm', level: 3 },
     zenyCost: [5000, 5000, 5000, 5000, 5000], alchemyCost: true,
@@ -1884,7 +1884,7 @@ const SKILLS = {
   },
   am_cp_armor: {
     id: 'am_cp_armor', name: '化學鎧甲保護 Chemical Protection Armor', maxLv: 5,
-    type: 'buff_chemical',
+    type: 'buff_chemical', party: true,
     spCost: [25, 25, 25, 25, 25], cooldown: [5, 5, 5, 5, 5],
     requires: { skillId: 'am_cp_shield', level: 3 },
     zenyCost: [5000, 5000, 5000, 5000, 5000], alchemyCost: true,
@@ -1894,7 +1894,7 @@ const SKILLS = {
   },
   am_cp_weapon: {
     id: 'am_cp_weapon', name: '化學武器保護 Chemical Protection Weapon', maxLv: 5,
-    type: 'buff_chemical',
+    type: 'buff_chemical', party: true,
     spCost: [30, 30, 30, 30, 30], cooldown: [5, 5, 5, 5, 5],
     requires: { skillId: 'am_cp_armor', level: 3 },
     zenyCost: [5000, 5000, 5000, 5000, 5000], alchemyCost: true,
@@ -2019,7 +2019,7 @@ const SKILLS = {
      兩張表都由使用者指定，不是官方的隨機 buff 清單——官方那份要隊伍系統才有意義。 */
   pa_gospel: {
     id: 'pa_gospel', name: '聖音 Gospel', maxLv: 10,
-    type: 'field_gospel', element: 'holy',
+    type: 'field_gospel', party: true, element: 'holy',
     spCost: [80, 80, 80, 80, 80, 100, 100, 100, 100, 100],
     cooldown: [60, 60, 60, 60, 60, 60, 60, 60, 60, 60],
     requires: { skillId: 'cr_trust', level: 8 },
@@ -2029,8 +2029,8 @@ const SKILLS = {
     tickSec: 10,
     duration: [60, 60, 60, 60, 60, 60, 60, 60, 60, 60],
     desc: '唱頌福音 60 秒，每 10 秒扣自身 HP 30/45 與 SP 20/35，'
-        + '並各以 55%~100% 機率對自己與全體敵人隨機發動一種效果。'
-        + '　自己：全素質+10／隨機補血 1~9999／異常狀態免疫／命中與迴避+20（各持續 10 秒）。'
+        + '並各以 55%~100% 機率對**全體隊友**與全體敵人隨機發動一種效果。'
+        + '　我方：全素質+10／隨機補血 1~9999／異常狀態免疫／命中與迴避+20（各持續 10 秒）。'
         + '　敵人：無視防禦與迴避的 1~9999 亂數傷害／黑暗／中毒／10 級挑釁／無事發生。'
   },
 
@@ -2176,7 +2176,7 @@ const SKILLS = {
      開隊伍後與冷豔舞姬同時掛就是兩份，10 秒內免傷兩次——桶本來就支援多筆。 */
   cg_moonlit: {
     id: 'cg_moonlit', name: '落花伴著月光下的水車小屋 Moonlit Water Mill', maxLv: 5,
-    type: 'buff_block_timed', exclusiveGroup: 'ensemble',
+    type: 'buff_block_timed', party: true, exclusiveGroup: 'ensemble',
     spCost: [30, 40, 50, 60, 70], cooldown: [20, 25, 30, 35, 40],
     requiresWeapon: 'instrument_whip',
     blockScope: 'attack', blockCdSec: 10,
@@ -2196,7 +2196,7 @@ const SKILLS = {
      使用者 2026-08-15 指定改成「被技能打到免傷一次，冷卻 10 秒」。 */
   cg_hermode: {
     id: 'cg_hermode', name: '海羅默德的手杖 Wand of Hermode', maxLv: 5,
-    type: 'buff_block_timed', exclusiveGroup: 'song',
+    type: 'buff_block_timed', party: true, exclusiveGroup: 'song',
     spCost: [20, 30, 40, 50, 60], cooldown: [10, 20, 30, 40, 50],
     requiresWeapon: 'instrument_whip',
     blockScope: 'skill', blockCdSec: 10,
@@ -2266,7 +2266,7 @@ const SKILLS = {
      所以做成「四個化學保護一次全掛」，代價是單樣的兩倍價錢。 */
   bc_fullprotection: {
     id: 'bc_fullprotection', name: '所有化學武器保護 Full Chemical Protection', maxLv: 5,
-    type: 'buff_chemical', chemKind: 'all',
+    type: 'buff_chemical', party: true, chemKind: 'all',
     spCost: [40, 40, 40, 40, 40], cooldown: [5, 5, 5, 5, 5],
     requires: [{ skillId: 'am_cp_weapon', level: 5 }, { skillId: 'am_cp_armor', level: 5 },
                { skillId: 'am_cp_shield', level: 5 }, { skillId: 'am_cp_helm', level: 5 }],
