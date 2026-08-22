@@ -5697,6 +5697,50 @@ function confirmRename() {
   if (renameCharacter(inp.value)) { renderTopBar(); renderCharacterTab(); closeRenameWindow(); }
 }
 
+/* ---------------- 雙欄清單的兩個體感修正（#139）----------------
+
+   倉庫與自動販賣是同一個形狀：左右兩欄，點一下就把東西搬到對面。
+   兩邊都是「每點一次就 `body.innerHTML = …` 整塊重畫」，於是：
+
+     1. 重畫會把 `.wh-list` 整個換掉，捲動位置歸零 —— 剛捲到一半點一樣東西，
+        清單就彈回最上面，要再捲一次才能點下一樣。
+     2. 搬過去的東西照筆劃排在對面清單的**中間**，看不到它跑哪去了，
+        想反悔還得先找。
+
+   東西一多就變成「點一下、捲半天」（使用者回報）。兩個都修：
+     · 重畫前後把每一欄的 scrollTop 記下來再放回去
+     · 剛搬過去的東西排到**對面那一欄**的最上面
+
+   `_listRecent` 只記在記憶體裡、關掉視窗就算了——這是操作動線的輔助，
+   不是玩家的設定，沒有必要進存檔。
+   **只標對面那一欄**：兩欄都標的話，來源欄剩下的那疊也會跳到頂端，
+   游標底下的那一列會換人，反而容易點錯。 */
+const _listRecent = { bag: {}, wh: {}, left: {}, right: {} };
+let _listRecentSeq = 0;
+function markListRecent(side, itemId) {
+  if (_listRecent[side]) _listRecent[side][itemId] = ++_listRecentSeq;
+}
+// 剛搬過來的排最前面，其餘照筆劃
+function sortRowsWithRecent(rows, side) {
+  const recent = _listRecent[side] || {};
+  return rows.sort((a, b) => {
+    const ra = recent[a.item] || 0, rb = recent[b.item] || 0;
+    if (ra !== rb) return rb - ra;
+    return (ITEMS[a.item].name || '').localeCompare(ITEMS[b.item].name || '', 'zh-Hant');
+  });
+}
+/* 重畫期間保住每一欄的捲動位置。依**出現順序**配對兩欄，
+   欄數不變（永遠是左右各一），所以用索引對就夠了。 */
+function keepListScroll(rootId, redraw) {
+  const root = document.getElementById(rootId);
+  const before = root ? Array.from(root.querySelectorAll('.wh-list')).map(el => el.scrollTop) : [];
+  redraw();
+  if (!root) return;
+  Array.from(root.querySelectorAll('.wh-list')).forEach((el, i) => {
+    if (before[i]) el.scrollTop = before[i];
+  });
+}
+
 /* ---------------- 跨角色倉庫 UI ---------------- */
 /* 倉庫做成「非阻斷浮動視窗」：外層鋪滿畫面但 pointer-events:none，
    只有中間的 frame 收事件。這樣戰鬥照跑、旁邊的分頁也照樣點得到，
@@ -5721,11 +5765,22 @@ function whAmount(have) {
   if (!whQty || isNaN(n) || n < 1) return have;
   return Math.min(n, have);
 }
-function whDeposit(itemId, have) { depositToWarehouse(itemId, whAmount(have)); renderWarehouse(); renderTopBar(); }
-function whWithdraw(itemId, have) { withdrawFromWarehouse(itemId, whAmount(have)); renderWarehouse(); renderTopBar(); }
+// 搬完把東西標在**對面那一欄**，重畫時它會排到最上面（#139）
+function whDeposit(itemId, have) { depositToWarehouse(itemId, whAmount(have)); markListRecent('wh', itemId); renderWarehouse(); renderTopBar(); }
+function whWithdraw(itemId, have) { withdrawFromWarehouse(itemId, whAmount(have)); markListRecent('bag', itemId); renderWarehouse(); renderTopBar(); }
 // 個體裝備一次就是一件，沒有數量的問題
-function whDepositInstance(instanceId) { depositInstanceToWarehouse(instanceId); renderWarehouse(); renderTopBar(); }
-function whWithdrawInstance(whInstanceId) { withdrawInstanceFromWarehouse(whInstanceId); renderWarehouse(); renderTopBar(); }
+function whDepositInstance(instanceId) {
+  const row = (state.inventory || []).find(r => r.instanceId === instanceId);
+  depositInstanceToWarehouse(instanceId);
+  if (row) markListRecent('wh', row.item);
+  renderWarehouse(); renderTopBar();
+}
+function whWithdrawInstance(whInstanceId) {
+  const row = (loadWarehouse().items || []).find(r => r.instanceId === whInstanceId);
+  withdrawInstanceFromWarehouse(whInstanceId);
+  if (row) markListRecent('bag', row.item);
+  renderWarehouse(); renderTopBar();
+}
 
 function showWarehousePanel() { openWarehouse(); }
 
@@ -5880,6 +5935,10 @@ function makeDraggable(handle, frame) {
 }
 
 function renderWarehouse() {
+  // 重畫會把 .wh-list 整塊換掉，捲動位置得自己接回來（#139）
+  keepListScroll('warehouse-body', renderWarehouseInner);
+}
+function renderWarehouseInner() {
   const body = document.getElementById('warehouse-body');
   if (!body || !state) return;
   const wh = loadWarehouse();
@@ -5888,14 +5947,14 @@ function renderWarehouse() {
   const bagAll = state.inventory.filter(r => ITEMS[r.item]);
   const whAll = (wh.items || []).filter(r => ITEMS[r.item]);
   const inCat = list => list.filter(r => invCategoryOf(r.item) === whCategory);
-  const applyFilters = list => {
+  const applyFilters = (list, side) => {
     let out = inCat(list);
     if (whSub !== 'all') out = out.filter(r => invSubOf(r.item) === whSub);
     if (whSearch) out = out.filter(r => (ITEMS[r.item].name || '').toLowerCase().includes(whSearch));
-    return out.sort((a, b) => (ITEMS[a.item].name || '').localeCompare(ITEMS[b.item].name || '', 'zh-Hant'));
+    return sortRowsWithRecent(out, side);
   };
-  const bagRows = applyFilters(bagAll);
-  const whRows = applyFilters(whAll);
+  const bagRows = applyFilters(bagAll, 'bag');
+  const whRows = applyFilters(whAll, 'wh');
 
   const catCount = {};
   INV_CATEGORIES.forEach(c => { catCount[c.key] = 0; });
@@ -5988,10 +6047,11 @@ function onAsSearch(v, ev) {
 function asAdd(itemId) {
   if (isItemLocked(itemId)) { showToast('🔒 已鎖定，無法加入自動販賣。'); return; }
   toggleAutoSellItem(itemId);
+  markListRecent('right', itemId);      // 剛移過去的排到右欄最上面（#139）
   renderAutoSellWindow();
 }
 // 把道具移出「要自動賣」（點右邊那格）
-function asRemove(itemId) { toggleAutoSellItem(itemId); renderAutoSellWindow(); }
+function asRemove(itemId) { toggleAutoSellItem(itemId); markListRecent('left', itemId); renderAutoSellWindow(); }
 // 取消全部自動賣：清空清單
 function asClearAll() {
   if (!state.autoSellConfig) state.autoSellConfig = { enabled: false, items: [] };
@@ -6028,6 +6088,9 @@ function closeAutoSellWindow() {
 }
 
 function renderAutoSellWindow() {
+  keepListScroll('autosell-body', renderAutoSellWindowInner);   // 同倉庫（#139）
+}
+function renderAutoSellWindowInner() {
   const body = document.getElementById('autosell-body');
   if (!body || !state) return;
   if (!state.autoSellConfig) state.autoSellConfig = { enabled: false, items: [] };
@@ -6044,10 +6107,10 @@ function renderAutoSellWindow() {
     .filter(r => ITEMS[r.item] && (ITEMS[r.item].sell || 0) > 0);
   const inCat = list => asCategory === 'all' ? list
     : list.filter(r => invCategoryOf(r.item) === asCategory);
-  const apply = list => {
+  const apply = (list, side) => {
     let out = inCat(list);
     if (asSearch) out = out.filter(r => (ITEMS[r.item].name || '').toLowerCase().includes(asSearch));
-    return out.sort((a, b) => (ITEMS[a.item].name || '').localeCompare(ITEMS[b.item].name || '', 'zh-Hant'));
+    return sortRowsWithRecent(out, side);
   };
 
   const listHtml = (rows, side) => rows.length
@@ -6092,12 +6155,12 @@ function renderAutoSellWindow() {
     <div class="wh-cols">
       <div class="wh-col">
         <div class="wh-col-head">不會自動賣（點一下移右邊 ▶）　${left.length}</div>
-        <div class="wh-list">${listHtml(apply(left), 'left')}</div>
+        <div class="wh-list">${listHtml(apply(left, 'left'), 'left')}</div>
       </div>
       <div class="wh-col">
         <div class="wh-col-head">要自動賣（點一下移回左邊 ✕）
           ${right.length ? `<button class="btn-small ghost" style="float:right" onclick="asClearAll()">取消全部</button>` : ''}　${right.length} 種</div>
-        <div class="wh-list">${listHtml(apply(right), 'right')}</div>
+        <div class="wh-list">${listHtml(apply(right, 'right'), 'right')}</div>
       </div>
     </div>
   `;

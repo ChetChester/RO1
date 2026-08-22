@@ -11026,6 +11026,25 @@ const NPC_SHOPS = {
   }
 };
 
+/* 箭矢**全部**上架（#139，使用者要求）。
+
+   上面那一行手寫的只有 8 種，而遊戲裡有 26 種——屬性箭（影子、無形、鐵鏽）、
+   異常狀態箭（昏迷、冰凍、睡眠、寧靜、詛咒、毒）、高階箭（神之金屬、破魔、精靈）
+   全都買不到，弓箭手想換屬性只能等它掉。
+
+   **用 type 掃而不是再手抄一份清單**：之後加新箭矢會自動上架，不會再出現
+   「資料裡有、商店沒有」這種只有玩家會發現的落差。寫進 `items` 而不是只在
+   getItems() 裡加，是因為圖鑑的「商店販售」那一行讀的是 `items`。 */
+(function stockAllArrows() {
+  const list = NPC_SHOPS.weapon.items;
+  const has = new Set(list);
+  Object.keys(ITEMS).forEach(id => {
+    if (ITEMS[id].type !== 'ammo' || has.has(id)) return;
+    list.push(id);
+    has.add(id);
+  });
+})();
+
 // NPC 商店開在地圖分頁裡（只有安全區的地圖才會有入口），不再有獨立的 NPC 分頁
 function openNpcShop(shopId) {
   const shop = NPC_SHOPS[shopId];
@@ -11048,6 +11067,8 @@ function openNpcShop(shopId) {
       const armorType = item.armorType || 'cloth';
       const typeNames = { cloth: '衣服', leather: '皮甲', shield: '盾牌', garment: '披風', footgear: '鞋子', accessory: '飾品' };
       category = typeNames[armorType] || armorType;
+    } else if (item.type === 'ammo') {
+      category = '箭矢';        // 26 種全上架（#139），不分一組會全部掉進「其他」
     } else if (item.aspdPct) {
       category = '攻速藥水';
     } else if (item.restoreSp) {
