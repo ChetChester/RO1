@@ -2366,6 +2366,7 @@ function recomputeDerived(fullHeal) {
   state.cardAllTargetDmgPct = getCardBonus('allTargetDmgPct');
   state.cardRangedDmgPct = getCardBonus('rangedDmgPct');
   state.cardIgnoreSizePenalty = getCardBonus('ignoreSizePenalty') > 0;
+  state.cardSplashAttack = getCardBonus('splashAttack') > 0;   // 巴風特卡片（#136）：普攻濺射
   state.cardBossDmgTakenPct = getCardBonus('bossDmgTakenPct');
   state.cardNormalDmgTakenPct = getCardBonus('normalDmgTakenPct');
   state.cardSpCostPct = getCardBonus('spCostPct');
@@ -6531,8 +6532,14 @@ function playerAttackInner() {
   /* 破防類減益（挑釁的 debuffDef、流氓的卸除盾牌／鎧甲）走 monDebuffDef()，
      跟技能那條路（defOf）共用同一支，兩邊看到的防禦值才會一致。 */
   const dcut = monDebuffDef(target);
-  let monDefVal = Math.round(monDef.def * ailDef * dcut);
-  let monSoftVal = Math.round((monDef.defSoft || 0) * ailDef * dcut);
+  /* 無視物防（#136）。**普攻這條路以前完全沒吃到**：`physDefIgnorePct()` 只長在
+     `defOf()` 裡，而 defOf 只有技能傷害在走，普攻是在這裡自己算防禦值的。
+     結果是 #127 接上的那一整批「無視○○系防禦力」的武器、以及達納托斯卡片的
+     「無視所有種族的防禦力」，對**普通攻擊一點作用都沒有**——而那批東西的
+     定位全都是普攻流。實測達納托斯卡片對 DEF 314 的怪只有 1.07 倍，補上之後才對得起說明。 */
+  const dig = Math.max(0, 1 - physDefIgnorePct(monDef) / 100);
+  let monDefVal = Math.round(monDef.def * ailDef * dcut * dig);
+  let monSoftVal = Math.round((monDef.defSoft || 0) * ailDef * dcut * dig);
 
   // 官方暴擊無視 DEF（也無視閃避）。以前暴擊照常吃減傷，等於只剩 1.5 倍那半邊效果，
   // 對高 DEF 的怪打起來跟普通攻擊差不了多少
@@ -6591,6 +6598,7 @@ function playerAttackInner() {
   /* 遺物的普攻效果（#113）。放在被動那一排之後、擊殺判定之前：
      濺射要能打死其他怪，而主目標的擊殺結算仍然由下面那段負責。 */
   tryRelicBlindProc();
+  tryCardSplashProc(dmg, target);      // 巴風特卡片（#136）：普攻打全場
   tryRelicSplashProc(dmg, target);
   tryRelicAspdProc();
   tryRelicMonkGatling(target, monDef);
@@ -12059,10 +12067,7 @@ function tryRelicBlindProc() {
         （tryCardAilments 那一整排只在主目標身上跑）
      3. 走 monsters 的**快照**迭代：killMonster 是用 filter 重新綁定陣列的，
         邊殺邊讀活陣列會漏怪 */
-function tryRelicSplashProc(dmg, mainTarget) {
-  if (!state.relicProcs || !state.relicProcs.mage) return;
-  if (!state.monsters || state.monsters.length < 2) return;
-  if (Math.random() * 100 >= RELIC_PROC_MAGE.splashChance) return;
+function applySplashDamage(dmg, mainTarget) {
   const list = state.monsters.slice();
   let n = 0;
   list.forEach(mon => {
@@ -12075,7 +12080,29 @@ function tryRelicSplashProc(dmg, mainTarget) {
     if (typeof showDamageFloatAt === 'function') showDamageFloatAt(mon.id, dmg, false);
     if (mon.hp <= 0) killMonster(md, mon);
   });
+  return n;
+}
+function tryRelicSplashProc(dmg, mainTarget) {
+  if (!state.relicProcs || !state.relicProcs.mage) return;
+  if (!state.monsters || state.monsters.length < 2) return;
+  if (Math.random() * 100 >= RELIC_PROC_MAGE.splashChance) return;
+  const n = applySplashDamage(dmg, mainTarget);
   if (n > 0) logMsg(`🔮 閃光術擴散！額外打中 ${n} 隻敵人，各 ${dmg} 點傷害。`, 'skill');
+}
+/* 巴風特卡片（#136）：普通攻擊變成濺射。
+
+   官方寫的是「除技能外的普通物理攻擊的範圍是 9 格」，代價是 HIT−10。
+   本作沒有格子，就照字面取「普攻打到場上每一隻」——這是那張卡**唯一**的好處，
+   之前只實作了 HIT−10 那半邊，等於一張純扣屬性的卡（使用者回報「沒有效果」）。
+
+   跟遺物的濺射共用同一支，所以那三條規則（不重擲命中暴擊、濺射不再觸發濺射、
+   走快照迭代）自動沿用。差別只有：遺物是 30% 機率，這張卡是**每一擊都會**——
+   官方的 9 格範圍不是機率性的。 */
+function tryCardSplashProc(dmg, mainTarget) {
+  if (!state.cardSplashAttack) return;
+  if (!state.monsters || state.monsters.length < 2) return;
+  const n = applySplashDamage(dmg, mainTarget);
+  if (n > 0) logMsg(`💥 攻擊範圍擴散！額外打中 ${n} 隻敵人，各 ${dmg} 點傷害。`);
 }
 
 /* ---- 騎士／武僧：被打時完全免傷 ----

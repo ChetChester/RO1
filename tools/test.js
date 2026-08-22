@@ -44,6 +44,7 @@ const SUITES = [
   'test_party_buffs.js', // 各職業的隊伍效果：party 旗標涵蓋面與互斥組分享（#130）
   'test_cardsets.js',    // 職業套卡：單張不白拿、湊齊才生效、套裝標籤（#134）
   'test_idle_offline.js',// 掛機結算：切分頁即離線、隊友也要算、收益紀錄（#135）
+  'test_cardfx_136.js',  // 巴風特濺射、達納托斯卡片、無視物防要對普攻生效（#136）
   'test_saveio.js',      // 存檔匯出/匯入：序列化、遷移、覆寫與失敗還原
 ];
 

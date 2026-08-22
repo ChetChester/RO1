@@ -3353,6 +3353,7 @@ function describeCardBonus(card) {
 function formatCardBonus(k, v, all) {
   if (CARD_BONUS_LABELS[k]) return `${CARD_BONUS_LABELS[k]} ${signed(v, CARD_PCT_KEYS.includes(k))}`;
   if (k === 'ignoreSizePenalty') return '無視體型修正（一律100%傷害）';
+  if (k === 'splashAttack') return '普通攻擊改為打擊場上全部敵人（不含技能）';
   if (k.startsWith('itemHeal_')) {
     const it = k.slice(9);
     return `使用${(ITEMS[it] || {}).name || it}時回復量 ${signed(v, 1)}`;
@@ -3413,6 +3414,12 @@ function formatCardBonus(k, v, all) {
   }
   if (k === 'magicReflectChance') return `${v}% 機率反射魔法攻擊`;
   // #17 第三批
+  // 物防這格以前沒有標籤，畫面上會直接印出 `defIgnorePct +100` 這種 key 名（#136）
+  if (k === 'defIgnorePct') return `無視物理防禦力 ${v}%`;
+  if (k.startsWith('defIgnoreRace_')) {
+    const r = k.slice(14);
+    return `無視${(RACE_LABELS && RACE_LABELS[r]) || r}系的物理防禦力 ${v}%`;
+  }
   if (k === 'mdefIgnorePct') return `無視魔法防禦力 ${v}%`;
   if (k === 'bossMdefIgnorePct') return `無視 BOSS 魔法防禦力 ${v}%`;
   if (k === 'spOnAttack') return v < 0 ? `每次攻擊消耗 ${-v} SP` : `每次攻擊回復 ${v} SP`;

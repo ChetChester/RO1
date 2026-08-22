@@ -1470,9 +1470,16 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-deep); co
   background: var(--bg-panel); border-radius: 4px; padding: 2px 7px;
 }
 .codex-detail-desc { font-size: 11px; color: var(--parchment-dim); margin-top: 10px; line-height: 1.5; }
+/* 區塊標題：標題在左、說明小字靠右。
+   **用 flex 不用 float**（#136）：說明小字本來是 `float: right`，
+   而浮動元素會溢出自己的區塊、插進後面的盒子裡。
+   後面的 `.codex-spots` 是 `display:flex`（一個 BFC），而 BFC 會**避開浮動**——
+   於是整個出沒地圖列被擠成幾十 px，地圖名縮成 0、「前往」鈕被推出可視範圍。
+   畫面越窄越嚴重（使用者 2026-08-22 回報的 MVP 圖鑑就是這個）。 */
 .codex-detail-sec {
   font-size: 11px; color: var(--gold-soft); margin: 12px 0 6px;
   border-bottom: 1px solid var(--line); padding-bottom: 4px;
+  display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
 }
 .codex-maps { display: flex; flex-wrap: wrap; gap: 5px; }
 .codex-maps span { font-size: 10px; color: var(--ink-dim); background: var(--bg-panel); border-radius: 4px; padding: 2px 6px; }
@@ -1491,7 +1498,7 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-deep); co
 .codex-drops .dim, .codex-srcs .dim, .codex-maps .dim, .codex-spots .dim { color: var(--ink-dim); font-size: 11px; }
 
 /* 出沒地／去哪裡打：一行一個去處，最右邊是可以直接過去的按鈕 */
-.codex-sec-hint { float: right; font-size: 10px; color: var(--ink-dim); font-weight: 400; }
+.codex-sec-hint { flex: none; text-align: right; font-size: 10px; color: var(--ink-dim); font-weight: 400; }
 .codex-spots { display: flex; flex-direction: column; gap: 4px; max-height: 240px; overflow-y: auto; }
 .codex-spot {
   display: flex; align-items: center; gap: 7px; padding: 4px 6px;
@@ -1509,7 +1516,8 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-deep); co
   flex: none; font-size: 9px; padding: 1px 5px; border-radius: 3px;
   color: var(--crimson-soft); border: 1px solid var(--crimson); white-space: nowrap;
 }
-.codex-mvp-note { display: block; margin: 2px 0 4px; }
+/* 這一行是獨立的整句說明，不是標題旁的小字：滿行靠左，也不跟著靠右 */
+.codex-mvp-note { display: block; text-align: left; margin: 2px 0 4px; line-height: 1.5; }
 .codex-go {
   flex: none; padding: 2px 8px; font-size: 10px; border-radius: 4px; cursor: pointer;
   background: rgba(212,175,55,0.12); border: 1px solid var(--gold-soft); color: var(--gold-soft);
