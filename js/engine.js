@@ -11176,6 +11176,48 @@ function removeItem(itemId, qty) {
   if (row.qty <= 0) owner.inventory = owner.inventory.filter(r => !(r.item === itemId && !r.instanceId));
   return true;
 }
+/* 一次開完手上所有同款箱子（#143）。
+
+   一個一個點：50 個箱子＝50 次點擊 + 50 行紀錄，卡冊那條鏈（未解封 → 卡冊 → 卡片）
+   更是要點三輪。這裡把「抽」跟「寫紀錄」拆開：抽照樣一個一個抽（每次都是獨立的機率，
+   不能用倍數近似），但紀錄合併成一份清單，不然戰鬥紀錄會被洗掉幾百行。
+
+   稀有的（MVP／迷你王卡、售價 5 萬以上）還是各自列一行——那是開箱子的重點，
+   混在「共 37 種」裡面等於沒看到。 */
+const BOX_OPEN_ALL_MAX = 999;              // 一次最多開這麼多，避免手滑卡住畫面
+function openAllBoxes(itemId) {
+  const def = ITEMS[itemId];
+  const row = state.inventory.find(r => r.item === itemId && !r.instanceId);
+  if (!def || !def.boxOpen || !row || row.qty < 1) return 0;
+  const pool = boxPool(def.boxOpen);
+  if (!pool || !pool.ids.length) { logMsg(`⚠️ ${def.name} 打不開（道具池是空的）。`); return 0; }
+
+  const n = Math.min(row.qty, BOX_OPEN_ALL_MAX);
+  const got = {};                           // itemId → 數量
+  const rare = [];
+  for (let i = 0; i < n; i++) {
+    const id = drawFromBox(def.boxOpen);
+    if (!id) break;
+    got[id] = (got[id] || 0) + 1;
+    const kind = CARDS[id] ? bossCardKind(id) : null;
+    if (kind === 'mvp') rare.push(`👑👑 MVP 卡片！${CARDS[id].name}`);
+    else if (kind === 'miniBoss') rare.push(`👑 迷你王卡片！${CARDS[id].name}`);
+    else if ((ITEMS[id].sell || 0) >= 50000) rare.push(`🎊🎊 大獎！${ITEMS[id].name}（${ITEMS[id].sell.toLocaleString()}z）`);
+  }
+  const opened = Object.values(got).reduce((a, b) => a + b, 0);
+  if (!opened) return 0;
+  removeItem(itemId, opened);
+  let worth = 0;
+  Object.entries(got).forEach(([id, q]) => { addItem(id, q); worth += (ITEMS[id].sell || 0) * q; });
+
+  logMsg(`📦 一次開啟 ${opened} 個${def.name}，開出 ${Object.keys(got).length} 種道具（總售價 ${worth.toLocaleString()}z）。`);
+  rare.slice(0, 10).forEach(txt => logMsg(txt));
+  if (rare.length > 10) logMsg(`　…另外還有 ${rare.length - 10} 件稀有道具。`);
+  if (row.qty > opened) logMsg(`　（一次最多開 ${BOX_OPEN_ALL_MAX} 個，還剩 ${row.qty - opened} 個。）`);
+  saveGame();
+  return opened;
+}
+
 function useItem(itemId) {
   const def = ITEMS[itemId];
   const row = state.inventory.find(r => r.item === itemId && !r.instanceId);
@@ -12450,6 +12492,70 @@ function setAutoSellEnabled(v) {
   state.autoSellReadyAt = Date.now() + AUTO_SELL_INTERVAL_MS;
   saveGame();
 }
+/* ---- 從別的存檔抄一份自動販賣清單（#140） ----
+
+   清單維持「每個角色一份」：補師要留的紅水，打手是純粹的負重。共用會互相打架。
+   但新角色從零開始一項一項點太累，而多數人只是想把主力那份搬過來，
+   所以不改成共用，只加一條「抄過來」的路。
+
+   抄之前要過濾三種東西，不然抄完的清單看起來有效、實際上是壞的：
+     · 本作已經沒有的 id（舊存檔留下的）——永遠賣不掉，只是佔位
+     · 賣不掉的（sell <= 0、遺物）——同上
+     · **這個角色鎖定的道具**——鎖定是角色自己的設定，
+       不能因為別人的清單裡有就被拖進去賣（賣出那一步雖然也會擋，
+       但清單上看得到卻永遠不賣，比直接不收更難懂） */
+function autoSellSyncCandidates() {
+  const out = [];
+  for (let i = 0; i < MAX_SLOTS; i++) {
+    if (String(i) === String(currentSlot)) continue;
+    let s = null;
+    try { s = JSON.parse(localStorage.getItem(getSlotKey(i)) || 'null'); } catch (e) { s = null; }
+    if (!s || !s.jobId || !s.name) continue;
+    const job = JOB_TREE[s.jobId];
+    const items = (s.autoSellConfig && Array.isArray(s.autoSellConfig.items)) ? s.autoSellConfig.items : [];
+    out.push({
+      slot: String(i), name: s.name, jobId: s.jobId,
+      jobName: job ? job.name : s.jobId, jobIcon: job ? job.icon : '❓',
+      baseLevel: s.baseLevel || 1,
+      count: items.filter(id => ITEMS[id]).length,
+    });
+  }
+  return out;
+}
+// 讀那一格的清單，濾成「這個角色現在真的能用」的 id
+function readAutoSellList(slot) {
+  let s = null;
+  try { s = JSON.parse(localStorage.getItem(getSlotKey(slot)) || 'null'); } catch (e) { s = null; }
+  const raw = (s && s.autoSellConfig && Array.isArray(s.autoSellConfig.items)) ? s.autoSellConfig.items : [];
+  const items = []; let locked = 0, dropped = 0;
+  raw.forEach(id => {
+    const def = ITEMS[id];
+    if (!def || def.type === 'relic' || !(def.sell > 0)) { dropped++; return; }
+    if (isItemLocked(id)) { locked++; return; }
+    if (items.indexOf(id) < 0) items.push(id);
+  });
+  return { ok: !!s, items, locked, dropped };
+}
+// mode: 'replace' 整份換掉／'merge' 併進現有清單（不動原本已選的）
+function syncAutoSellFrom(slot, mode) {
+  const r = readAutoSellList(slot);
+  if (!r.ok) { logMsg('⚠️ 那格存檔讀不到資料。'); return false; }
+  if (!state.autoSellConfig) state.autoSellConfig = { enabled: false, items: [] };
+  const before = state.autoSellConfig.items.slice();
+  const next = mode === 'merge'
+    ? before.concat(r.items.filter(id => before.indexOf(id) < 0))
+    : r.items.slice();
+  state.autoSellConfig.items = next;
+  const added = next.filter(id => before.indexOf(id) < 0).length;
+  const removed = before.filter(id => next.indexOf(id) < 0).length;
+  logMsg(`🏷️ 自動販賣清單已${mode === 'merge' ? '合併' : '覆蓋'}：共 ${next.length} 種`
+    + `（新增 ${added}、移除 ${removed}）`
+    + (r.locked ? `，跳過 ${r.locked} 種已鎖定` : '')
+    + (r.dropped ? `，略過 ${r.dropped} 種無效` : ''));
+  saveGame();
+  return true;
+}
+
 // 立即執行一次自動販賣（不受30秒週期限制，並重新計時）
 function runAutoSellNow() {
   const sold = autoSellSelectedItems();

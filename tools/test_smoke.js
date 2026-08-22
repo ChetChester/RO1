@@ -342,6 +342,55 @@ g.state.rebirthPath = null; g.state.rebirthCount = 0;
   });
 }
 
+/* ---- 資料互相引用的道具都要存在（#142）----
+
+   #142 把一萬四千多筆「沒人參照」的道具從 ITEMS 刪掉了。判定靠掃原始碼字串，
+   漏判一筆就會刪到還在用的東西——而那不會噴錯，只會變成掉落表掉出 undefined、
+   套裝永遠湊不齊、配方按下去沒反應。所以反過來從引用端驗一次。
+
+   已知本來就斷的兩筆（刪之前就斷了，不是刪出來的）：
+     · 潛水套裝的 oxygen_bomb_k —— ITEMS 裡從來沒有這件，這套永遠湊不齊
+     · 某張卡的 pool=food
+   修好之後把下面的 KNOWN 一起清掉。 */
+{
+  const KNOWN = ['oxygen_bomb_k', 'food'];
+  const bad = [];
+  const chk = (where, id) => {
+    if (typeof id !== 'string' || !id || g.ITEMS[id] || KNOWN.includes(id)) return;
+    bad.push(where + ' → ' + id);
+  };
+  Object.values(g.MONSTERS).forEach(m => (m.drops || []).forEach(d => chk('掉落/' + m.id, d.item)));
+  Object.entries(g.MONSTER_CARD_DROPS || {}).forEach(([k, v]) => chk('卡片掉落/' + k, v && v.card));
+  Object.entries(g.NPC_SHOPS).forEach(([k, sh]) => (sh.items || []).forEach(i => chk('商店/' + k, i)));
+  Object.entries(g.EQUIP_SETS || {}).forEach(([k, st]) => (st.items || []).forEach(i => chk('套裝/' + k, i)));
+  Object.entries(g.MATERIAL_CRAFT_RECIPES || {}).forEach(([k, r]) => {
+    chk('配方產出/' + k, r.result);
+    (r.consume || []).forEach(c => chk('配方材料/' + k, c.item));
+  });
+  Object.keys(g.CARDS).forEach(id => chk('卡片', id));
+  t.eq('掉落／商店／套裝／配方引用到的道具都還在', bad.length, 0, bad.slice(0, 6).join('、'));
+  // 反過來也要驗：ITEMS 沒被砍成空的
+  t.ok('ITEMS 還有東西（砍孤兒沒砍過頭）', Object.keys(g.ITEMS).length > 2000,
+    Object.keys(g.ITEMS).length + ' 筆');
+  t.ok('圖鑑池沒有縮水', g.getCodexPool().items.length > 1400, g.getCodexPool().items.length + ' 件');
+  /* 卡冊、精煉材料、隊友的預設補品這些是**用不加引號的物件鍵**寫的
+     （ALBUM_ITEMS = { old_card_album: 10, ... }）。#142 第一版只掃帶引號的字串，
+     這 9 本卡冊整批被當成孤兒刪掉，未解封的卡冊開出來一片空白也不會噴錯。 */
+  const byKey = { ALBUM_ITEMS: g.ALBUM_ITEMS, ALBUM_SLOT: g.ALBUM_SLOT, RELIC_ITEMS: g.RELIC_ITEMS };
+  Object.entries(byKey).forEach(([n, v]) => {
+    // 沒掛出來就要**失敗**，不能靜靜跳過——跳過的話這個守門員等於不存在
+    t.ok(n + ' 掛得到（harness 的 EXPOSE_CONST 要有）', !!v);
+    const gone = v ? Object.keys(v).filter(id => !g.ITEMS[id]) : [];
+    t.eq(n + ' 的鍵在 ITEMS 裡都找得到', gone.length, 0, gone.slice(0, 4).join('、'));
+  });
+  // 箱子開得出東西（池子被砍空的話開箱只會是一片空白）
+  ['any', 'violet', 'valuable', 'album', 'card'].forEach(k => {
+    const pl = g.boxPool(k);
+    t.ok('箱子 ' + k + ' 的池子不是空的', !!pl && pl.ids.length >= (k === 'album' ? 5 : 100),
+      pl ? pl.ids.length + ' 件' : '沒有這個池');
+  });
+}
+
 /* ---- 結果 ---- */
 t.eq('全庫掃描零例外', errs.length, 0);
 if (errs.length) {

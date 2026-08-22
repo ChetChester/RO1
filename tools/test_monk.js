@@ -91,7 +91,13 @@ function learnChain(g, pairs) {
      這裡**不驗拳套有幾把**——那是把資料檔抄一遍，#82 刪掉兩件孤兒裝備就會誤報。 */
   const all = Object.keys(g.ITEMS).filter(x => g.ITEMS[x].weaponCat === 'knuckle');
   const blocked = all.filter(x => g.equipBlockReason(x) && !/等級/.test(g.equipBlockReason(x)));
-  t.ok('拳套資料還在（至少 50 把）', all.length >= 50, '實際 ' + all.length);
+  /* 這裡本來寫「至少 50 把」，#142 把一萬四千筆沒人參照的道具刪掉之後只剩 18 把
+     ——那 32 把本來就沒有任何怪會掉、沒有商店賣，武僧一輩子拿不到。
+     所以改驗**穿得到的拳套涵蓋整條升級路**，而不是庫存數字。 */
+  const lv = all.map(x => g.ITEMS[x].reqLevel || 1).sort((a, b) => a - b);
+  t.ok('拳套還有得穿', all.length >= 10, '實際 ' + all.length + ' 把');
+  t.ok('低等就有拳套可用', lv[0] <= 20, '最低需求等級 ' + lv[0]);
+  t.ok('高等也有拳套可換', lv[lv.length - 1] >= 100, '最高需求等級 ' + lv[lv.length - 1]);
   t.eq('沒有任何拳套因職業被擋下', blocked.length, 0);
   // 弓拿不動（攻速表沒有那一列）
   t.ok('武僧拿不動弓', !g.jobCanUseWeapon('monk', Object.keys(g.ITEMS).find(x => g.ITEMS[x].weaponCat === 'bow')));

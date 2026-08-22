@@ -4412,6 +4412,7 @@ function renderInventoryTab() {
               title="${r.need} 個合成 1 個${ITEMS[r.to].name}">合成(${row.qty}/${r.need})</button>`;
           })()}
           ${canUse ? `<button class="btn-small" onclick="useItem('${row.item}');renderInventoryTab();">${def.type === 'consumable' ? '使用' : '裝備'}</button>` : ''}
+          ${def.boxOpen && row.qty > 1 ? `<button class="btn-small" onclick="openAllBoxes('${row.item}');renderInventoryTab();renderTopBar();" title="手上這 ${row.qty} 個一次開完，紀錄會合併成一份清單">全部開啟(${row.qty})</button>` : ''}
           ${locked || def.type === 'relic' ? '' : `<button class="btn-small ghost" onclick="sellItem('${row.item}',1);renderInventoryTab();renderTopBar();">賣出(${def.sell})</button>`}
           ${!locked && def.type !== 'relic' && row.qty > 1 ? `<button class="btn-small ghost" onclick="sellItemAll('${row.item}');renderInventoryTab();renderTopBar();">全部賣出</button>` : ''}
           <button class="btn-small ghost" onclick="depositToWarehouse('${row.item}',1);renderInventoryTab();renderTopBar();">存倉庫</button>
@@ -6070,6 +6071,7 @@ function showAutoSellWindow() {
         <header id="autosell-drag" class="wh-header">
           <div><h3>🏷️ 自動販賣</h3><span class="wh-sub">左邊不會賣，點一下移右邊＝開始自動賣（每30秒）</span></div>
           <div class="wh-header-btns">
+            <button class="btn-small ghost" onclick="showAutoSellSyncWindow()" title="從別的存檔抄一份清單過來">⇄ 同步清單</button>
             <button class="btn-small ghost" onclick="runAutoSellNow();renderAutoSellWindow();renderTopBar();" title="立即賣出右邊選定道具">立即賣出</button>
             <button class="btn-small ghost" onclick="closeAutoSellWindow()">✕ 關閉</button>
           </div>
@@ -6085,6 +6087,74 @@ function showAutoSellWindow() {
 function closeAutoSellWindow() {
   const win = document.getElementById('autosell-window');
   if (win) win.classList.add('hidden');
+  closeAutoSellSyncWindow();          // 子視窗不能留在畫面上（#140）
+}
+
+/* ---- 同步別的存檔的清單（#140）----
+   做成**獨立的小浮動視窗**，而不是塞進自動販賣的 body：
+   body 每點一次道具就整塊重畫，塞進去的話點一下道具選單就消失了。 */
+function showAutoSellSyncWindow() {
+  let win = document.getElementById('assync-window');
+  if (!win) {
+    win = document.createElement('div');
+    win.id = 'assync-window';
+    win.className = 'wh-window assync-window';
+    win.innerHTML = `<div id="assync-frame" class="wh-frame assync-frame">
+        <header id="assync-drag" class="wh-header">
+          <div><h3>⇄ 同步自動販賣清單</h3><span class="wh-sub">從別的存檔抄一份過來</span></div>
+          <div class="wh-header-btns">
+            <button class="btn-small ghost" onclick="closeAutoSellSyncWindow()">✕ 關閉</button>
+          </div>
+        </header>
+        <div id="assync-body" class="wh-body"></div>
+      </div>`;
+    document.body.appendChild(win);
+    makeDraggable(document.getElementById('assync-drag'), document.getElementById('assync-frame'));
+  }
+  win.classList.remove('hidden');
+  renderAutoSellSyncWindow();
+}
+function closeAutoSellSyncWindow() {
+  const win = document.getElementById('assync-window');
+  if (win) win.classList.add('hidden');
+}
+function renderAutoSellSyncWindow() {
+  const body = document.getElementById('assync-body');
+  if (!body || !state) return;
+  const list = autoSellSyncCandidates();
+  const cur = (state.autoSellConfig && state.autoSellConfig.items) ? state.autoSellConfig.items.length : 0;
+  const rows = list.map(c => `
+      <div class="assync-row">
+        <span class="assync-who">${c.jobIcon} ${c.name}
+          <span class="assync-sub">${c.jobName}・Lv${c.baseLevel}</span></span>
+        <span class="assync-n">${c.count} 種</span>
+        <span class="assync-btns">
+          <button class="btn-small" ${c.count ? '' : 'disabled'}
+            onclick="doAutoSellSync('${c.slot}','merge')" title="保留目前選好的，只補上他有你沒有的">合併</button>
+          <button class="btn-small ghost" ${c.count ? '' : 'disabled'}
+            onclick="doAutoSellSync('${c.slot}','replace')" title="整份換成他的">覆蓋</button>
+        </span>
+      </div>`).join('');
+  body.innerHTML = `
+    <div class="wh-hint">自動販賣清單<b>每個角色各一份</b>（補師要留的紅水，打手只是負重）。
+      這裡可以把別的存檔那份抄過來。<br>
+      目前這個角色選了 <b>${cur}</b> 種；<b>已鎖定的道具不會被抄進來</b>。</div>
+    ${list.length ? `<div class="assync-list">${rows}</div>`
+      : '<div class="empty-hint">其他存檔格裡沒有角色。</div>'}`;
+}
+function doAutoSellSync(slot, mode) {
+  if (mode === 'replace') {
+    const c = autoSellSyncCandidates().find(x => x.slot === String(slot));
+    const cur = (state.autoSellConfig && state.autoSellConfig.items) ? state.autoSellConfig.items.length : 0;
+    if (!confirm(`要用「${c ? c.name : '存檔' + slot}」的清單覆蓋嗎？
+
+`
+      + `⚠️ 目前選好的 ${cur} 種會被整份換掉（無法復原）。`)) return;
+  }
+  if (!syncAutoSellFrom(String(slot), mode)) return;
+  closeAutoSellSyncWindow();
+  renderAutoSellWindow();
+  renderTopBar();
 }
 
 function renderAutoSellWindow() {

@@ -125,7 +125,8 @@ function boot(opts) {
     'STAT_RESET_COST_ZENY',
     'ALLY_MONSTER_TARGET_PLAYER_PCT',
     'OFFLINE_LOG_MAX', 'OFFLINE_LOG_ITEMS_MAX', 'OFFLINE_MIN_MS', 'OFFLINE_CAP_MS',
-    'MAX_SLOTS', 'SAVE_KEY_PREFIX'];
+    'MAX_SLOTS', 'SAVE_KEY_PREFIX',
+    'ALBUM_ITEMS', 'ALBUM_SLOT', 'BOX_POOLS', 'BOX_OPEN_ALL_MAX'];
   src += '\n;globalThis.__getState = () => state;'
        + '\nglobalThis.__setState = v => { state = v; };'
        + '\nglobalThis.__consts = { '

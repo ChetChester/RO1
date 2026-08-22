@@ -1683,6 +1683,20 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-deep); co
 .wh-row-name { flex: 1; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .wh-row-qty { color: var(--gold-soft); font-variant-numeric: tabular-nums; flex-shrink: 0; }
 
+/* 同步自動販賣清單的小視窗（#140）：疊在自動販賣視窗上面，所以 z-index 要更高 */
+.assync-window { z-index: 74; }
+.assync-frame { width: min(92vw, 480px); height: auto; max-height: min(80vh, 560px); }
+.assync-list { display: flex; flex-direction: column; gap: 6px; }
+.assync-row {
+  display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+  background: var(--bg-panel-2); border: 1px solid var(--line); border-radius: 8px; font-size: 12px;
+}
+.assync-who { flex: 1; min-width: 0; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.assync-sub { color: var(--ink-dim); font-size: 11px; margin-left: 6px; }
+.assync-n { color: var(--gold-soft); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.assync-btns { display: flex; gap: 4px; flex-shrink: 0; }
+.assync-btns button[disabled] { opacity: .4; cursor: not-allowed; }
+
 /* ---------------- 道具鎖定 / 裝備比較 ---------------- */
 .inv-row.locked { border-color: var(--gold); background: #262b45; }
 .inv-lock-tag { font-size: 11px; }
