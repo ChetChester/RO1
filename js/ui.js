@@ -186,7 +186,9 @@ function showSlotSelect() {
 
 function backToTitle() {
   saveGame();
-  if (typeof tickTimer !== 'undefined' && tickTimer) { clearInterval(tickTimer); tickTimer = null; }
+  // 走 stopLoop() 而不是自己清計時器：那支還會把 loopRunning() 的旗標放下來（#135），
+  // 少了那一步，切分頁的處理會以為迴圈還在跑，回來就不重啟了
+  stopLoop();
   stopAnim();
   if (animCanvas) animCanvas.style.display = 'none';
   const img = document.getElementById('player-img');
@@ -327,7 +329,8 @@ function continueGame() {
     if (loadGame()) {
       const off = computeOfflineProgress();
       enterGame();
-      if (off) showOfflineModal(off);
+      // 彈窗開不開看勾選，紀錄一律留（#135）
+      deliverOfflineResult(off);
     } else {
       console.error('Failed to load game');
     }
@@ -386,6 +389,15 @@ function enterGame() {
   initVolumeSliders();
   const muteBtn = document.getElementById('btn-mute');
   if (muteBtn) muteBtn.textContent = state.muted ? '🔇' : '🔊';
+  /* 掛機收益面板每次進場都要收起來重置（#135）：換存檔格時面板若留在開啟狀態，
+     裡面會是上一格的紀錄。勾選框則要讀這一格自己的設定。 */
+  idleReportOpen = false;
+  _idleReportUnseen = false;
+  const rp = document.getElementById('idle-report-panel');
+  if (rp) rp.classList.add('hidden');
+  const optBox = document.getElementById('opt-offline-modal');
+  if (optBox) optBox.checked = showOfflineReport();
+  refreshIdleReportBtn();
   playMapMusic();
   showScreen('screen-game');
 }
@@ -525,6 +537,8 @@ let allyPanelOpen = false;
 function toggleAllyPanel() {
   allyPanelOpen = !allyPanelOpen;
   document.getElementById('ally-panel').classList.toggle('hidden', !allyPanelOpen);
+  // 兩個浮動面板釘在同一個位置，同時開會疊在一起（#135）
+  if (allyPanelOpen && idleReportOpen) toggleIdleReport();
   if (allyPanelOpen) renderAllyPanel();
 }
 function allyAction(fn, slot) {
@@ -4974,16 +4988,22 @@ function showOfflineModal(off) {
     document.getElementById('offline-modal').classList.remove('hidden');
     return;
   }
-  const itemsHtml = off.itemsGained.length
-    ? off.itemsGained.map(r => `<span class="offline-item">${ITEMS[r.item].icon} ${ITEMS[r.item].name} x${r.qty}</span>`).join('')
+  // 貴重的排前面（#135）：掛一整晚有上百種掉落，卡片不該被藥草擠到最下面
+  const spoils = sortSpoilsByValue(off.itemsGained);
+  const itemsHtml = spoils.length
+    ? spoils.map(r => `<span class="offline-item">${ITEMS[r.item].icon} ${ITEMS[r.item].name} x${r.qty}</span>`).join('')
     : '<span class="offline-item-empty">（沒有掉落物）</span>';
 
   const levelUpHtml = (off.baseLevelUps > 0 || off.jobLevelUps > 0)
     ? `<div class="offline-levelup">🎉 基礎等級 +${off.baseLevelUps}　職業等級 +${off.jobLevelUps}</div>`
     : '';
+  // 隊友有出力的話寫出來——#135 之前隊友的傷害根本沒算進離線收益
+  const partyHtml = off.allyCount
+    ? `<p class="offline-duration">🤝 ${off.allyCount} 位隊友一起參戰。</p>` : '';
 
   document.getElementById('offline-modal-body').innerHTML = `
     <p class="offline-duration">離開了 <strong>${formatDuration(off.elapsedMs)}</strong>，你的角色在原地持續戰鬥了 ${off.kills} 場戰鬥：</p>
+    ${partyHtml}
     ${levelUpHtml}
     <div class="offline-stats-grid">
       <div>經驗值 +${off.expGained}</div>
@@ -4997,6 +5017,144 @@ function showOfflineModal(off) {
 function closeOfflineModal() {
   document.getElementById('offline-modal').classList.add('hidden');
 }
+
+/* ---------------- 掛機收益：切分頁即離線（#135）----------------
+
+   使用者回報：掛單隻時切走再回來畫面會爆衝，組隊時反而完全沒有收益。
+   成因是背景分頁的計時器被瀏覽器降頻，而 gameTick 的兩半對降頻反應不同
+   （玩家的攻擊會補、慢心跳裡的隊友一次都不補，詳見 engine.js 的 stopLoop）。
+
+   解法是承認「分頁切走就是離線」：隱藏時停掉主迴圈並蓋上時間戳，
+   回來時交給 computeOfflineProgress() 結算再重啟。這樣：
+     · 不會爆衝——回來時累積器是歸零的（結算尾端會重設）
+     · 組隊算得到——離線結算現在會把隊友的傷害一起抽樣
+     · 那段時間不會兩頭落空（以前降頻的 tick 還在存檔，把 lastActiveAt 一直往前推，
+       等於既沒真的打也不算離線）
+------------------------------------------------- */
+function showOfflineReport() {
+  // 預設顯示：舊存檔沒有這個欄位時維持原本的行為
+  return !(state && state.showOfflineModal === false);
+}
+function setShowOfflineModal(on) {
+  if (!state) return;
+  state.showOfflineModal = !!on;
+  saveGame();
+}
+/* 結算結果的統一出口：不管是開遊戲讀檔還是切分頁回來，都走這裡。
+   紀錄一律留（見 engine.js 的 pushOfflineLog 說明），彈窗才看勾選。 */
+const IDLE_SETTLE_MIN_MS = 5000;    // 切分頁：超過 5 秒就結算，收益不蒸發
+function deliverOfflineResult(off) {
+  if (!off) return;
+  /* 收益已經在 computeOfflineProgress() 裡發出去了，這裡只決定「要不要留痕跡」。
+     太短的（快速切一下分頁）不記也不彈：不然頻繁切換的人三筆紀錄全是
+     「離開 0 分鐘」，那顆按鈕就變成裝飾品，剛好跟使用者要的相反。 */
+  if (off.elapsedMs < OFFLINE_MIN_MS) { saveGame(); return; }
+  pushOfflineLog(off);
+  if (showOfflineReport()) showOfflineModal(off);
+  else {
+    _idleReportUnseen = true;
+    showToast(`📈 掛機收益已記錄：經驗 +${(off.expGained || 0).toLocaleString()}`);
+  }
+  refreshIdleReportBtn();
+  if (idleReportOpen) renderIdleReport();
+  saveGame();
+}
+
+let _idleReportUnseen = false;
+let idleReportOpen = false;
+
+function toggleIdleReport() {
+  idleReportOpen = !idleReportOpen;
+  const el = document.getElementById('idle-report-panel');
+  if (el) el.classList.toggle('hidden', !idleReportOpen);
+  if (idleReportOpen) {
+    // 兩個浮動面板釘在同一個位置，同時開會疊在一起
+    if (typeof allyPanelOpen !== 'undefined' && allyPanelOpen) toggleAllyPanel();
+    _idleReportUnseen = false;
+    const cb = document.getElementById('opt-offline-modal');
+    if (cb) cb.checked = showOfflineReport();
+    renderIdleReport();
+  }
+  refreshIdleReportBtn();
+}
+function refreshIdleReportBtn() {
+  const btn = document.getElementById('btn-idle-report');
+  if (btn) btn.classList.toggle('has-new', _idleReportUnseen && !idleReportOpen);
+}
+function formatStamp(ms) {
+  const d = new Date(ms);
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+function renderIdleReport() {
+  const el = document.getElementById('idle-report-body');
+  if (!el) return;
+  const list = (typeof offlineLogList === 'function' ? offlineLogList() : []) || [];
+  if (!list.length) {
+    el.innerHTML = `<div class="idle-rec-empty">還沒有紀錄。<br>切到別的分頁或關掉遊戲，回來就會結算一次。</div>`;
+    return;
+  }
+  el.innerHTML = list.map(r => {
+    if (r.safeTown) {
+      return `<div class="idle-rec">
+        <div class="idle-rec-when">${formatStamp(r.at)}</div>
+        <div class="idle-rec-head">離開 ${formatDuration(r.elapsedMs)}　🏘️ 待在安全區</div>
+        <div class="idle-rec-grid"><div>沒有戰鬥收穫</div></div>
+      </div>`;
+    }
+    const items = (r.itemsGained || []).length
+      ? (r.itemsGained || []).map(x => ITEMS[x.item]
+          ? `<span class="offline-item">${ITEMS[x.item].icon} ${ITEMS[x.item].name} x${x.qty}</span>` : '').join('')
+        + (r.itemsMore ? `<span class="offline-item">…還有 ${r.itemsMore} 種</span>` : '')
+      : '<span class="offline-item-empty">（沒有掉落物）</span>';
+    const lv = (r.baseLevelUps > 0 || r.jobLevelUps > 0)
+      ? `<div class="idle-rec-lv">🎉 等級 +${r.baseLevelUps}　職業 +${r.jobLevelUps}</div>` : '';
+    const party = r.allyCount ? `　🤝 ${r.allyCount} 位隊友` : '';
+    return `<div class="idle-rec">
+      <div class="idle-rec-when">${formatStamp(r.at)}</div>
+      <div class="idle-rec-head">離開 ${formatDuration(r.elapsedMs)}　${r.mapName || ''}${party}</div>
+      <div class="idle-rec-grid">
+        <div>擊殺 ${(r.kills || 0).toLocaleString()}</div>
+        <div>鋅幣 +${(r.goldGained || 0).toLocaleString()}</div>
+        <div>經驗 +${(r.expGained || 0).toLocaleString()}</div>
+        <div>職業 +${(r.jobExpGained || 0).toLocaleString()}</div>
+      </div>
+      ${lv}
+      <div class="idle-rec-items">${items}</div>
+    </div>`;
+  }).join('');
+}
+
+/* 分頁可見度。**只有真的在遊戲畫面裡才處理**：還在標題／創角畫面時
+   state 是 null 或還沒進場，停迴圈與結算都沒有意義。 */
+document.addEventListener('visibilitychange', () => {
+  if (!state || typeof stopLoop !== 'function') return;
+  const inGame = document.getElementById('screen-game').classList.contains('active');
+  if (!inGame) return;
+  if (document.hidden) {
+    stopLoop();
+    state.lastActiveAt = Date.now();
+    saveGame();
+  } else if (!loopRunning()) {
+    let off = null;
+    try { off = computeOfflineProgress(IDLE_SETTLE_MIN_MS); }
+    catch (e) { console.error('切回分頁結算失敗', e); }
+    /* 沒結算（離開不到 5 秒）時**也要把時間錨點推回現在**。
+       結算那條路的尾端本來就會重設這三格，但 return null 那條不會——
+       不重設的話 gameTick 會看到「距離上次攻擊 4.9 秒」，一口氣把那些刀補完，
+       正是要修掉的爆衝畫面。 */
+    if (!off) {
+      state.lastAttackTime = Date.now();
+      state.attackAccumulator = 0;
+      state.lastMonsterAttackTime = Date.now();
+      (state.monsters || []).forEach(m => { m.lastAttackTime = Date.now(); });
+      state._lastSlowTick = Date.now();
+    }
+    startLoop();
+    deliverOfflineResult(off);
+    renderAll();
+  }
+});
 
 /* ---------------- 手動存檔 ---------------- */
 function manualSave() {

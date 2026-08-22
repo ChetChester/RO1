@@ -123,7 +123,8 @@ function boot(opts) {
     'RELIC_PROC_KNIGHT', 'RELIC_PROC_MONK', 'RELIC_PROC_PRIEST', 'RELIC_PROC_BLACKSMITH',
     'JOB3_EXP_L1', 'JOB3_EXP_SEGS', 'JOB_EXP_COEF', 'BASE_EXP_L100', 'BASE_EXP_SEGS',
     'STAT_RESET_COST_ZENY',
-    'ALLY_MONSTER_TARGET_PLAYER_PCT'];
+    'ALLY_MONSTER_TARGET_PLAYER_PCT',
+    'OFFLINE_LOG_MAX', 'OFFLINE_LOG_ITEMS_MAX', 'OFFLINE_MIN_MS', 'OFFLINE_CAP_MS'];
   src += '\n;globalThis.__getState = () => state;'
        + '\nglobalThis.__setState = v => { state = v; };'
        + '\nglobalThis.__consts = { '

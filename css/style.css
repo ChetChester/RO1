@@ -1843,3 +1843,59 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-deep); co
 .legal-list > li { margin-bottom: 8px; }
 .legal-list > li > b { color: var(--ink); }
 .legal-list p { margin: 3px 0; font-size: 12px; line-height: 1.65; color: var(--ink-dim); }
+
+/* ---------------- 掛機收益（#135）----------------
+   跟隊友面板同一套結構：按鈕釘在戰鬥區右上角（靜音鈕旁邊），
+   內容是浮動面板而不是 modal-overlay——開著的時候遊戲照跑，
+   這正是使用者要的「不影響掛機可以查看」。 */
+/* 按鈕釘在標頭的音量滑桿右邊（使用者指定），尺寸是靜音鈕的兩倍：
+   掛機遊戲的玩家一天會點它很多次，不該跟一堆 34px 的小鈕混在一起。
+   position 是 static（靠 hud-right 的 flex 排），但 ::after 的金點要 relative 才釘得住。 */
+.btn-idle-report {
+  position: relative; flex: none;
+  width: 68px; height: 68px; border-radius: 50%;
+  background: rgba(18,20,28,0.65); border: 1px solid var(--gold);
+  color: var(--gold-soft); font-size: 30px; line-height: 1; cursor: pointer;
+}
+.btn-idle-report:hover { background: rgba(212,175,55,0.25); color: var(--ink); }
+/* 有沒看過的紀錄時點一下金點，不然玩家不知道裡面有東西 */
+.btn-idle-report.has-new::after {
+  content: ''; position: absolute; top: 6px; right: 6px;
+  width: 14px; height: 14px; border-radius: 50%; background: var(--gold);
+  box-shadow: 0 0 6px var(--gold);
+}
+/* 外層不捲、只有 body 捲：跟隊友面板同一個理由（標題與勾選要釘住） */
+.idle-report-panel {
+  position: absolute; top: 52px; right: 12px; z-index: 6;
+  width: 320px; max-height: calc(100% - 76px);
+  display: flex; flex-direction: column; overflow: hidden;
+  padding: 10px 12px; border-radius: 10px;
+  background: rgba(18,20,28,0.94); border: 1px solid var(--gold);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+}
+.idle-report-head {
+  flex: none;
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 12px; color: var(--gold-soft); margin-bottom: 6px;
+}
+.idle-report-opt {
+  flex: none; display: flex; align-items: center; gap: 6px;
+  font-size: 11px; color: var(--ink-dim); cursor: pointer;
+  padding-bottom: 8px; margin-bottom: 8px; border-bottom: 1px solid var(--line);
+}
+/* min-height:0 少了的話 flex 子元素不會縮，body 撐爆外層就等於沒有捲動 */
+#idle-report-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+.idle-rec {
+  background: var(--bg-panel-2); border: 1px solid var(--line);
+  border-radius: 8px; padding: 8px 10px; margin-bottom: 8px;
+}
+.idle-rec-when { font-size: 11px; color: var(--ink-dim); margin-bottom: 4px; }
+.idle-rec-head { font-size: 12px; color: var(--gold-soft); margin-bottom: 6px; }
+.idle-rec-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 2px 8px;
+  font-size: 12px; color: var(--ink);
+}
+.idle-rec-lv { font-size: 12px; color: var(--gold-soft); font-weight: 700; margin-top: 4px; }
+.idle-rec-items { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.idle-rec-items .offline-item { font-size: 11px; padding: 2px 7px; }
+.idle-rec-empty { font-size: 12px; color: var(--ink-dim); text-align: center; padding: 18px 0; line-height: 1.7; }

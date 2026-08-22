@@ -5298,7 +5298,33 @@ function tryOnHitStunProc2(mon, monDef) {
 function startLoop() {
   if (tickTimer) clearInterval(tickTimer);
   tickTimer = setInterval(gameTick, TICK_MS);
+  _loopOn = true;
 }
+/* 停掉主迴圈。分頁切走時用（#135）。
+
+   為什麼要停：瀏覽器會把背景分頁的 setInterval 壓成 1 秒一次，離開超過五分鐘
+   再壓成**一分鐘一次**。降頻本身還不是最糟的，糟的是這個 tick 有兩半，
+   而兩半對「久久才跑一次」的反應完全不同：
+
+     玩家攻擊  用累積時間差（attackAccumulator），會把缺的刀一次補完
+     慢心跳    `if (now - _lastSlowTick >= 1000) { _lastSlowTick = now; … }`
+               —— 多出來的時間**直接丟掉**，過了 60 秒也只跑一次
+
+   於是切回來時：玩家一口氣爆發（使用者回報的「加速打怪畫面」），
+   而掛在慢心跳裡的隊友、自然回復、自動喝藥、自動技能一次都沒補到
+   （「組隊時就沒有加速，甚至直接沒經驗」）。
+
+   與其兩邊都去補（要動 buff、冷卻、生怪、怪物攻擊各自的 wall-clock 判斷），
+   不如承認「分頁切走就是離線」，交給離線結算算——那支本來就在做這件事。 */
+function stopLoop() {
+  if (tickTimer) clearInterval(tickTimer);
+  tickTimer = null;
+  _loopOn = false;
+}
+/* 用獨立旗標而不是 `!!tickTimer`：計時器 id 是不透明值，不保證非 0
+   （Node 的測試治具就把 setInterval 樁成回傳 0），拿它當布林會漏判。 */
+let _loopOn = false;
+function loopRunning() { return _loopOn; }
 
 /* 場域持續效果的一跳：光耀之堂（回血）、十字驅魔攻擊（範圍聖傷）、聖音…
    抽成獨立一支是因為**隊友也會放這些**（#131）。以前這段長在 gameTick() 裡面，
@@ -12811,11 +12837,17 @@ function loadGame() {
 /* ---------------- 離線掛機結算 ----------------
    回傳結算摘要（若離線時間太短則回傳 null），並直接把結果套用到 state 上。
 ------------------------------------------------- */
-function computeOfflineProgress() {
+/* minMs：低於這個時間就不結算（省下抽樣成本）。預設是開遊戲讀檔用的 30 秒門檻。
+
+   切分頁那條路（#135）會傳一個小很多的值：使用者描述的情境正是「頻繁切換畫面」，
+   沿用 30 秒的話每次切走 20 秒就完全沒有收益——主迴圈已經停了，那段時間會憑空蒸發，
+   比修之前還糟。彈窗與紀錄另有自己的門檻，在 deliverOfflineResult() 那邊擋。 */
+function computeOfflineProgress(minMs) {
   if (!state) return null;
+  const gate = minMs == null ? OFFLINE_MIN_MS : minMs;
   const rawElapsed = Date.now() - (state.lastActiveAt || Date.now());
   const elapsedMs = Math.min(rawElapsed, OFFLINE_CAP_MS);
-  if (elapsedMs < OFFLINE_MIN_MS) { state.lastActiveAt = Date.now(); return null; }
+  if (elapsedMs < gate) { state.lastActiveAt = Date.now(); return null; }
   const elapsedSec = Math.floor(elapsedMs / 1000);
 
   const map = currentMap();
@@ -12825,7 +12857,7 @@ function computeOfflineProgress() {
     // 城鎮安全區：沒有怪物可打，離線期間只是安穩休息，沒有戰鬥收穫
     state.lastActiveAt = Date.now();
     saveGame();
-    return { elapsedMs, elapsedSec, expGained: 0, jobExpGained: 0, goldGained: 0, itemsGained: [], baseLevelUps: 0, jobLevelUps: 0, kills: 0, safeTown: true };
+    return { elapsedMs, elapsedSec, expGained: 0, jobExpGained: 0, goldGained: 0, itemsGained: [], baseLevelUps: 0, jobLevelUps: 0, kills: 0, safeTown: true, allyCount: 0, mapName: map.name };
   }
 
   const totalWeight = pool.reduce((s, m) => s + m.weight, 0);
@@ -12878,10 +12910,53 @@ function computeOfflineProgress() {
     state.monsters[0].hp = avgHp;
     state.monsters[0].maxHp = avgHp;
   }
+  /* 隊友也要一起抽樣（#135）。
+
+     以前這個迴圈只跑 `playerAttack()`，所以離線收益等於**單人的收益**——
+     隊友打的那一份完全沒算進去。玩家是輔助職（祭司帶輸出隊友）時，
+     離線回來的經驗趨近於 0，這就是使用者回報的「組隊直接沒經驗」。
+
+     隊友走的是跟線上 `alliesTick()` 同一條路：`withAlly()` 換身跑同一支
+     `playerAttack()`，所以技能、SP、箭矢、卡片觸發全部照他們自己的數值算。
+     每輪迴圈代表 `atkInterval` 毫秒，用累積器換算各自該揮幾刀——
+     隊友的攻速跟玩家不同，一輪一刀會把快的算太少、慢的算太多。
+
+     倒地的隊友不算：線上 `alliesTick()` 也是直接 return。 */
+  const sampleAllies = (state.allies || []).filter(a => a && !a._downed);
+  const _allySnap = sampleAllies.map(a => ({
+    a,
+    buffs: (a.buffs || []).map(b => ({ ...b })),
+    sp: a.sp,
+    cooldowns: { ...(a.cooldowns || {}) },
+    atkAccum: a._atkAccum,
+    lastAttackAt: a._lastAttackAt,
+    ammo: a.equip && a.equip.ammo,
+    hp: a.hp,
+    downed: a._downed,
+    // 抽樣期間打死的怪也會記傭兵經驗，那是 3 秒的量；外推那份等一下才發
+    pendingExp: a._pendingExp,
+    pendingJobExp: a._pendingJobExp,
+  }));
+  const allyAccum = sampleAllies.map(() => 0);
+
   let sampleKills = 0;
   let sampleDamage = 0;
+  /* 一刀打完的結算：擊殺就補一隻同血量的假怪，否則累計實際造成的傷害。
+     抽成閉包是因為現在**一輪裡有好幾個人揮刀**（玩家 + 每位隊友），
+     每一刀都要各自結算——不然某一刀把怪打死之後，排在後面的人會對空氣揮拳。 */
+  const resolveSwing = (monBefore, hadMon) => {
+    if (state.monsters.length < hadMon || (state.monsters[0] && state.monsters[0].hp <= 0)) {
+      sampleKills++;
+      sampleDamage += monBefore;
+      if (state.monsters.length === 0) state.monsters = [{ defId: avgMonId || 'poring', hp: avgHp, maxHp: avgHp, id: 999999 }];
+      else state.monsters[0].hp = avgHp;
+    } else if (state.monsters[0]) {
+      const dealt = monBefore - state.monsters[0].hp;
+      if (dealt > 0) sampleDamage += dealt;
+    }
+  };
+
   for (let i = 0; i < sampleAttacks; i++) {
-    const beforeHp = state.monsters[0] ? state.monsters[0].hp : avgHp;
     // tick buff 3 秒內的到期（每刀按 attackInterval 推進）
     if (state.buffs.length) {
       state.buffs.forEach(b => { if (b.msRemaining) b.msRemaining -= atkInterval; });
@@ -12892,28 +12967,58 @@ function computeOfflineProgress() {
       state.cooldowns[k] = Math.max(0, (state.cooldowns[k]||0) - atkInterval);
       if (state.cooldowns[k] === 0) delete state.cooldowns[k];
     }
-    const monBefore = state.monsters[0] ? state.monsters[0].hp : avgHp;
     // 真實攻擊（含技能、MATK/物攻自動分流）— 先試自動施放再普攻，與線上 tick 一致
-    const hadMon = state.monsters.length;
-    if (state.autoSkill) tryAutoCastSkill();
-    tryAutoCastSupportSkills();
-    playerAttack();
-    // 若怪被擊殺，playerAttack 會移除 state.monsters[0]，計一次擊殺並補一隻同血量假怪
-    if (state.monsters.length < hadMon || (state.monsters[0] && state.monsters[0].hp <= 0)) {
-      sampleKills++;
-      sampleDamage += monBefore;
-      if (state.monsters.length === 0) state.monsters = [{ defId: avgMonId || 'poring', hp: avgHp, maxHp: avgHp, id: 999999 }];
-      else state.monsters[0].hp = avgHp;
-    } else if (state.monsters[0]) {
-      const dealt = monBefore - state.monsters[0].hp;
-      if (dealt > 0) sampleDamage += dealt;
+    {
+      const monBefore = state.monsters[0] ? state.monsters[0].hp : avgHp;
+      const hadMon = state.monsters.length;
+      if (state.autoSkill) tryAutoCastSkill();
+      tryAutoCastSupportSkills();
+      playerAttack();
+      resolveSwing(monBefore, hadMon);
     }
+    // 隊友：各自按攻擊間隔補刀，順序跟線上 alliesTick() 一致
+    sampleAllies.forEach((ally, ai) => {
+      if (ally._downed) return;
+      allyAccum[ai] += atkInterval;
+      const iv = Math.max(100, ally.attackInterval || 1000);
+      let swings = 0;
+      while (allyAccum[ai] >= iv && swings < 20) {
+        allyAccum[ai] -= iv;
+        swings++;
+        const monBefore = state.monsters[0] ? state.monsters[0].hp : avgHp;
+        const hadMon = state.monsters.length;
+        /* 一位隊友出錯不能拖垮整份結算：例外從 withAlly 竄出來的話，
+           forEach 會整個中斷，後面的隊友那一輪完全不會動（跟 alliesTick 同一條保險）。 */
+        try {
+          withAlly(ally, () => {
+            if (state.autoSkill) tryAutoCastSkill();
+            tryAutoCastSupportSkills();
+            playerAttack();
+          });
+        } catch (e) { break; }
+        resolveSwing(monBefore, hadMon);
+        if (ally._downed) break;
+      }
+    });
     // 箭矢耗盡自動換下一種（與線上一致）
     if (needsAmmo() && getAmmoCount() === 0) {
       const nxt = state.inventory.find(r => !r.instanceId && isAmmoItem(r.item) && r.qty > 0);
       if (nxt) state.equip.ammo = nxt.item;
     }
   }
+  // 隊友的抽樣痕跡要還原，否則切一次分頁就把他們的 SP 與冷卻真的扣掉了
+  _allySnap.forEach(s => {
+    s.a.buffs = s.buffs;
+    s.a.sp = s.sp;
+    s.a.cooldowns = s.cooldowns;
+    s.a._atkAccum = s.atkAccum;
+    s.a._lastAttackAt = s.lastAttackAt;
+    s.a.hp = s.hp;
+    s.a._downed = s.downed;
+    s.a._pendingExp = s.pendingExp;
+    s.a._pendingJobExp = s.pendingJobExp;
+    if (s.a.equip) s.a.equip.ammo = s.ammo;
+  });
   // 也可用傷害外推，避免隨機擊殺數為 0 時的 0/0
   const killsPerSecByDamage = sampleDamage / avgHp / sampleSec;
   const killsPerSecByCount = sampleKills / sampleSec;
@@ -12974,10 +13079,25 @@ function computeOfflineProgress() {
   const beforeJobLv = state.jobLevel;
   gainExp(expGained, jobExpGained);
   state.gold += goldGained;
+  /* 隊友的傭兵經驗（#135）。線上 killMonster() 每擊殺都會記 ALLY_MERC_EXP_PCT，
+     離線走的是外推所以沒有逐次擊殺，這裡照同一個比例一次補上——
+     不然「掛機一整晚」對隊友本人的存檔完全沒有意義。
+     跟線上同一條規則：記給全隊未倒地的每一位，不是只記給補刀的那個。 */
+  sampleAllies.forEach(a => {
+    a._pendingExp = (a._pendingExp || 0) + expGained * ALLY_MERC_EXP_PCT / 100;
+    a._pendingJobExp = (a._pendingJobExp || 0) + jobExpGained * ALLY_MERC_EXP_PCT / 100;
+  });
   state.lastActiveAt = Date.now();
+  /* 時間錨點全部推回現在，否則主迴圈一恢復就會把離線那段「再打一次」（#135）：
+     玩家的累積器會爆發一串攻擊，場上每隻怪也各賺一次免費攻擊
+     （`now - mon.lastAttackTime` 是整段離線時間），慢心跳同理。 */
   state.lastAttackTime = Date.now();
   state.attackAccumulator = 0;
   state.lastMonsterAttackTime = Date.now();
+  state._lastSlowTick = Date.now();
+  state.lastSpawnTime = Date.now();
+  (state.monsters || []).forEach(m => { m.lastAttackTime = Date.now(); });
+  (state.allies || []).forEach(a => { if (a) { a._atkAccum = 0; a._lastAttackAt = Date.now(); } });
   saveGame();
 
   return {
@@ -12986,8 +13106,73 @@ function computeOfflineProgress() {
     itemsGained,
     baseLevelUps: state.baseLevel - beforeBaseLv,
     jobLevelUps: state.jobLevel - beforeJobLv,
-    kills: Math.round(totalKills)
+    kills: Math.round(totalKills),
+    allyCount: sampleAllies.length,
+    mapName: map.name,
   };
+}
+
+/* ---------------- 掛機收益紀錄（#135）----------------
+   使用者要的是「頻繁切分頁的人不用一直關彈窗」：結算照跑，但收益改成留在
+   浮動視窗裡隨時可以翻，最多留三筆。
+
+   **不管彈窗開不開都記**。只有關掉彈窗時才記的話，把彈窗留著的玩家點開那個
+   視窗永遠是空的，那顆按鈕就變成裝飾品。記錄本身有上限，留著不花什麼成本。
+
+   存在 state 裡跟著存檔走（音量、靜音那些設定也都在 state 上），
+   所以換存檔格看到的是那一格自己的紀錄。 */
+const OFFLINE_LOG_MAX = 3;
+const OFFLINE_LOG_ITEMS_MAX = 12;      // 一筆紀錄最多列幾種掉落
+function offlineLogList() { return (state && state.offlineLog) || []; }
+
+/* 掉落清單的排序：**貴重的排前面**（使用者要求）。
+
+   掛一整晚回來可能有上百種掉落，畫面上放不下就得截斷，而原本的順序是
+   `dropAgg` 的建表順序——也就是地圖怪物表的順序，跟價值毫無關係。
+   結果就是「一張卡片被 80 種藥草擠掉」：真正想看的那一件反而看不到。
+
+   分三層再比單價：卡片 → 裝備 → 其他。
+   為什麼分層而不是純比 sell：卡片的售價在本作只有 10z（那是官方的雜項售價），
+   純比價錢的話全遊戲最稀有的東西會排在木錘後面。 */
+function spoilsRank(itemId) {
+  if (CARDS[itemId]) return 0;
+  const it = ITEMS[itemId];
+  if (!it) return 3;
+  if (it.type === 'weapon' || it.type === 'armor') return 1;
+  return 2;
+}
+function sortSpoilsByValue(items) {
+  return (items || []).slice().sort((a, b) => {
+    const ra = spoilsRank(a.item), rb = spoilsRank(b.item);
+    if (ra !== rb) return ra - rb;
+    const sa = (ITEMS[a.item] || {}).sell || 0, sb = (ITEMS[b.item] || {}).sell || 0;
+    if (sa !== sb) return sb - sa;
+    return (b.qty || 0) - (a.qty || 0);
+  });
+}
+function pushOfflineLog(off) {
+  if (!state || !off) return;
+  if (!Array.isArray(state.offlineLog)) state.offlineLog = [];
+  /* 只留畫面要用的欄位。整包 off 帶著 itemsGained 的完整陣列，
+     掛一整晚可能有上百種掉落，三筆就把存檔撐大。
+     截斷前先照價值排序，卡片與裝備才不會被一堆藥草擠掉。 */
+  const spoils = sortSpoilsByValue(off.itemsGained);
+  state.offlineLog.unshift({
+    at: Date.now(),
+    elapsedMs: off.elapsedMs,
+    safeTown: !!off.safeTown,
+    mapName: off.mapName || '',
+    kills: off.kills || 0,
+    expGained: off.expGained || 0,
+    jobExpGained: off.jobExpGained || 0,
+    goldGained: off.goldGained || 0,
+    baseLevelUps: off.baseLevelUps || 0,
+    jobLevelUps: off.jobLevelUps || 0,
+    allyCount: off.allyCount || 0,
+    itemsGained: spoils.slice(0, OFFLINE_LOG_ITEMS_MAX),
+    itemsMore: Math.max(0, spoils.length - OFFLINE_LOG_ITEMS_MAX),
+  });
+  state.offlineLog.length = Math.min(state.offlineLog.length, OFFLINE_LOG_MAX);
 }
 function hasSave() {
   return !!localStorage.getItem(getSlotKey(currentSlot));

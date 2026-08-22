@@ -43,6 +43,7 @@ const SUITES = [
   'test_ammo.js',        // 箭矢：整條弓箭手線的自動選種與自動補貨（#129）
   'test_party_buffs.js', // 各職業的隊伍效果：party 旗標涵蓋面與互斥組分享（#130）
   'test_cardsets.js',    // 職業套卡：單張不白拿、湊齊才生效、套裝標籤（#134）
+  'test_idle_offline.js',// 掛機結算：切分頁即離線、隊友也要算、收益紀錄（#135）
   'test_saveio.js',      // 存檔匯出/匯入：序列化、遷移、覆寫與失敗還原
 ];
 

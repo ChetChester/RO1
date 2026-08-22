@@ -146,6 +146,8 @@
           <label class="volume-label" title="玩家立繪的大小">🧍 <input type="range" id="sprite-scale" min="50" max="150" step="5" value="100" oninput="setSpriteScalePct(this.value)"><span id="sprite-scale-text">100%</span></label>
           <label class="volume-label" title="施放技能時的立繪大小（相對於上面那支）。每個職業各記一份">✨ <input type="range" id="skill-scale" min="50" max="150" step="5" value="85" oninput="setSkillSpriteScalePct(this.value)"><span id="skill-scale-text">85%</span></label>
         </div>
+        <!-- 掛機收益（#135）：按鈕在標頭的音量滑桿旁，面板是疊在戰鬥區的浮動視窗 -->
+        <button id="btn-idle-report" class="btn-idle-report" onclick="toggleIdleReport()" title="掛機收益：最近 3 筆離線／切分頁的結算">📈</button>
         <button id="btn-jobchange-alert" class="btn-jobchange hidden" onclick="switchTab('jobtree')">🔔 可以轉職了！</button>
       </div>
     </header>
@@ -155,6 +157,16 @@
       <section class="battle-panel">
         <div class="map-bg-layer"><img id="map-bg-img" alt="" onerror="this.onerror=null;this.src='images/_placeholder_map.png';"></div>
         <button id="btn-mute" class="btn-mute" onclick="toggleMute()" title="靜音/取消靜音">🔊</button>
+        <div id="idle-report-panel" class="idle-report-panel hidden">
+          <div class="idle-report-head">
+            <span>📈 掛機收益</span>
+            <button class="ally-panel-close" onclick="toggleIdleReport()">✕</button>
+          </div>
+          <label class="idle-report-opt" title="取消勾選之後，回到遊戲不再跳出結算彈窗，收益改成記在這裡（最多 3 筆）">
+            <input type="checkbox" id="opt-offline-modal" onchange="setShowOfflineModal(this.checked)"> 回來時顯示結算彈窗
+          </label>
+          <div id="idle-report-body"></div>
+        </div>
         <!-- GM 測試面板：只在安全區顯示（顯示/隱藏由 renderGmPanel() 控制） -->
         <div id="gm-panel" class="gm-panel hidden">
           <div class="gm-title">GM 測試</div>
