@@ -13123,6 +13123,18 @@ function computeOfflineProgress(minMs) {
   const avgExp = wAvg(m => m.exp || 1);
   const avgJobExp = wAvg(m => m.jobExp || 1);
   const avgLevel = wAvg(m => m.level || 1);
+  /* 打寶模式（#145）。以前整份離線結算完全沒有讀它——三種模式跑出來的
+     經驗、鋅幣、掉落一模一樣，等於開了打寶去掛機是白開的。
+
+     三邊要一起改才會自洽：怪的血量在線上是 spawnMonster() 當場乘上去的，
+     抽樣這裡是自己造假怪、直接用平均血量，所以要自己乘；
+     經驗與鋅幣是結算時乘；掉落率是每次擊殺時乘。
+     只補其中一邊會更糟——只加掉落倍率的話，瘋狂模式的擊殺數本來就多算五倍，
+     兩個乘起來會變成線上的二十五倍。
+
+     怪物的防禦與攻擊不用管：那兩個是在傷害計算當下乘的，
+     抽樣走的是真正的 playerAttack()，本來就吃得到。 */
+  const farmHp = avgHp * farmMult('hp');
 
   // 離線掛機估算：快照後跑 3 秒真實戰鬥外推（方法A），含 MATK/物攻、技能、冷卻、SP
   const sampleSec = 3;
@@ -13148,11 +13160,11 @@ function computeOfflineProgress(minMs) {
   const avgMonDef = avgMonId ? MONSTERS[avgMonId] : null;
   // 保底：若地圖池無有效怪，用平均屬性造一隻假怪
   if (!state.monsters || state.monsters.length === 0) {
-    state.monsters = [{ defId: avgMonId || 'poring', hp: avgHp, maxHp: avgHp, id: 999999 }];
+    state.monsters = [{ defId: avgMonId || 'poring', hp: farmHp, maxHp: farmHp, id: 999999 }];
   } else {
-    // 暫用平均血量覆蓋第一隻，確保抽樣穩定
-    state.monsters[0].hp = avgHp;
-    state.monsters[0].maxHp = avgHp;
+    // 暫用平均血量覆蓋第一隻，確保抽樣穩定（打寶模式的加成要含進去）
+    state.monsters[0].hp = farmHp;
+    state.monsters[0].maxHp = farmHp;
   }
   /* 隊友也要一起抽樣（#135）。
 
@@ -13192,8 +13204,8 @@ function computeOfflineProgress(minMs) {
     if (state.monsters.length < hadMon || (state.monsters[0] && state.monsters[0].hp <= 0)) {
       sampleKills++;
       sampleDamage += monBefore;
-      if (state.monsters.length === 0) state.monsters = [{ defId: avgMonId || 'poring', hp: avgHp, maxHp: avgHp, id: 999999 }];
-      else state.monsters[0].hp = avgHp;
+      if (state.monsters.length === 0) state.monsters = [{ defId: avgMonId || 'poring', hp: farmHp, maxHp: farmHp, id: 999999 }];
+      else state.monsters[0].hp = farmHp;
     } else if (state.monsters[0]) {
       const dealt = monBefore - state.monsters[0].hp;
       if (dealt > 0) sampleDamage += dealt;
@@ -13264,7 +13276,7 @@ function computeOfflineProgress(minMs) {
     if (s.a.equip) s.a.equip.ammo = s.ammo;
   });
   // 也可用傷害外推，避免隨機擊殺數為 0 時的 0/0
-  const killsPerSecByDamage = sampleDamage / avgHp / sampleSec;
+  const killsPerSecByDamage = sampleDamage / farmHp / sampleSec;
   const killsPerSecByCount = sampleKills / sampleSec;
   let killsPerSec = Math.max(killsPerSecByDamage, killsPerSecByCount);
   // 保底：若抽樣期間因閃避/未命中導致 0 傷害，退回舊公式保底避免離線 0 收益
@@ -13274,7 +13286,7 @@ function computeOfflineProgress(minMs) {
     const avgFlee2 = 80 + avgLevel * 4;
     const avgHitPct2 = hitChancePct(effectiveHitWithBuff(), avgFlee2) / 100;
     const dmgPerAttack2 = mitigateDamage(raw * critFactor, avgDef, avgSoftDef) * avgHitPct2;
-    killsPerSec = dmgPerAttack2 / avgHp;
+    killsPerSec = dmgPerAttack2 / farmHp;
   }
   // 還原快照
   state.buffs = _snap.buffs;
@@ -13322,40 +13334,140 @@ function computeOfflineProgress(minMs) {
   const normalShare = bossKills > 0 ? 1 - MVP_SPAWN_CHANCE_PCT / 100 : 1;
   const totalKills = killsPerSec * elapsedSec * normalShare;
 
-  let expGained = Math.round(avgExp * totalKills);
-  let jobExpGained = Math.round(avgJobExp * totalKills);
-  let goldGained = Math.round((3 + avgLevel * 1.4) * totalKills);
+  /* 經驗與鋅幣要跟線上 killMonster() 同一條式子（#145）：
+       經驗 = def.exp × 卡片的種族經驗加成 × 打寶倍率
+       鋅幣 = (3 + 等級 × 1.4) × 打寶倍率
+     以前這裡兩個倍率都沒乘，瘋狂模式掛一整晚拿到的跟不開打寶一樣多。
+     種族經驗加成照怪物出沒權重取平均——池子裡混著好幾個種族，
+     只認第一隻的種族會讓「專打某族」的卡片被高估。 */
+  const expMult = 1 + (buffMult('exp').flatBonus || 0) / 100;
+  const raceExpOf = def => 1 + ((def && def.race && state.cardExpRace && state.cardExpRace[def.race]) || 0);
+  const avgRaceExp = wAvg(m => raceExpOf(m));
+  const expFarm = farmMult('exp') * expMult * avgRaceExp;
+  const goldFarm = farmMult('gold');
+  let expGained = Math.round(avgExp * totalKills * expFarm);
+  let jobExpGained = Math.round(avgJobExp * totalKills * expFarm);
+  let goldGained = Math.round((3 + avgLevel * 1.4) * totalKills * goldFarm);
   bossGained.forEach(b => {
     const bd = MONSTERS[b.id];
-    expGained += Math.round((bd.exp || 0) * b.kills);
-    jobExpGained += Math.round((bd.jobExp || 0) * b.kills);
-    goldGained += Math.round((3 + (bd.level || 0) * 1.4) * b.kills);
+    const bm = farmMult('exp') * expMult * raceExpOf(bd);
+    expGained += Math.round((bd.exp || 0) * b.kills * bm);
+    jobExpGained += Math.round((bd.jobExp || 0) * b.kills * bm);
+    goldGained += Math.round((3 + (bd.level || 0) * 1.4) * b.kills * goldFarm);
   });
 
-  // 掉落物期望值（依真實怪物密度權重計算每次擊殺的期望掉落機率）
+  /* 掉落物期望值（依真實怪物密度權重計算每次擊殺的期望掉落機率）。
+
+     這一段以前只算 `def.drops`，於是**線上擊殺時會發生的其他事全都不會發生**：
+     卡片掉落、卡片／裝備的附加掉落（邪惡箱那一批）、偷竊、貪婪、尋找礦石、
+     打寶模式的掉落倍率。玩家回報「邪惡箱卡片離線沒有效果」就是這一條，
+     但同一個洞底下躺著的是一整排——連**一般怪的卡片**離線都掉不出來
+     （之前只補了頭目那半邊）。
+
+     全部走同一張 dropAgg：那張表的單位是「每次擊殺的期望件數」，
+     最後統一乘上 totalKills，所以只要把各自的期望值加進來就好。 */
+  const dropMult = farmMult('drop');
   const dropAgg = {};
+  const addExp2 = (id, n) => { if (n > 0 && ITEMS[id]) dropAgg[id] = (dropAgg[id] || 0) + n; };
+  /* 加權掉落表的期望分佈：偷竊與貪婪都是「照掉落率加權抽一件」（pickWeightedDrop），
+     所以每一件被抽中的機率是 該件掉落率 ÷ 全部掉落率之和——
+     不是它自己的掉落率。抄成掉落率的話稀有物會被高估好幾個數量級。 */
+  const weightedShare = (drops, out) => {
+    const list = (drops || []).filter(d => d && d.item && d.chance > 0);
+    const total = list.reduce((a, d) => a + d.chance, 0);
+    if (!total) return;
+    list.forEach(d => { out[d.item] = (out[d.item] || 0) + d.chance / total; });
+  };
+  const stealRate = (state.stealChance || 0) / 100;
+  const greedRate = (state.hasGreedProc ? (state.greedChance || 0) : 0) / 100;
+  const oreRate = (state.hasFindingOreProc ? (state.findingOreChance || 0) : 0) / 100;
+  const raceShare = {};                    // 種族 → 出沒權重佔比（卡片附加掉落要用）
   pool.forEach(m => {
     const def = MONSTERS[m.id];
     if (!def) return; // 跳過不存在的怪物
     const spawnShare = m.weight / totalWeight;
+    if (def.race) raceShare[def.race] = (raceShare[def.race] || 0) + spawnShare;
     (def.drops || []).forEach(d => {
-      const perKillChance = d.chance * spawnShare;
-      dropAgg[d.item] = (dropAgg[d.item] || 0) + perKillChance;
+      // 打寶模式的掉落倍率跟線上同樣夾在 1 以下（本來就 100% 的乘上去沒有意義）
+      addExp2(d.item, Math.min(1, d.chance * dropMult) * spawnShare);
     });
+    // 一般怪的卡片：線上走 MONSTER_CARD_DROPS，離線以前整條漏掉
+    const cd = (typeof MONSTER_CARD_DROPS !== 'undefined') ? MONSTER_CARD_DROPS[m.id] : null;
+    if (cd && cd.card) addExp2(cd.card, cd.chance * spawnShare);
+    // 偷竊／貪婪：各自機率發動一次，發動後照掉落率加權抽一件
+    if (stealRate || greedRate) {
+      const share = {};
+      weightedShare(def.drops, share);
+      Object.entries(share).forEach(([id, p]) => addExp2(id, p * (stealRate + greedRate) * spawnShare));
+    }
+  });
+  // 尋找礦石：跟種族無關，四種礦石均分
+  if (oreRate) {
+    const ores = ['boody_red', 'crystal_blue', 'wind_of_verdure', 'yellow_live'];
+    ores.forEach(id => addExp2(id, oreRate / ores.length));
+  }
+  /* 卡片／裝備的附加掉落（邪惡箱卡片那一批，#145）。
+     `state.cardKillDrops` 是 recomputeDerived 整理好的清單，跟線上
+     tryCardKillDrops() 讀的是同一份，所以裝備上的（廚刀掉肉、獸人弓掉鋼鐵箭）
+     也一起涵蓋。限定種族的要照那個種族在這張圖的出沒佔比打折。 */
+  let killDropZenyPerKill = 0;      // 一般怪：每次擊殺的期望鋅幣
+  let bossZeny = 0;                 // 頭目：直接就是總額
+  (state.cardKillDrops || []).forEach(e => {
+    const hitShare = e.race ? (raceShare[e.race] || 0) : 1;
+    const rate = (e.chance / 100) * hitShare;
+    if (!(rate > 0)) return;
+    if (e.zeny) { killDropZenyPerKill += e.zeny * rate; return; }
+    const list = e.pool ? itemPool(e.pool) : e.items;
+    if (!list || !list.length) return;
+    list.forEach(id => addExp2(id, rate / list.length));   // 候選裡隨機挑一個
   });
   /* 頭目的掉落也照期望值發（#137）。跟雜魚共用同一張 dropAgg：
      那張表是「每次擊殺的期望掉落機率」，頭目的除數是牠自己的擊殺數而不是 totalKills，
      所以直接把 `掉落率 × 該頭目的擊殺數` 加進去，單位一致。
      卡片走 MONSTER_CARD_DROPS 那條的也要補，不然頭目卡片離線永遠掉不出來。 */
   const bossDropAgg = {};
+  const addBoss = (id, n) => { if (n > 0 && ITEMS[id]) bossDropAgg[id] = (bossDropAgg[id] || 0) + n; };
   bossGained.forEach(b => {
     const bd = MONSTERS[b.id];
-    (bd.drops || []).forEach(d => {
-      bossDropAgg[d.item] = (bossDropAgg[d.item] || 0) + d.chance * b.kills;
-    });
+    (bd.drops || []).forEach(d => addBoss(d.item, Math.min(1, d.chance * dropMult) * b.kills));
     const cd = (typeof MONSTER_CARD_DROPS !== 'undefined') ? MONSTER_CARD_DROPS[b.id] : null;
-    if (cd && cd.card) bossDropAgg[cd.card] = (bossDropAgg[cd.card] || 0) + cd.chance * b.kills;
+    if (cd && cd.card) addBoss(cd.card, cd.chance * b.kills);
+    /* 以太礦石（#145）：只有頭目會掉，一次擲兩顆各自判定。
+       離線以前完全沒有這一段——打了一整晚頭目卻一顆以太都沒有。 */
+    const eth = getEtherDropChance(bd);
+    if (eth > 0) ['ether_oridecon', 'ether_elunium'].forEach(id => addBoss(id, eth * b.kills));
+    // 頭目也吃偷竊／貪婪／卡片附加掉落，跟雜魚同一條規則
+    if (stealRate || greedRate) {
+      const share = {};
+      weightedShare(bd.drops, share);
+      Object.entries(share).forEach(([id, pr]) => addBoss(id, pr * (stealRate + greedRate) * b.kills));
+    }
+    (state.cardKillDrops || []).forEach(e => {
+      if (e.race && bd.race !== e.race) return;
+      const rate = e.chance / 100;
+      if (e.zeny) { bossZeny += e.zeny * rate * b.kills; return; }
+      const list = e.pool ? itemPool(e.pool) : e.items;
+      if (!list || !list.length) return;
+      list.forEach(id => addBoss(id, rate * b.kills / list.length));
+    });
   });
+  /* 遺物（#145）：只有打寶模式會掉，一般怪固定機率、頭目照等級分段，
+     而且碎片與遺物券是**各擲一次**。離線以前一件都不會掉，
+     等於開著打寶掛機一整晚，遺物進度完全沒有推進。 */
+  if (farmMode() && typeof RELIC_PIECE_IDS !== 'undefined' && RELIC_PIECE_IDS.length) {
+    const normPct = RELIC_DROP_PCT_NORMAL / 100;      // 每次擊殺的機率
+    RELIC_PIECE_IDS.forEach(id => addExp2(id, normPct / RELIC_PIECE_IDS.length));
+    addExp2(RELIC_TICKET_ID, normPct);
+    bossGained.forEach(b => {
+      const bd = MONSTERS[b.id];
+      const pct = relicBossDropPct(bd.level) / 100;
+      if (!(pct > 0)) return;
+      RELIC_PIECE_IDS.forEach(id => addBoss(id, pct * b.kills / RELIC_PIECE_IDS.length));
+      addBoss(RELIC_TICKET_ID, pct * b.kills);
+    });
+  }
+  // 藍鼠那種「擊殺掉錢」的卡片：期望值一次補進鋅幣
+  goldGained += Math.round(killDropZenyPerKill * totalKills + bossZeny);
 
   const itemsGained = [];
   /* 雜魚與頭目是兩張表，但同一樣東西可能兩邊都掉（蘋果那種）。
