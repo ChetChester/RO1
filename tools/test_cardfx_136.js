@@ -179,7 +179,11 @@ const TANK = Object.values(G0.MONSTERS).find(m => m.def > 300 && m.hp > 1e6 && !
   const noWhere = pool.monsters.filter(id => g.getMonsterMaps(id).length === 0);
   t.eq('圖鑑裡沒有「查得到卻無處可去」的怪', noWhere.length, 0,
     noWhere.slice(0, 5).map(i => g.MONSTERS[i].name).join('、'));
+  /* 遺物與遺物券不走掉落表也不走商店（#138）：
+     頭目掉券、券換遺物，取得方式由圖鑑明細另外寫。 */
+  const isRelic = id => g.ITEMS[id] && (g.ITEMS[id].type === 'relic' || id === g.RELIC_TICKET_ID);
   const noSrc = [...pool.items, ...pool.cards].filter(id =>
+    !isRelic(id) &&
     !g.getItemFarmSpots(id).length &&
     !Object.values(g.NPC_SHOPS).some(s => (s.items || []).includes(id)));
   t.eq('圖鑑裡沒有「查得到卻無處可拿」的道具', noSrc.length, 0,

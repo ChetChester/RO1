@@ -2929,8 +2929,61 @@ let codexSearch = '';
 let codexPage = 0;
 let codexOpenId = null;
 
+/* 分類篩選（#138）。圖鑑一頁 60 格、道具有一千四百多筆，只有「已發現／未發現」
+   根本翻不完——使用者要的是按類別收斂。三個分頁各有自己的一組分類，
+   所以 `codexCat` 也是**每個分頁各記一份**，切回來還在原來的分類上。
+
+   `test` 收的是那一列的 id，回傳真假。寫成函式而不是欄位比對，是因為三種分頁
+   要看的欄位根本不同（怪看 isBoss、卡看 slot、道具看 type + armorType）。 */
+const CODEX_CATS = {
+  mon: [
+    { k: 'all', label: '全部' },
+    { k: 'normal', label: '普通怪', test: id => !MONSTERS[id].isBoss },
+    { k: 'boss', label: 'BOSS', test: id => !!MONSTERS[id].isBoss },
+  ],
+  card: [
+    { k: 'all', label: '全部' },
+    { k: 'weapon', label: '武器', test: id => (CARDS[id] || {}).slot === 'weapon' },
+    { k: 'armor', label: '鎧甲', test: id => (CARDS[id] || {}).slot === 'armor' },
+    { k: 'shield', label: '盾牌', test: id => (CARDS[id] || {}).slot === 'shield' },
+    { k: 'headgear', label: '頭飾', test: id => (CARDS[id] || {}).slot === 'headgear' },
+    { k: 'garment', label: '肩披', test: id => (CARDS[id] || {}).slot === 'garment' },
+    { k: 'footgear', label: '鞋子', test: id => (CARDS[id] || {}).slot === 'footgear' },
+    { k: 'accessory', label: '飾品', test: id => (CARDS[id] || {}).slot === 'accessory' },
+  ],
+  item: [
+    { k: 'all', label: '全部' },
+    { k: 'weapon', label: '武器', test: id => ITEMS[id].type === 'weapon' },
+    // 飾品在資料上是 armor 底下的一種 armorType，要先從防具裡挑出來
+    { k: 'armor', label: '防具', test: id => ITEMS[id].type === 'armor' && ITEMS[id].armorType !== 'accessory' },
+    { k: 'accessory', label: '飾品', test: id => ITEMS[id].type === 'armor' && ITEMS[id].armorType === 'accessory' },
+    // 箭矢歸消耗品：它會被打完，玩家找它的心情跟找藥水一樣
+    { k: 'consumable', label: '消耗品', test: id => ITEMS[id].type === 'consumable' || ITEMS[id].type === 'ammo' },
+    { k: 'relic', label: '遺物', test: id => ITEMS[id].type === 'relic' || id === (typeof RELIC_TICKET_ID !== 'undefined' ? RELIC_TICKET_ID : '') },
+    // 其餘一律算素材（含少數 type 沒歸類乾淨的）
+    { k: 'material', label: '素材', test: id => !['weapon', 'armor', 'consumable', 'ammo', 'relic'].includes(ITEMS[id].type)
+      && id !== (typeof RELIC_TICKET_ID !== 'undefined' ? RELIC_TICKET_ID : '') },
+  ],
+};
+let codexCat = { mon: 'all', card: 'all', item: 'all' };
 function setCodexView(v) { codexView = v; codexPage = 0; codexOpenId = null; renderCodexTab(); }
 function setCodexFilter(f) { codexFilter = f; codexPage = 0; renderCodexTab(); }
+function setCodexCat(k) { codexCat[codexView] = k; codexPage = 0; renderCodexTab(); }
+// 目前分頁的分類列，順便標出每一類有幾筆（0 筆的直接讓玩家看得出來，不必點進去）
+function codexCatBar(ids) {
+  const cats = CODEX_CATS[codexView] || [];
+  const cur = codexCat[codexView] || 'all';
+  return '<div class="codex-cats">' + cats.map(c => {
+    const n = c.test ? ids.filter(c.test).length : ids.length;
+    return `<button class="btn-small ${c.k === cur ? 'active' : ''} ${n ? '' : 'empty'}"
+      onclick="setCodexCat('${c.k}')">${c.label} <span class="codex-cat-n">${n}</span></button>`;
+  }).join('') + '</div>';
+}
+function codexCatFilter(ids) {
+  const cur = codexCat[codexView] || 'all';
+  const c = (CODEX_CATS[codexView] || []).find(x => x.k === cur);
+  return (!c || !c.test) ? ids : ids.filter(c.test);
+}
 function setCodexPage(p) { codexPage = p; renderCodexTab(); }
 /* ---------------- 搜尋框與注音輸入 ----------------
 
@@ -2993,12 +3046,16 @@ function renderCodexTab() {
 
   // 依目前分頁組出清單，並套用搜尋/篩選
   let rows;
+  // 分類列要顯示**各類的總數**，所以算數量用的是還沒篩過的全表
+  const allIds = codexView === 'mon' ? pool.monsters : (codexView === 'card' ? pool.cards : pool.items);
+  const catBar = codexCatBar(allIds);
+  const ids = codexCatFilter(allIds);
   if (codexView === 'mon') {
-    rows = pool.monsters.map(id => ({ id, name: MONSTERS[id].name, found: !!book.seen[id] }));
+    rows = ids.map(id => ({ id, name: MONSTERS[id].name, found: !!book.seen[id] }));
   } else if (codexView === 'card') {
-    rows = pool.cards.map(id => ({ id, name: (CARDS[id] || ITEMS[id]).name, found: !!book.item[id] }));
+    rows = ids.map(id => ({ id, name: (CARDS[id] || ITEMS[id]).name, found: !!book.item[id] }));
   } else {
-    rows = pool.items.map(id => ({ id, name: ITEMS[id].name, found: !!book.item[id] }));
+    rows = ids.map(id => ({ id, name: ITEMS[id].name, found: !!book.item[id] }));
   }
   if (codexFilter === 'found') rows = rows.filter(r => r.found);
   else if (codexFilter === 'missing') rows = rows.filter(r => !r.found);
@@ -3030,7 +3087,8 @@ function renderCodexTab() {
         <button class="btn-small ${codexFilter === 'found' ? 'active' : ''}" onclick="setCodexFilter('found')">已發現</button>
         <button class="btn-small ${codexFilter === 'missing' ? 'active' : ''}" onclick="setCodexFilter('missing')">未發現</button>
       </div>
-    </div>`;
+    </div>
+    ${catBar}`;
 
   if (codexOpenId) html += renderCodexDetail(codexOpenId);
 
@@ -3142,6 +3200,30 @@ function bossTimeHtml(id, def) {
     <span class="codex-bt-modes">${tabs}</span>⏱️ ${body}</div>`;
 }
 
+/* 遺物與遺物券的取得方式。兩者的來源不同，分開寫：
+     遺物券 → 打頭目掉（等級越高機率越高，一般怪也有極小機率）
+     遺物   → 拿券去安全區的遺物商人換指定套裝的隨機一件 */
+function relicSourceHtml(id, def) {
+  const isTicket = typeof RELIC_TICKET_ID !== 'undefined' && id === RELIC_TICKET_ID;
+  const isRelic = def && def.type === 'relic';
+  if (!isTicket && !isRelic) return '';
+  if (isTicket) {
+    const tiers = (typeof RELIC_DROP_BOSS_TIERS !== 'undefined' ? RELIC_DROP_BOSS_TIERS : [])
+      .slice().sort((a, b) => a.minLevel - b.minLevel)
+      .map(t => `Lv${t.minLevel}+ ${t.pct}%`).join('　');
+    const normal = typeof RELIC_DROP_PCT_NORMAL !== 'undefined' ? RELIC_DROP_PCT_NORMAL : 0;
+    return `<div class="codex-spot shop"><span class="codex-spot-mon">👑 擊敗頭目</span>
+        <span class="codex-spot-name">${tiers || '頭目掉落'}</span></div>
+      <div class="codex-spot shop"><span class="codex-spot-mon">👾 一般魔物</span>
+        <span class="codex-spot-name">${normal}%</span></div>`;
+  }
+  const cost = typeof RELIC_TICKET_COST !== 'undefined' ? RELIC_TICKET_COST : 10;
+  const setName = (typeof RELIC_SETS !== 'undefined' && def.relicSet && RELIC_SETS[def.relicSet])
+    ? RELIC_SETS[def.relicSet].name : '';
+  return `<div class="codex-spot shop"><span class="codex-spot-mon">🎫 遺物商人</span>
+    <span class="codex-spot-name">遺物券 ×${cost} 換${setName ? `「${setName}」` : ''}隨機一件（安全區）</span></div>`;
+}
+
 function codexMapRow(m, extra) {
   /* MVP 那幾筆要標出來（#108）：牠們只在 BOSS 模式開著的時候才會出現，
      沒標的話玩家會以為前往之後站著就會遇到。 */
@@ -3241,6 +3323,10 @@ function renderCodexDetail(id) {
     .filter(sh => (sh.items || []).includes(id))
     .map(sh => `<div class="codex-spot shop"><span class="codex-spot-mon">🏪 ${sh.name || '商店'}</span>
       <span class="codex-spot-name">${d.buyPrice ? d.buyPrice.toLocaleString() + ' 鋅幣' : '商店販售'}</span></div>`).join('');
+  /* 遺物的取得方式（#138）。它們不從掉落表來，所以 getItemFarmSpots() 是空的——
+     不補這一段，圖鑑會對 49 件遺物說「沒有怪物會掉」，那是錯的。
+     實際規則：頭目掉遺物券（等級越高機率越高），券再拿去跟遺物商人換。 */
+  const relicRows = relicSourceHtml(id, d);
   const statBits = [];
   ['atk', 'matk', 'def', 'hp', 'sp', 'str', 'agi', 'vit', 'int', 'dex', 'luk', 'hit', 'flee', 'critRate'].forEach(k => {
     if (typeof d[k] === 'number' && d[k] !== 0) statBits.push(`${k.toUpperCase()} ${d[k] > 0 ? '+' : ''}${d[k]}`);
@@ -3286,7 +3372,7 @@ function renderCodexDetail(id) {
     ${(card && card.desc) || d.desc ? `<div class="codex-detail-desc">${(card && card.desc) || d.desc}</div>` : ''}
     ${unimpl}
     <div class="codex-detail-sec">去哪裡打<span class="codex-sec-hint">照出現率排序，點「前往」直接過去</span></div>
-    <div class="codex-spots">${shopRows}${srcRows || (shopRows ? '' : '<div class="dim">沒有怪物會掉，也不在商店販售</div>')}</div>
+    <div class="codex-spots">${relicRows}${shopRows}${srcRows || (relicRows || shopRows ? '' : '<div class="dim">沒有怪物會掉，也不在商店販售</div>')}</div>
   </div>`;
 }
 

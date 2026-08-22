@@ -7275,6 +7275,13 @@ function getCodexPool() {
   }
   Object.values(NPC_SHOPS).forEach(shop => (shop.items || []).forEach(id => { if (ITEMS[id]) itemSet.add(id); }));
   POTION_TIERS.forEach(id => { if (ITEMS[id]) itemSet.add(id); });
+  /* 遺物也是收藏品（#138）。它們不從掉落表來（頭目掉遺物券、券再去換），
+     所以上面那幾圈一個都掃不到——圖鑑的「遺物」分類會是空的。
+     取得方式在明細裡另外寫（見 ui.js 的 relicSourceHtml）。 */
+  if (typeof RELIC_ITEMS !== 'undefined') {
+    Object.keys(RELIC_ITEMS).forEach(id => { if (ITEMS[id]) itemSet.add(id); });
+  }
+  if (typeof RELIC_TICKET_ID !== 'undefined' && ITEMS[RELIC_TICKET_ID]) itemSet.add(RELIC_TICKET_ID);
   const cardSet = new Set([...itemSet].filter(id => CARDS[id]));
   _codexPoolCache = {
     monsters: [...monSet].sort((a, b) => (MONSTERS[a].level || 0) - (MONSTERS[b].level || 0)),
@@ -7375,21 +7382,10 @@ function getItemFarmSpots(itemId) {
     getMonsterMaps(s.mon).forEach(m => {
       out.push({ mapId: m.id, mapName: m.name, spawnPct: m.pct, mon: s.mon, dropChance: s.chance });
     });
-    /* BOSS 全部從 `MAPS[*].monsters` 移到 `MVP_MAP_DATA` 之後（見 DONE.md「BOSS 只在
-       MVP 模式出現」），牠們掉的東西在一般地圖表裡查不到來源。全庫有 338 件道具
-       **只有 MVP 會掉**——不補這段的話圖鑑會對這 338 件說「沒有怪物會掉」，是錯的。
-       出現率照 spawnMonster() 的規則算：MVP 模式開著時 20% 從該圖的 MVP 名單裡等機率抽。 */
-    if (typeof MVP_MAP_DATA !== 'undefined') {
-      Object.entries(MVP_MAP_DATA).forEach(([mapId, list]) => {
-        if (!list || !list.includes(s.mon)) return;
-        const m = MAPS.find(x => x.id === mapId);
-        if (!m) return;
-        out.push({
-          mapId, mapName: m.name, spawnPct: 20 / list.length,
-          mon: s.mon, dropChance: s.chance, mvp: true,
-        });
-      });
-    }
+    /* MVP 的出沒地圖**已經包含在 getMonsterMaps() 裡了**（#108 那次補的）。
+       這裡以前還有一段自己再掃一次 MVP_MAP_DATA 的程式，是 #108 之前寫的，
+       後來沒跟著拿掉——結果同時掛在一般配怪表與 MVP 名單上的怪
+       （鴞嫋男爵那種）每張地圖會列兩行，一行普通一行 👑，看起來像資料錯了。 */
   });
   return out.sort((a, b) => b.spawnPct - a.spawnPct);
 }
@@ -8999,6 +8995,14 @@ function tryAutoSpells(trigger, mon) {
     let lv = e.lv;
     if (e.upgradeIf && skillLv(e.upgradeIf.skill) >= e.upgradeIf.lv) {
       lv = Math.max(1, Math.min(sk.maxLv || e.upgradeIf.toLv, e.upgradeIf.toLv));
+    }
+    /* 「依自身學習的等級觸發」（#138，雙發神弓）。官方少數幾件寫的不是固定等級，
+       而是跟著玩家自己學到幾級。以前這一格是寫死的 `e.lv`，所以二連矢點滿 10 級
+       也只會自動放 5 級——使用者回報的就是這件事。
+       沒學過的時候退回 `e.lv`，不然非本職拿到那件裝備會完全沒效果。 */
+    if (e.useLearnedLv) {
+      const learned = skillLv(e.skill);
+      if (learned > 0) lv = Math.min(sk.maxLv || learned, learned);
     }
 
     // 本作把火狩／泥沼地／冰凍術／天使之怒做成了被動（passiveStat），castSkill() 放不出來，

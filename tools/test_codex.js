@@ -61,9 +61,17 @@ const g = H.boot();
   // 池子裡的每一樣道具都該查得到來源（商店或怪物），不然圖鑑會出現查不到去處的死條目
   const shop = new Set();
   Object.values(g.NPC_SHOPS).forEach(s => (s.items || []).forEach(i => shop.add(i)));
+  /* 遺物與遺物券是第三種來源（#138）：頭目掉券、券換遺物，兩者都不在掉落表與商店裡，
+     取得方式由圖鑑明細的 relicSourceHtml() 另外寫。所以它們不算孤兒，但**數量要對得上**
+     ——多出一件沒歸類的就代表有東西混進池子了。 */
+  const isRelic = id => g.ITEMS[id] && (g.ITEMS[id].type === 'relic' || id === g.RELIC_TICKET_ID);
   const orphan = pool.items.concat(pool.cards)
-    .filter(id => !shop.has(id) && g.getItemFarmSpots(id).length === 0);
+    .filter(id => !shop.has(id) && !isRelic(id) && g.getItemFarmSpots(id).length === 0);
   t.eq('圖鑑池裡沒有查不到來源的道具', orphan.length, 0, orphan.slice(0, 5).join(','));
+  // RELIC_ITEMS 本身就含遺物券（48 件遺物 + 1 張券）
+  const relics = pool.items.filter(isRelic);
+  t.eq('遺物與遺物券全部進得了圖鑑池', relics.length, Object.keys(g.RELIC_ITEMS).length);
+  t.ok('遺物券也在裡面（它是遺物的取得管道）', relics.includes(g.RELIC_TICKET_ID));
 }
 
 /* ---------- MVP 的出沒地圖（#108）----------

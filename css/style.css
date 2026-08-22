@@ -1923,3 +1923,10 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-deep); co
 .codex-bt-mode.active { background: rgba(212,175,55,0.22); color: var(--ink); border-color: var(--gold); }
 .codex-bt-mode:hover { border-color: var(--gold); }
 .codex-bt-none { color: var(--ink-dim); }
+
+/* 圖鑑的分類列（#138）：怪分普通／BOSS、卡分部位、道具分武防飾消素遺。
+   一頁 60 格而道具有一千四百多筆，只有「已發現／未發現」翻不完。 */
+.codex-cats { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0 2px; }
+.codex-cats .btn-small { padding: 2px 8px; font-size: 11px; }
+.codex-cats .btn-small.empty { opacity: 0.45; }
+.codex-cat-n { font-size: 10px; opacity: 0.7; margin-left: 2px; font-variant-numeric: tabular-nums; }
