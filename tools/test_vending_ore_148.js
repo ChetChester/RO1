@@ -21,6 +21,46 @@ function merchant() {
 }
 const vend = g => (g.state.vendingConfig || {}).items || [];
 
+/* ---------- 轉職之後還是商人（#149）----------
+   玩家回報「找不到露天商店的入口」，人在**神匠**。
+   露天商店本來擋在 `state.jobId === 'merchant'`——轉去鐵匠／神匠／鍊金／創造者
+   之後 jobId 就變了，同一個角色會突然「不是商人」，入口與自動販售整個消失。
+   跟 isBlacksmithLine() 當初踩到的是同一個坑，所以這裡把**整條商人線**都驗一遍。 */
+{
+  const LINE = [
+    ['merchant', ['merchant'], false],
+    ['blacksmith', ['merchant', 'blacksmith'], false],
+    ['whitesmith', ['merchant', 'blacksmith'], true],
+    ['alchemist', ['merchant', 'alchemist'], false],
+    ['creator', ['merchant', 'alchemist'], true],
+  ];
+  const fails = [];
+  LINE.forEach(([job, path, rebirth]) => {
+    const g = H.boot();
+    H.mkChar(g, { path, job, rebirth, baseLevel: 99, gold: 1e6 });
+    if (g.state.jobId !== job) { fails.push(job + '(轉職失敗)'); return; }
+    g.state.jobSkillPoints.merchant = 60;
+    H.learn(g, 'vending', 1);
+    g.setVendingItems(['jellopy']);
+    g.addItem('jellopy', 5);
+    const gold0 = g.state.gold;
+    g.state.vendingReadyAt = 0;
+    g.tryAutoVending();
+    if (g.state.gold <= gold0) fails.push(g.JOB_TREE[job].name);
+  });
+  t.eq('整條商人線都賣得動（不是只有商人本人）', fails.join('、'), '');
+  // 反過來：不在商人線上的職業擺了也不會賣
+  const g2 = H.boot();
+  H.mkChar(g2, { path: ['swordsman', 'knight'], job: 'knight', baseLevel: 99 });
+  g2.state.learnedSkills.vending = 1;      // 就算硬塞技能也一樣
+  g2.setVendingItems(['jellopy']);
+  g2.addItem('jellopy', 5);
+  const gold1 = g2.state.gold;
+  g2.state.vendingReadyAt = 0;
+  g2.tryAutoVending();
+  t.eq('騎士擺了也不會賣', g2.state.gold, gold1);
+}
+
 /* ---------- 上架清單 ---------- */
 {
   const g = merchant();
@@ -83,18 +123,6 @@ const vend = g => (g.state.vendingConfig || {}).items || [];
   t.ok('個體裝備不會被露天商店賣掉', !!g.state.inventory.find(r => r.item === w && r.instanceId));
   t.eq('也沒有進帳', g.state.gold, gold0);
 }
-{
-  // 不是商人就不跑（露天商店是商人的招牌技能）
-  const g = H.boot();
-  H.mkChar(g, { path: ['swordsman'], job: 'swordsman', baseLevel: 60 });
-  g.setVendingItems(['jellopy']);
-  g.addItem('jellopy', 10);
-  const gold0 = g.state.gold;
-  g.state.vendingReadyAt = 0;
-  g.tryAutoVending();
-  t.eq('劍士擺了也不會賣', g.state.gold, gold0);
-}
-
 /* ---------- 原石全部合成 ---------- */
 {
   const g = merchant();

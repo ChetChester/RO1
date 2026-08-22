@@ -342,11 +342,16 @@ g.state.rebirthPath = null; g.state.rebirthCount = 0;
   });
 }
 
-/* ---- 資料互相引用的道具都要存在（#142）----
+/* ---- 資料互相引用的道具都要存在（#142 / #149）----
 
-   #142 把一萬四千多筆「沒人參照」的道具從 ITEMS 刪掉了。判定靠掃原始碼字串，
-   漏判一筆就會刪到還在用的東西——而那不會噴錯，只會變成掉落表掉出 undefined、
-   套裝永遠湊不齊、配方按下去沒反應。所以反過來從引用端驗一次。
+   #142 曾經把一萬七千多筆「js/ 底下掃不到參照」的道具從 ITEMS 刪掉，
+   **#149 又全部放回去了**：那個判定漏了一個參照來源——**玩家的存檔**。
+   神秘箱子的道具池是 `Object.keys(ITEMS)` 過濾出來的，那些東西本來就開得出來、
+   開出來就躺在背包裡；刪掉之後 `ITEMS[id]` 變 undefined，玩家的裝備憑空消失。
+
+   這一段守門員留著：不管有沒有人再動 ITEMS，掉落表／商店／套裝／配方引用到的
+   道具都必須存在。缺一筆不會噴錯，只會變成掉落表掉出 undefined、
+   套裝永遠湊不齊、配方按下去沒反應。
 
    `food` 是某張卡的 killDrop 分類池名（不是道具 id），走 ITEM_POOLS 那條，
    所以查不到 ITEMS 是正常的。
@@ -370,7 +375,9 @@ g.state.rebirthPath = null; g.state.rebirthCount = 0;
   Object.keys(g.CARDS).forEach(id => chk('卡片', id));
   t.eq('掉落／商店／套裝／配方引用到的道具都還在', bad.length, 0, bad.slice(0, 6).join('、'));
   // 反過來也要驗：ITEMS 沒被砍成空的
-  t.ok('ITEMS 還有東西（砍孤兒沒砍過頭）', Object.keys(g.ITEMS).length > 2000,
+  /* #149 把 #142 刪掉的整批放回去了。門檻拉到兩萬——箱子開得出來的東西
+     全部住在 ITEMS 裡，再被誰「順手清乾淨」一次，玩家背包裡的東西就會再消失一次。 */
+  t.ok('ITEMS 沒有再被清空（箱子開出來的都住在這裡）', Object.keys(g.ITEMS).length > 20000,
     Object.keys(g.ITEMS).length + ' 筆');
   t.ok('圖鑑池沒有縮水', g.getCodexPool().items.length > 1400, g.getCodexPool().items.length + ' 件');
   /* 卡冊、精煉材料、隊友的預設補品這些是**用不加引號的物件鍵**寫的

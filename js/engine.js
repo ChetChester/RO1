@@ -12699,7 +12699,11 @@ function setVendingItems(itemIds) {
   saveGame();
 }
 function tryAutoVending() {
-  if (state.jobId !== 'merchant') return;
+  /* **走職業鏈，不能只認 `merchant`**（#149）。轉職到鐵匠／神匠／鍊金／創造者
+     之後 jobId 就變了，同一個角色會突然「不是商人」，露天商店整個消失——
+     玩家回報「找不到露天商店的入口」時人在神匠。
+     這跟 isBlacksmithLine() 當初踩到的是同一個坑。 */
+  if (!jobLineHas(state.jobId, 'merchant')) return;
   if (!state.learnedSkills || !state.learnedSkills['vending']) return;
   if (!state.vendingConfig || !state.vendingConfig.items || state.vendingConfig.items.length === 0) return;
   const readyAt = state.vendingReadyAt || 0;

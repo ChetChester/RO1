@@ -4494,7 +4494,9 @@ function renderInventoryTab() {
 
     // 露天商店（僅商人職業且已學會露天商店技能時顯示）
     let vendingHtml = '';
-    if (state.jobId === 'merchant' && state.learnedSkills && state.learnedSkills['vending']) {
+    // 職業鏈判定（#149）：轉去鐵匠／神匠／鍊金／創造者之後 jobId 就不是 merchant 了，
+    // 只認 'merchant' 的話這個入口會整個消失——玩家回報「找不到露天商店」時人在神匠
+    if (jobLineHas(state.jobId, 'merchant') && state.learnedSkills && state.learnedSkills['vending']) {
       const cfg = state.vendingConfig || { items: [] };
       const itemNames = cfg.items.length
         ? cfg.items.map(id => ITEMS[id] ? ITEMS[id].name : id).join('、')
