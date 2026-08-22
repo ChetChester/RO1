@@ -110,6 +110,36 @@ const rb3 = g.importFullBackup({ app: 'ro-idle', type: 'backup', slots: 'oops' }
 t.ok('缺少欄位資料被拒絕', !rb3.ok);
 t.eq('拒絕後欄位 0 仍在', JSON.parse(g.localStorage.getItem(key(0))).name, '甲');
 
+/* ---------------- 存檔欄位數（#137：12 → 15）----------------
+   加欄位的規範是「只改 MAX_SLOTS 一個數」，其餘掃全帳號的地方都讀它。
+   會壞的方式是有人在某處寫死了數字——那不會報錯，只會讓最後幾格
+   在備份、雇傭名單或選擇畫面裡靜靜地消失。所以驗的是**最後一格**。 */
+{
+  const last = g.MAX_SLOTS - 1;
+  t.eq('存檔欄位數是 15', g.MAX_SLOTS, 15);
+  t.eq('選擇畫面剛好分 5 頁（每頁 3 格）', Math.ceil(g.MAX_SLOTS / 3), 5);
+  g.localStorage.clear();
+  t.ok('最後一格寫得進去', g.importSaveToSlot(last, Object.assign({}, s0, { name: '末格' })).ok);
+  const b = g.buildFullBackup();
+  t.eq('最後一格進得了整包備份', b.slots[last].name, '末格');
+  t.eq('備份的欄位數跟著 MAX_SLOTS', Object.keys(b.slots).length, g.MAX_SLOTS);
+  g.localStorage.clear();
+  t.ok('最後一格還原得回來', g.importFullBackup(b).ok);
+  t.eq('還原後最後一格名字', JSON.parse(g.localStorage.getItem(key(last))).name, '末格');
+  // 超出範圍的欄位要擋掉，不然壞備份會把 key 寫到天上去
+  const over = { app: 'ro-idle', type: 'backup', version: 1, slots: {} };
+  over.slots[g.MAX_SLOTS] = Object.assign({}, s0, { name: '溢出' });
+  g.importFullBackup(over);
+  t.eq('超出欄位範圍的資料不會被寫入', g.localStorage.getItem(g.getSlotKey(g.MAX_SLOTS)), null);
+  // 舊的 12 格備份匯進來要照常運作，多出來的三格保持空的
+  const old12 = { app: 'ro-idle', type: 'backup', version: 1, slots: {} };
+  for (let i = 0; i < 12; i++) old12.slots[i] = Object.assign({}, s0, { name: '舊' + i });
+  g.localStorage.clear();
+  t.ok('舊的 12 格備份匯得進來', g.importFullBackup(old12).ok);
+  t.eq('舊備份的第 12 格還在', JSON.parse(g.localStorage.getItem(key(11))).name, '舊11');
+  t.eq('新增的第 13 格保持空的', g.localStorage.getItem(key(12)), null);
+}
+
 /* ---------------- 服事技能 id 遷移冪等（#114） ----------------
    舊遷移每次 loadGame 都跑、又不判斷是否已搬過：新式存檔的
    `blessing`（天使之賜福）與 `cure`（治療術）會被併進

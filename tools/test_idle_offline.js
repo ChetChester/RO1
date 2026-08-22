@@ -233,4 +233,168 @@ function rewind(g, sec) { g.state.lastActiveAt = Date.now() - sec * 1000; }
     Object.values(g.localStorage._d).some(v => /offlineLog/.test(v)));
 }
 
+/* ---------------- 頭目擊殺紀錄與離線頭目（#137）----------------
+
+   離線以前完全碰不到 MVP（怪物池只有 map.monsters），BOSS 模式的獎勵離線拿不到。
+   補上的關鍵是「這個角色打不打得動」——模擬算得出 DPS 但算不出會不會被打死，
+   所以改用實際殺過的紀錄當通行證。
+
+   會壞而且不會報錯的地方有三個，這裡一條一條釘：
+     1. 沒殺過的頭目也算進離線（等於白送，也是被鑽的入口）
+     2. 隊友補刀時紀錄寫進隊友快照而不是玩家（killMonster 一整排導向的老坑）
+     3. 頭目吃掉的時間沒從雜魚那邊扣，兩邊加起來超過 100% */
+function bossScene() {
+  const g = H.boot();
+  H.mkChar(g, { path: ['swordsman', 'knight'], rebirth: true, job: 'lordknight', baseLevel: 99,
+    stats: { str: 99, agi: 70, vit: 60, int: 1, dex: 90, luk: 30 } });
+  H.wield(g, 'spear1');
+  const mapId = Object.keys(g.MVP_MAP_DATA).find(id =>
+    g.MAPS.some(m => m.id === id && (m.monsters || []).length) && (g.MVP_MAP_DATA[id] || []).length >= 2);
+  g.state.mapId = mapId;
+  g.state.mvpMode = true;
+  g.recomputeDerived(true);
+  return { g, mapId, list: g.MVP_MAP_DATA[mapId].filter(i => g.MONSTERS[i]) };
+}
+// 假裝線上打死一隻，耗時 sec 秒
+function fakeKill(g, id, sec) {
+  const def = g.MONSTERS[id];
+  g.state.monsters = [{ defId: id, hp: 1, maxHp: def.hp, id: 99, spawnedAt: Date.now() - sec * 1000 }];
+  g.killMonster(def, g.state.monsters[0]);
+}
+
+/* ---- 紀錄本身 ---- */
+{
+  const { g, list } = bossScene();
+  const id = list[0];
+  t.eq('一開始沒有任何頭目紀錄', Object.keys(g.state.bossKills || {}).length, 0);
+  fakeKill(g, id, 90);
+  const r1 = g.bossKillRecord(id);
+  t.eq('殺一次就有紀錄', r1.n, 1);
+  t.ok('耗時量得出來（約 90 秒）', Math.abs(r1.lastMs - 90000) < 1500, r1.lastMs + 'ms');
+  fakeKill(g, id, 40);
+  fakeKill(g, id, 120);
+  const r2 = g.bossKillRecord(id);
+  t.eq('次數累加', r2.n, 3);
+  t.ok('最近一次跟著最後那一隻（120 秒）', Math.abs(r2.lastMs - 120000) < 1500, r2.lastMs + 'ms');
+  t.ok('最佳停在最快那一次（40 秒）', Math.abs(r2.bestMs - 40000) < 1500, r2.bestMs + 'ms');
+  // 雜魚不記，秒殺不記
+  const mob = Object.values(g.MONSTERS).find(m => !m.isBoss && m.exp > 0);
+  fakeKill(g, mob.id, 5);
+  t.eq('雜魚不進頭目紀錄', !!g.bossKillRecord(mob.id), false);
+  fakeKill(g, list[1], 0);
+  t.eq('0 秒擊殺不採計（擋 GM 秒殺與假怪）', !!g.bossKillRecord(list[1]), false);
+}
+
+/* ---- 隊友補刀：紀錄要落在玩家身上 ---- */
+{
+  const { g, list } = bossScene();
+  // 隨便造一個隊友快照塞進隊上（不必真的雇傭，這裡驗的是 killMonster 的導向）
+  g.state.allies = [{ _allyName: '打手', _slot: '9', hp: 100, maxHp: 100, buffs: [], cooldowns: {}, inventory: [] }];
+  const def = g.MONSTERS[list[0]];
+  const mon = { defId: list[0], hp: 1, maxHp: def.hp, id: 77, spawnedAt: Date.now() - 60000 };
+  g.state.monsters = [mon];
+  g.withAlly(g.state.allies[0], () => g.killMonster(def, mon));
+  t.ok('隊友補刀也算玩家的紀錄', !!g.bossKillRecord(list[0]));
+  t.eq('紀錄沒有寫進隊友快照', !!(g.state.allies[0].bossKills), false);
+}
+
+/* ---- 離線：沒殺過就沒有 ---- */
+{
+  const { g, list } = bossScene();
+  rewind(g, 86400);
+  const off = g.computeOfflineProgress();
+  t.eq('沒殺過任何頭目時，離線一隻都不會遇到', off.bossKills, 0);
+  t.eq('頭目明細是空的', off.bossList.length, 0);
+  t.ok('雜魚照常算', off.kills > 0);
+}
+
+/* ---- 離線：殺過才算，而且照最近一次的耗時 ---- */
+{
+  const base = bossScene();
+  rewind(base.g, 86400);
+  const plain = base.g.computeOfflineProgress();
+
+  const { g, list } = bossScene();
+  fakeKill(g, list[0], 1200);                    // 20 分鐘一隻
+  rewind(g, 86400);
+  const off = g.computeOfflineProgress();
+  t.ok('殺過的頭目離線遇得到', off.bossKills > 0, '擊殺 ' + off.bossKills);
+  t.eq('明細只列打得動的那一隻', off.bossList.length, 1);
+  t.eq('列的是對的那一隻', off.bossList[0].id, list[0]);
+  /* 名單是等機率抽的，所以每隻分到「頭目時間 ÷ 名單長度」，不是 ÷ 打得動的隻數——
+     抽到打不動的那隻本來就是白耗，那份時間要損失掉。 */
+  const expect = 86400 * (g.MVP_SPAWN_CHANCE_PCT / 100) / list.length / 1200;
+  t.ok('擊殺數對得上時間預算', Math.abs(off.bossKills - expect) <= 1,
+    `預期約 ${expect.toFixed(1)}，實得 ${off.bossKills}`);
+  /* 頭目佔掉的時間要從雜魚那邊扣，不然兩邊加起來超過 100%。
+     **總經驗可能因此變少**——那是對的：低階頭目給的經驗比同一段時間的雜魚少，
+     線上開 BOSS 模式也是這樣，那個模式換的是掉落不是經驗。
+     所以比較的基準是「扣掉兩成之後的雜魚經驗」，頭目那份要疊在它上面。 */
+  t.ok('雜魚擊殺數跟著少了兩成', Math.abs(off.kills - plain.kills * 0.8) < plain.kills * 0.02,
+    `${plain.kills} → ${off.kills}`);
+  t.ok('頭目的經驗確實疊上去了', off.expGained > plain.expGained * 0.8,
+    `雜魚八成 ${Math.round(plain.expGained * 0.8)} → 實得 ${off.expGained}`);
+}
+
+/* ---- 用的是「最近一次」而不是「歷史最快」 ---- */
+{
+  const { g, list } = bossScene();
+  fakeKill(g, list[0], 300);       // 先來一次很快的 → bestMs
+  fakeKill(g, list[0], 2400);      // 再來一次很慢的 → lastMs
+  const rec = g.bossKillRecord(list[0]);
+  t.ok('best 與 last 確實不同（後面的比較才有意義）', rec.bestMs < rec.lastMs);
+  rewind(g, 86400);
+  const off = g.computeOfflineProgress();
+  const byLast = 86400 * (g.MVP_SPAWN_CHANCE_PCT / 100) / list.length / 2400;
+  const byBest = 86400 * (g.MVP_SPAWN_CHANCE_PCT / 100) / list.length / 300;
+  t.ok('離線照最近一次算（保守），不是照最佳',
+    Math.abs(off.bossKills - byLast) < Math.abs(off.bossKills - byBest),
+    `實得 ${off.bossKills}：照最近約 ${byLast.toFixed(1)}、照最佳約 ${byBest.toFixed(1)}`);
+}
+
+/* ---- 沒開 BOSS 模式就不該有頭目 ---- */
+{
+  const { g, list } = bossScene();
+  fakeKill(g, list[0], 600);
+  g.state.mvpMode = false;
+  rewind(g, 86400);
+  const off = g.computeOfflineProgress();
+  t.eq('關掉 BOSS 模式時離線沒有頭目', off.bossKills, 0);
+}
+
+/* ---- 頭目的掉落與圖鑑 ---- */
+{
+  const { g, list } = bossScene();
+  const id = list[0];
+  fakeKill(g, id, 600);
+  const rec0 = Object.assign({}, g.bossKillRecord(id));
+  const kills0 = g.ensureCodex().mon[id] || 0;
+  // 只有這隻頭目會掉、雜魚不會掉的東西
+  const normal = new Set();
+  g.currentMap().monsters.forEach(e => (g.MONSTERS[e.id].drops || []).forEach(d => normal.add(d.item)));
+  const only = (g.MONSTERS[id].drops || []).filter(d => !normal.has(d.item) && g.ITEMS[d.item]);
+  rewind(g, 86400);
+  const off = g.computeOfflineProgress();
+  t.ok('頭目專屬掉落進得了收穫清單',
+    !only.length || (off.itemsGained || []).some(x => only.some(d => d.item === x.item)),
+    '專屬掉落 ' + only.length + ' 種');
+  t.ok('離線擊殺記進圖鑑', (g.ensureCodex().mon[id] || 0) > kills0);
+  // 離線是外推的，不該回頭改「線上實測」的耗時
+  const rec1 = g.bossKillRecord(id);
+  t.eq('離線不會覆寫實測耗時', rec1.lastMs, rec0.lastMs);
+  t.eq('離線也不會灌水擊殺次數', rec1.n, rec0.n);
+}
+
+/* ---- 舊存檔沒有這一格 ---- */
+{
+  const { g } = bossScene();
+  g.state.name = '舊角'; g.saveGame();
+  const raw = JSON.parse(Object.values(g.localStorage._d).find(v => /"name":"舊角"/.test(v)));
+  delete raw.bossKills;
+  g.localStorage.setItem(g.getSlotKey(0), JSON.stringify(raw));
+  t.ok('舊存檔讀得起來', g.loadGame());
+  t.ok('讀檔後自動補上頭目紀錄欄位', !!g.state.bossKills);
+  t.eq('補上的是空表', Object.keys(g.state.bossKills).length, 0);
+}
+
 process.exit(t.report('掛機結算與收益紀錄'));

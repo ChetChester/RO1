@@ -14,10 +14,10 @@
 
 const SAVE_KEY_PREFIX = 'ro_idle_save_slot_';
 let currentSlot = 0; // 目前使用的存檔欄位 (0 ~ MAX_SLOTS-1)
-/* 存檔欄位數（#104：9 → 12）。所有掃全帳號的地方都讀這個常數
-   （選擇畫面、跨角色倉庫、鐵匠名字、離線結算），加欄位只要改這一個數。
+/* 存檔欄位數（#104：9 → 12；#137：12 → 15）。所有掃全帳號的地方都讀這個常數
+   （選擇畫面、跨角色倉庫、鐵匠名字、隊友雇傭名單、整包備份），加欄位只要改這一個數。
    選擇畫面每頁 SLOTS_PER_PAGE 格，頁數是算出來的，不必跟著動。 */
-const MAX_SLOTS = 12;
+const MAX_SLOTS = 15;
 
 function getSlotKey(slot) { return SAVE_KEY_PREFIX + slot; }
 const TICK_MS = 100;
@@ -6233,7 +6233,11 @@ function spawnMonster() {
     state.monsterIdCounter = (state.monsterIdCounter || 0) + 1;
     // 打寶模式的血量倍率是**生怪當下**算進去的（切換模式時 setFarmMode 會清場重生）
     const hp = Math.round(def.hp * farmMult('hp'));
-    state.monsters.push({ defId, hp, maxHp: hp, id: state.monsterIdCounter });
+    /* `spawnedAt`（#137）：頭目的擊殺耗時要從這裡量到死。
+       量「出現到死」而不是「第一刀到死」是刻意的——中間被雜魚分掉的攻擊、
+       喝水停頓、隊友放輔助的空檔，全部算進去才是真實的產出速度，
+       而離線結算要的正是那個速度。 */
+    state.monsters.push({ defId, hp, maxHp: hp, id: state.monsterIdCounter, spawnedAt: Date.now() });
     applyDontForgetMe(state.monsters[state.monsters.length - 1]);
     codexRecordSeen(defId);
     const isMvp = mvpList && mvpList.includes(defId);
@@ -6268,7 +6272,7 @@ function summonBossSlaves(bossDef) {
     const sdef = MONSTERS[sid];
     if (!sdef) continue;
     state.monsterIdCounter = (state.monsterIdCounter || 0) + 1;
-    state.monsters.push({ defId: sid, hp: sdef.hp, maxHp: sdef.hp, id: state.monsterIdCounter });
+    state.monsters.push({ defId: sid, hp: sdef.hp, maxHp: sdef.hp, id: state.monsterIdCounter, spawnedAt: Date.now() });
     applyDontForgetMe(state.monsters[state.monsters.length - 1]);
     codexRecordSeen(sid);
     names.push(sdef.icon + sdef.name);
@@ -6288,7 +6292,7 @@ function spawnExtraMonster() {
   const def = MONSTERS[defId];
   if (!def) return;
   state.monsterIdCounter = (state.monsterIdCounter || 0) + 1;
-  state.monsters.push({ defId, hp: def.hp, maxHp: def.hp, id: state.monsterIdCounter });
+  state.monsters.push({ defId, hp: def.hp, maxHp: def.hp, id: state.monsterIdCounter, spawnedAt: Date.now() });
   applyDontForgetMe(state.monsters[state.monsters.length - 1]);
   logMsg(`一隻 ${def.icon} ${def.name} 被衝鋒攻擊召喚了！`);
 }
@@ -7443,6 +7447,54 @@ function rollEtherDrop(monDef) {
   });
 }
 
+/* ---------------- 頭目擊殺紀錄（#137）----------------
+
+   離線結算以前完全不會遇到 MVP：`computeOfflineProgress()` 的怪物池只有
+   `map.monsters`，一整晚掛下來連一隻頭目都碰不到，BOSS 模式的獎勵等於離線拿不到。
+
+   要補上就得回答一個問題：**這個角色到底打不打得動那隻頭目？**
+   模擬算得出 DPS，但算不出「會不會被打死」——現在的離線抽樣裡怪物根本不還手。
+   對雜魚無所謂，對 ATK 三千多、血量百萬起跳的 MVP 就是整件事的關鍵。
+
+   所以改用一個模擬偽造不了的證據：**實際殺過**。
+   `state.bossKills[怪物id] = { n, lastMs, bestMs, at }`
+     n       殺過幾次（≥1 就是離線的通行證）
+     lastMs  最近一次的擊殺耗時 → **離線用這個算**
+     bestMs  歷史最快 → 圖鑑顯示用（使用者要求）
+
+   離線用 lastMs 而不是 bestMs：使用者選的是「就讓它舊著，下次線上打一隻就更新」，
+   最近一次反映的是現在的裝備，也不會被「某次帶滿隊友刷出的最佳紀錄」灌水。
+   換裝變強之後紀錄會暫時偏慢，線上再打一隻就跟上——保守的方向錯了不會出事。
+
+   耗時從**出現**量到死（monObj.spawnedAt），中間被雜魚分掉的攻擊、喝水、
+   放輔助的空檔全部算進去。那才是真實產出速度，離線本來就該照那個給。 */
+function ensureBossKills(st) {
+  const s = st || state;
+  if (!s.bossKills) s.bossKills = {};
+  return s.bossKills;
+}
+function bossKillRecord(monId, st) {
+  const s = st || state;
+  return (s && s.bossKills && s.bossKills[monId]) || null;
+}
+function recordBossKillTime(owner, monKey, def, monObj) {
+  if (!owner || !def || !def.isBoss) return;
+  const at = monObj && monObj.spawnedAt;
+  if (!at) return;                      // 舊存檔留在場上的怪沒有這一格，跳過
+  const ms = Date.now() - at;
+  /* 下限擋掉不合理的紀錄：GM 秒殺、測試造出來的假怪、以及同一拍連續結算。
+     沒有下限的話一次 0ms 的紀錄會讓離線變成無限刷。 */
+  if (!(ms >= BOSS_KILL_MIN_MS)) return;
+  const log = ensureBossKills(owner);
+  const cur = log[monKey] || { n: 0, lastMs: 0, bestMs: 0, at: 0 };
+  cur.n++;
+  cur.lastMs = ms;
+  cur.bestMs = cur.bestMs > 0 ? Math.min(cur.bestMs, ms) : ms;
+  cur.at = Date.now();
+  log[monKey] = cur;
+}
+const BOSS_KILL_MIN_MS = 1000;
+
 function killMonster(def, monObj) {
   /* 同一隻只能結算一次。
 
@@ -7470,6 +7522,7 @@ function killMonster(def, monObj) {
      傭兵自己**額外**累積 20%（不從玩家那邊扣），退隊時進待領帳本。 */
   const acting = _allyActing;
   const owner = acting ? allyOwnerState() : state;
+  recordBossKillTime(owner, monKey, def, monObj);
   /* 20% 記給**全隊未倒地的隊友**，不是只記給補刀的那一個。
      照補刀算的話，攻擊力低的隊友（祭司、鐵匠）永遠搶不到最後一擊——
      實測 300 隻全被鐵匠收走，祭司累積 0。他們是隊友不是承包商。 */
@@ -12711,6 +12764,7 @@ function loadGame() {
     if (!state.monsterIdCounter) state.monsterIdCounter = 0;
     if (!state.encounterMode) state.encounterMode = 'melee';
     if (!state.lastSpawnTime) state.lastSpawnTime = 0;
+    if (!state.bossKills) state.bossKills = {};   // 頭目擊殺紀錄（#137）：舊存檔沒有這格
     // 如果舊存檔有 state.monster 但沒有 state.monsters，遷移過來
     if (state.monster && state.monsters.length === 0) {
       state.monsters = [state.monster];
@@ -12884,7 +12938,7 @@ function computeOfflineProgress(minMs) {
     // 城鎮安全區：沒有怪物可打，離線期間只是安穩休息，沒有戰鬥收穫
     state.lastActiveAt = Date.now();
     saveGame();
-    return { elapsedMs, elapsedSec, expGained: 0, jobExpGained: 0, goldGained: 0, itemsGained: [], baseLevelUps: 0, jobLevelUps: 0, kills: 0, safeTown: true, allyCount: 0, mapName: map.name };
+    return { elapsedMs, elapsedSec, expGained: 0, jobExpGained: 0, goldGained: 0, itemsGained: [], baseLevelUps: 0, jobLevelUps: 0, kills: 0, safeTown: true, allyCount: 0, mapName: map.name, bossKills: 0, bossList: [] };
   }
 
   const totalWeight = pool.reduce((s, m) => s + m.weight, 0);
@@ -13069,11 +13123,49 @@ function computeOfflineProgress(minMs) {
   state.equip.ammo = _snap.equipAmmo;
   logMsg = _origLog;
   _dpsPaused = false;
-  const totalKills = killsPerSec * elapsedSec;
+  /* ---- 頭目（#137）----
+     開著 BOSS 模式時，線上每次補怪有 MVP_SPAWN_CHANCE_PCT 的機率抽到頭目。
+     這裡照同一個數字切一份**時間預算**給頭目，剩下的才留給雜魚，兩邊加起來剛好 100%。
 
-  const expGained = Math.round(avgExp * totalKills);
-  const jobExpGained = Math.round(avgJobExp * totalKills);
-  const goldGained = Math.round((3 + avgLevel * 1.4) * totalKills);
+     三條規則都刻意保守：
+       1. 只有**實際殺過**的頭目才算（bossKillRecord），沒殺過的那份時間直接損失——
+          官方名單是等機率抽的，抽到你打不動的那隻本來就是白耗。
+       2. 速度用最近一次的實測耗時，不是歷史最快。
+       3. 一隻一隻打（線上也是「場上有頭目就不再生下一隻」），
+          所以是「時間 ÷ 耗時」而不是併行。
+
+     這個模型比線上實際偏低：線上頭目一出現就佔著場子直到被打死，
+     等於幾乎整段時間都在打牠。寧可少給。 */
+  const bossGained = [];
+  let bossKills = 0;
+  if (state.mvpMode && typeof MVP_MAP_DATA !== 'undefined') {
+    const mvpList = (MVP_MAP_DATA[map.id] || []).filter(id => MONSTERS[id]);
+    if (mvpList.length) {
+      // 名單是等機率抽的，所以每一隻分到的是「頭目時間 ÷ 名單長度」，不是 ÷ 打得動的隻數
+      const perBossSec = elapsedSec * (MVP_SPAWN_CHANCE_PCT / 100) / mvpList.length;
+      mvpList.forEach(id => {
+        const rec = bossKillRecord(id);
+        if (!rec || !(rec.n > 0) || !(rec.lastMs > 0)) return;
+        const n = perBossSec / (rec.lastMs / 1000);
+        if (!(n > 0)) return;
+        bossGained.push({ id, kills: n });
+        bossKills += n;
+      });
+    }
+  }
+  // 頭目佔掉的時間不能同時拿去打雜魚，兩邊的時間預算要加得起來
+  const normalShare = bossKills > 0 ? 1 - MVP_SPAWN_CHANCE_PCT / 100 : 1;
+  const totalKills = killsPerSec * elapsedSec * normalShare;
+
+  let expGained = Math.round(avgExp * totalKills);
+  let jobExpGained = Math.round(avgJobExp * totalKills);
+  let goldGained = Math.round((3 + avgLevel * 1.4) * totalKills);
+  bossGained.forEach(b => {
+    const bd = MONSTERS[b.id];
+    expGained += Math.round((bd.exp || 0) * b.kills);
+    jobExpGained += Math.round((bd.jobExp || 0) * b.kills);
+    goldGained += Math.round((3 + (bd.level || 0) * 1.4) * b.kills);
+  });
 
   // 掉落物期望值（依真實怪物密度權重計算每次擊殺的期望掉落機率）
   const dropAgg = {};
@@ -13086,13 +13178,38 @@ function computeOfflineProgress(minMs) {
       dropAgg[d.item] = (dropAgg[d.item] || 0) + perKillChance;
     });
   });
+  /* 頭目的掉落也照期望值發（#137）。跟雜魚共用同一張 dropAgg：
+     那張表是「每次擊殺的期望掉落機率」，頭目的除數是牠自己的擊殺數而不是 totalKills，
+     所以直接把 `掉落率 × 該頭目的擊殺數` 加進去，單位一致。
+     卡片走 MONSTER_CARD_DROPS 那條的也要補，不然頭目卡片離線永遠掉不出來。 */
+  const bossDropAgg = {};
+  bossGained.forEach(b => {
+    const bd = MONSTERS[b.id];
+    (bd.drops || []).forEach(d => {
+      bossDropAgg[d.item] = (bossDropAgg[d.item] || 0) + d.chance * b.kills;
+    });
+    const cd = (typeof MONSTER_CARD_DROPS !== 'undefined') ? MONSTER_CARD_DROPS[b.id] : null;
+    if (cd && cd.card) bossDropAgg[cd.card] = (bossDropAgg[cd.card] || 0) + cd.chance * b.kills;
+  });
+
   const itemsGained = [];
-  Object.keys(dropAgg).forEach(itemId => {
-    const expected = dropAgg[itemId] * totalKills;
+  /* 雜魚與頭目是兩張表，但同一樣東西可能兩邊都掉（蘋果那種）。
+     收穫清單要**併成一列**，不然畫面上會看到「蘋果 x4」跟「蘋果 x2」並排。 */
+  const gainedIdx = {};
+  const rollQty = expected => {
     let qty = Math.floor(expected);
     if (Math.random() < (expected - qty)) qty++;
-    if (qty > 0) { addItem(itemId, qty); itemsGained.push({ item: itemId, qty }); }
-  });
+    return qty;
+  };
+  const grant = (itemId, qty) => {
+    if (!(qty > 0) || !ITEMS[itemId]) return;
+    addItem(itemId, qty);
+    const i = gainedIdx[itemId];
+    if (i === undefined) { gainedIdx[itemId] = itemsGained.length; itemsGained.push({ item: itemId, qty }); }
+    else itemsGained[i].qty += qty;
+  };
+  Object.keys(dropAgg).forEach(itemId => grant(itemId, rollQty(dropAgg[itemId] * totalKills)));
+  Object.keys(bossDropAgg).forEach(itemId => grant(itemId, rollQty(bossDropAgg[itemId])));
 
   // 離線擊殺也要記進圖鑑，依出沒權重分配到各怪物；掛機一整晚回來圖鑑卻沒動會很奇怪
   pool.forEach(m => {
@@ -13100,6 +13217,12 @@ function computeOfflineProgress(minMs) {
     const share = Math.floor(totalKills * (m.weight / totalWeight));
     if (share > 0) codexRecordKill(m.id);
     if (share > 1) ensureCodex().mon[m.id] += share - 1;
+  });
+  // 頭目同理。**不動 bossKills 的耗時紀錄**：那是線上實測的數字，離線不該回頭寫它
+  bossGained.forEach(b => {
+    const share = Math.floor(b.kills);
+    if (share > 0) codexRecordKill(b.id);
+    if (share > 1) ensureCodex().mon[b.id] += share - 1;
   });
 
   const beforeBaseLv = state.baseLevel;
@@ -13136,6 +13259,10 @@ function computeOfflineProgress(minMs) {
     kills: Math.round(totalKills),
     allyCount: sampleAllies.length,
     mapName: map.name,
+    // 頭目那份分開回報：玩家最想知道的就是「這一晚有沒有打到頭目」（#137）
+    bossKills: Math.round(bossKills),
+    bossList: bossGained.filter(b => b.kills >= 0.5)
+      .map(b => ({ id: b.id, name: MONSTERS[b.id].name, kills: Math.round(b.kills) })),
   };
 }
 
@@ -13196,6 +13323,7 @@ function pushOfflineLog(off) {
     baseLevelUps: off.baseLevelUps || 0,
     jobLevelUps: off.jobLevelUps || 0,
     allyCount: off.allyCount || 0,
+    bossList: (off.bossList || []).slice(0, 4),
     itemsGained: spoils.slice(0, OFFLINE_LOG_ITEMS_MAX),
     itemsMore: Math.max(0, spoils.length - OFFLINE_LOG_ITEMS_MAX),
   });

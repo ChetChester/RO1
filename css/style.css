@@ -1907,3 +1907,7 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-deep); co
 .idle-rec-items { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
 .idle-rec-items .offline-item { font-size: 11px; padding: 2px 7px; }
 .idle-rec-empty { font-size: 12px; color: var(--ink-dim); text-align: center; padding: 18px 0; line-height: 1.7; }
+
+/* 頭目的擊殺耗時（#137）：離線結算靠這個數字決定打不打得動，所以要看得到 */
+.codex-boss-time { font-size: 11px; color: var(--gold-soft); margin-top: 2px; }
+.codex-boss-time.none { color: var(--ink-dim); }

@@ -3101,6 +3101,29 @@ function codexGoToMap(mapId) {
 }
 
 // 一行「哪張圖、出現率多少、可以直接去」
+/* 「12 分 34 秒」。頭目的擊殺耗時動輒幾十分鐘，秒數直接印出來看不出量級 */
+function formatKillTime(ms) {
+  const s = Math.round(ms / 1000);
+  if (s < 60) return s + ' 秒';
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return r ? `${m} 分 ${r} 秒` : `${m} 分`;
+}
+/* 頭目的最佳擊殺速度（#137）。
+
+   這個數字不只是紀錄——**離線結算就是靠它決定打不打得動**（用的是最近一次，
+   顯示的是歷史最快）。所以要讓玩家看得到：沒打過就沒有離線收益，
+   畫面上不講的話那條規則等於是隱形的。 */
+function bossTimeHtml(id, def) {
+  if (!def || !def.isBoss) return '';
+  const rec = (typeof bossKillRecord === 'function') ? bossKillRecord(id) : null;
+  if (!rec || !(rec.bestMs > 0)) {
+    return `<div class="codex-boss-time none" title="離線掛機只會遇到你實際擊敗過的頭目">⏱️ 尚未擊敗（離線不會遇到）</div>`;
+  }
+  const last = rec.lastMs > 0 ? `　最近 ${formatKillTime(rec.lastMs)}` : '';
+  return `<div class="codex-boss-time" title="最佳＝歷史最快；離線結算用的是「最近一次」，換裝變強後線上再打一隻就會更新">⏱️ 最佳擊殺 <b>${formatKillTime(rec.bestMs)}</b>${last}</div>`;
+}
+
 function codexMapRow(m, extra) {
   /* MVP 那幾筆要標出來（#108）：牠們只在 BOSS 模式開著的時候才會出現，
      沒標的話玩家會以為前往之後站著就會遇到。 */
@@ -3159,7 +3182,7 @@ function renderCodexDetail(id) {
             ${d.isMvp ? '<span class="codex-mvp">MVP</span>'
               : (d.isBoss ? '<span class="codex-miniboss">迷你王</span>' : '')}
           </div>
-          <div class="codex-detail-kills">累計擊殺 <b>${kills}</b></div>
+          <div class="codex-detail-kills">累計擊殺 <b>${kills}</b>${bossTimeHtml(id, d)}</div>
         </div>
       </div>
       <div class="codex-detail-stats">
@@ -5007,10 +5030,14 @@ function showOfflineModal(off) {
   // 隊友有出力的話寫出來——#135 之前隊友的傷害根本沒算進離線收益
   const partyHtml = off.allyCount
     ? `<p class="offline-duration">🤝 ${off.allyCount} 位隊友一起參戰。</p>` : '';
+  // 頭目那份單獨寫一行（#137）：這是玩家最想知道的一件事
+  const bossHtml = (off.bossList || []).length
+    ? `<p class="offline-duration">👑 擊敗頭目：${off.bossList.map(b => `${b.name} ×${b.kills}`).join('、')}</p>` : '';
 
   document.getElementById('offline-modal-body').innerHTML = `
     <p class="offline-duration">離開了 <strong>${formatDuration(off.elapsedMs)}</strong>，你的角色在原地持續戰鬥了 ${off.kills} 場戰鬥：</p>
     ${partyHtml}
+    ${bossHtml}
     ${levelUpHtml}
     <div class="offline-stats-grid">
       <div>經驗值 +${off.expGained}</div>
@@ -5117,6 +5144,8 @@ function renderIdleReport() {
     const lv = (r.baseLevelUps > 0 || r.jobLevelUps > 0)
       ? `<div class="idle-rec-lv">🎉 等級 +${r.baseLevelUps}　職業 +${r.jobLevelUps}</div>` : '';
     const party = r.allyCount ? `　🤝 ${r.allyCount} 位隊友` : '';
+    const boss = (r.bossList || []).length
+      ? `<div class="idle-rec-lv">👑 ${r.bossList.map(b => `${b.name} ×${b.kills}`).join('、')}</div>` : '';
     return `<div class="idle-rec">
       <div class="idle-rec-when">${formatStamp(r.at)}</div>
       <div class="idle-rec-head">離開 ${formatDuration(r.elapsedMs)}　${r.mapName || ''}${party}</div>
@@ -5126,6 +5155,7 @@ function renderIdleReport() {
         <div>經驗 +${(r.expGained || 0).toLocaleString()}</div>
         <div>職業 +${(r.jobExpGained || 0).toLocaleString()}</div>
       </div>
+      ${boss}
       ${lv}
       <div class="idle-rec-items">${items}</div>
     </div>`;

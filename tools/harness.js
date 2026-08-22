@@ -124,7 +124,8 @@ function boot(opts) {
     'JOB3_EXP_L1', 'JOB3_EXP_SEGS', 'JOB_EXP_COEF', 'BASE_EXP_L100', 'BASE_EXP_SEGS',
     'STAT_RESET_COST_ZENY',
     'ALLY_MONSTER_TARGET_PLAYER_PCT',
-    'OFFLINE_LOG_MAX', 'OFFLINE_LOG_ITEMS_MAX', 'OFFLINE_MIN_MS', 'OFFLINE_CAP_MS'];
+    'OFFLINE_LOG_MAX', 'OFFLINE_LOG_ITEMS_MAX', 'OFFLINE_MIN_MS', 'OFFLINE_CAP_MS',
+    'MAX_SLOTS', 'SAVE_KEY_PREFIX'];
   src += '\n;globalThis.__getState = () => state;'
        + '\nglobalThis.__setState = v => { state = v; };'
        + '\nglobalThis.__consts = { '
