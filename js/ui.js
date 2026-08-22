@@ -3113,15 +3113,33 @@ function formatKillTime(ms) {
 
    這個數字不只是紀錄——**離線結算就是靠它決定打不打得動**（用的是最近一次，
    顯示的是歷史最快）。所以要讓玩家看得到：沒打過就沒有離線收益，
-   畫面上不講的話那條規則等於是隱形的。 */
+   畫面上不講的話那條規則等於是隱形的。
+
+   分三種模式各記一份：打寶把怪的血量拉到 ×3、瘋狂 ×5，同一隻頭目的耗時
+   差三到五倍。這裡給三個切換鈕，預設看**現在這個模式**——那才是離線會用到的那份。 */
+const BOSS_TIME_MODES = [
+  { m: 0, label: '普通' },
+  { m: 1, label: '打寶' },
+  { m: 2, label: '瘋狂' },
+];
+let codexBossMode = null;          // null = 跟著目前的打寶模式走
+function setCodexBossMode(m) { codexBossMode = m; renderCodexTab(); }
 function bossTimeHtml(id, def) {
   if (!def || !def.isBoss) return '';
-  const rec = (typeof bossKillRecord === 'function') ? bossKillRecord(id) : null;
-  if (!rec || !(rec.bestMs > 0)) {
-    return `<div class="codex-boss-time none" title="離線掛機只會遇到你實際擊敗過的頭目">⏱️ 尚未擊敗（離線不會遇到）</div>`;
-  }
-  const last = rec.lastMs > 0 ? `　最近 ${formatKillTime(rec.lastMs)}` : '';
-  return `<div class="codex-boss-time" title="最佳＝歷史最快；離線結算用的是「最近一次」，換裝變強後線上再打一隻就會更新">⏱️ 最佳擊殺 <b>${formatKillTime(rec.bestMs)}</b>${last}</div>`;
+  const cur = codexBossMode == null
+    ? (typeof farmMode === 'function' ? farmMode() : 0) : codexBossMode;
+  const rec = (typeof bossKillRecord === 'function') ? bossKillRecord(id, cur) : null;
+  const tabs = BOSS_TIME_MODES.map(o => {
+    const has = (typeof bossKillRecord === 'function') && bossKillRecord(id, o.m);
+    return `<button class="codex-bt-mode ${o.m === cur ? 'active' : ''} ${has ? 'has' : ''}"
+      onclick="event.stopPropagation();setCodexBossMode(${o.m})"
+      title="${o.label}模式的擊殺紀錄${has ? '' : '（尚未擊敗）'}">${o.label}</button>`;
+  }).join('');
+  const body = (!rec || !(rec.bestMs > 0))
+    ? `<span class="codex-bt-none" title="離線掛機只會遇到你在這個模式下實際擊敗過的頭目">尚未擊敗（此模式離線不會遇到）</span>`
+    : `最佳 <b>${formatKillTime(rec.bestMs)}</b>　最近 ${formatKillTime(rec.lastMs)}`;
+  return `<div class="codex-boss-time" title="最佳＝歷史最快；離線結算用的是「最近一次」，換裝變強後線上再打一隻就會更新">
+    <span class="codex-bt-modes">${tabs}</span>⏱️ ${body}</div>`;
 }
 
 function codexMapRow(m, extra) {

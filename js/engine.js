@@ -6237,7 +6237,7 @@ function spawnMonster() {
        量「出現到死」而不是「第一刀到死」是刻意的——中間被雜魚分掉的攻擊、
        喝水停頓、隊友放輔助的空檔，全部算進去才是真實的產出速度，
        而離線結算要的正是那個速度。 */
-    state.monsters.push({ defId, hp, maxHp: hp, id: state.monsterIdCounter, spawnedAt: Date.now() });
+    state.monsters.push({ defId, hp, maxHp: hp, id: state.monsterIdCounter, spawnedAt: Date.now(), farmMode: farmMode() });
     applyDontForgetMe(state.monsters[state.monsters.length - 1]);
     codexRecordSeen(defId);
     const isMvp = mvpList && mvpList.includes(defId);
@@ -7468,14 +7468,40 @@ function rollEtherDrop(monDef) {
 
    耗時從**出現**量到死（monObj.spawnedAt），中間被雜魚分掉的攻擊、喝水、
    放輔助的空檔全部算進去。那才是真實產出速度，離線本來就該照那個給。 */
+/* **一隻頭目要分三份紀錄**（普通／打寶／瘋狂）。
+
+   打寶模式把怪的血量拉到 ×3、瘋狂 ×5，而血量是**生怪當下**算進去的，
+   所以同一隻頭目在三種模式下的擊殺耗時差三到五倍。混成一份的話：
+   用瘋狂模式的紀錄去算普通模式的離線 → 少給三倍；反過來 → 多給五倍。
+   兩個方向都不對，後者還會變成刷法。
+
+     state.bossKills[怪物id][模式] = { n, lastMs, bestMs, at }
+
+   離線只認**當下這個模式**的紀錄：在瘋狂模式掛機，就得先在瘋狂模式殺過一次。 */
 function ensureBossKills(st) {
   const s = st || state;
   if (!s.bossKills) s.bossKills = {};
   return s.bossKills;
 }
-function bossKillRecord(monId, st) {
+/* 舊版（#137 初版）是一隻怪一份平鋪紀錄，沒有分模式。
+   那份不知道是在哪個模式量的，一律歸到普通——三種模式裡普通最快，
+   歸到它等於「之後在打寶模式掛機要重新量一次」，錯的方向是保守的那邊。 */
+function migrateBossKills(st) {
+  const log = (st && st.bossKills);
+  if (!log) return;
+  Object.keys(log).forEach(id => {
+    const v = log[id];
+    if (!v || typeof v !== 'object') { delete log[id]; return; }
+    if (typeof v.lastMs === 'number' || typeof v.n === 'number') {
+      log[id] = { [FARM_MODE_OFF]: v };
+    }
+  });
+}
+function bossKillRecord(monId, mode, st) {
   const s = st || state;
-  return (s && s.bossKills && s.bossKills[monId]) || null;
+  const m = mode == null ? farmMode() : mode;
+  const per = s && s.bossKills && s.bossKills[monId];
+  return (per && per[m]) || null;
 }
 function recordBossKillTime(owner, monKey, def, monObj) {
   if (!owner || !def || !def.isBoss) return;
@@ -7485,13 +7511,18 @@ function recordBossKillTime(owner, monKey, def, monObj) {
   /* 下限擋掉不合理的紀錄：GM 秒殺、測試造出來的假怪、以及同一拍連續結算。
      沒有下限的話一次 0ms 的紀錄會讓離線變成無限刷。 */
   if (!(ms >= BOSS_KILL_MIN_MS)) return;
+  /* 用**生怪當下**的模式，不是現在的模式：血量是那時候算進去的。
+     切模式時 setFarmMode() 會清場重生，所以兩者其實一致，
+     但把它記在怪身上就不必依賴那條不變式。 */
+  const mode = monObj.farmMode == null ? farmMode() : monObj.farmMode;
   const log = ensureBossKills(owner);
-  const cur = log[monKey] || { n: 0, lastMs: 0, bestMs: 0, at: 0 };
+  const per = log[monKey] || (log[monKey] = {});
+  const cur = per[mode] || { n: 0, lastMs: 0, bestMs: 0, at: 0 };
   cur.n++;
   cur.lastMs = ms;
   cur.bestMs = cur.bestMs > 0 ? Math.min(cur.bestMs, ms) : ms;
   cur.at = Date.now();
-  log[monKey] = cur;
+  per[mode] = cur;
 }
 const BOSS_KILL_MIN_MS = 1000;
 
@@ -12765,6 +12796,7 @@ function loadGame() {
     if (!state.encounterMode) state.encounterMode = 'melee';
     if (!state.lastSpawnTime) state.lastSpawnTime = 0;
     if (!state.bossKills) state.bossKills = {};   // 頭目擊殺紀錄（#137）：舊存檔沒有這格
+    migrateBossKills(state);                      // 初版沒分打寶模式，搬到「普通」那一格
     // 如果舊存檔有 state.monster 但沒有 state.monsters，遷移過來
     if (state.monster && state.monsters.length === 0) {
       state.monsters = [state.monster];
@@ -13144,7 +13176,9 @@ function computeOfflineProgress(minMs) {
       // 名單是等機率抽的，所以每一隻分到的是「頭目時間 ÷ 名單長度」，不是 ÷ 打得動的隻數
       const perBossSec = elapsedSec * (MVP_SPAWN_CHANCE_PCT / 100) / mvpList.length;
       mvpList.forEach(id => {
-        const rec = bossKillRecord(id);
+        /* 只認**當下這個打寶模式**的紀錄：怪的血量差三到五倍，
+           拿普通模式的耗時去算瘋狂模式的離線會多給五倍。 */
+        const rec = bossKillRecord(id, farmMode());
         if (!rec || !(rec.n > 0) || !(rec.lastMs > 0)) return;
         const n = perBossSec / (rec.lastMs / 1000);
         if (!(n > 0)) return;

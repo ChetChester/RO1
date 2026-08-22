@@ -1908,6 +1908,18 @@ html, body { margin: 0; padding: 0; height: 100%; background: var(--bg-deep); co
 .idle-rec-items .offline-item { font-size: 11px; padding: 2px 7px; }
 .idle-rec-empty { font-size: 12px; color: var(--ink-dim); text-align: center; padding: 18px 0; line-height: 1.7; }
 
-/* 頭目的擊殺耗時（#137）：離線結算靠這個數字決定打不打得動，所以要看得到 */
-.codex-boss-time { font-size: 11px; color: var(--gold-soft); margin-top: 2px; }
-.codex-boss-time.none { color: var(--ink-dim); }
+/* 頭目的擊殺耗時（#137）：離線結算靠這個數字決定打不打得動，所以要看得到。
+   三種打寶模式各一份紀錄，左邊三顆小鈕切換。 */
+.codex-boss-time {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 5px;
+  font-size: 11px; color: var(--gold-soft); margin-top: 3px;
+}
+.codex-bt-modes { display: inline-flex; gap: 2px; }
+.codex-bt-mode {
+  padding: 1px 6px; font-size: 10px; border-radius: 3px; cursor: pointer;
+  background: transparent; border: 1px solid var(--line); color: var(--ink-dim);
+}
+.codex-bt-mode.has { color: var(--gold-soft); border-color: var(--gold-soft); }
+.codex-bt-mode.active { background: rgba(212,175,55,0.22); color: var(--ink); border-color: var(--gold); }
+.codex-bt-mode:hover { border-color: var(--gold); }
+.codex-bt-none { color: var(--ink-dim); }

@@ -255,10 +255,11 @@ function bossScene() {
   g.recomputeDerived(true);
   return { g, mapId, list: g.MVP_MAP_DATA[mapId].filter(i => g.MONSTERS[i]) };
 }
-// 假裝線上打死一隻，耗時 sec 秒
-function fakeKill(g, id, sec) {
+// 假裝在 mode 這個打寶模式下線上打死一隻，耗時 sec 秒
+function fakeKill(g, id, sec, mode) {
+  const m = mode == null ? (g.state.farmMode || 0) : mode;
   const def = g.MONSTERS[id];
-  g.state.monsters = [{ defId: id, hp: 1, maxHp: def.hp, id: 99, spawnedAt: Date.now() - sec * 1000 }];
+  g.state.monsters = [{ defId: id, hp: 1, maxHp: def.hp, id: 99, spawnedAt: Date.now() - sec * 1000, farmMode: m }];
   g.killMonster(def, g.state.monsters[0]);
 }
 
@@ -385,6 +386,54 @@ function fakeKill(g, id, sec) {
   t.eq('離線也不會灌水擊殺次數', rec1.n, rec0.n);
 }
 
+/* ---- 三種打寶模式各記一份（#137）----
+   打寶把怪的血量拉到 ×3、瘋狂 ×5，同一隻頭目的耗時差三到五倍。
+   混成一份的話，拿普通模式的紀錄去算瘋狂模式的離線會**多給五倍**——那是刷法不是收益。 */
+{
+  const { g, list } = bossScene();
+  const id = list[0];
+  fakeKill(g, id, 120, g.FARM_MODE_OFF);
+  fakeKill(g, id, 360, g.FARM_MODE_NORMAL);
+  fakeKill(g, id, 600, g.FARM_MODE_MAD);
+  const r = m => g.bossKillRecord(id, m);
+  t.ok('普通模式那一份是 120 秒', Math.abs(r(g.FARM_MODE_OFF).lastMs - 120000) < 1500);
+  t.ok('打寶模式那一份是 360 秒', Math.abs(r(g.FARM_MODE_NORMAL).lastMs - 360000) < 1500);
+  t.ok('瘋狂模式那一份是 600 秒', Math.abs(r(g.FARM_MODE_MAD).lastMs - 600000) < 1500);
+  t.eq('三份互不干擾（各只殺過一次）',
+    [r(0).n, r(1).n, r(2).n].join(','), '1,1,1');
+  // 記的是生怪當下的模式，不是結算當下的
+  g.state.farmMode = g.FARM_MODE_MAD;
+  fakeKill(g, id, 90, g.FARM_MODE_OFF);
+  t.ok('紀錄跟著怪身上的模式走，不是跟著現在的模式',
+    Math.abs(r(g.FARM_MODE_OFF).lastMs - 90000) < 1500 && r(g.FARM_MODE_MAD).n === 1);
+}
+{
+  // 離線只認當下這個模式的紀錄
+  const { g, list } = bossScene();
+  g.state.bossKills = {};
+  g.state.bossKills[list[0]] = { 0: { n: 1, lastMs: 1200000, bestMs: 1200000, at: Date.now() } };
+  const got = [];
+  [g.FARM_MODE_OFF, g.FARM_MODE_NORMAL, g.FARM_MODE_MAD].forEach(m => {
+    g.state.farmMode = m;
+    rewind(g, 86400);
+    got.push(g.computeOfflineProgress().bossKills);
+  });
+  t.ok('只在普通模式殺過 → 普通模式離線算得到', got[0] > 0, '擊殺 ' + got[0]);
+  t.eq('打寶模式離線不算（沒在那個模式殺過）', got[1], 0);
+  t.eq('瘋狂模式離線不算', got[2], 0);
+}
+{
+  // 同一隻在兩個模式都殺過時，各自用各自的耗時
+  const { g, list } = bossScene();
+  const id = list[0];
+  fakeKill(g, id, 600, g.FARM_MODE_OFF);      // 普通 10 分
+  fakeKill(g, id, 3000, g.FARM_MODE_MAD);     // 瘋狂 50 分
+  const kills = m => { g.state.farmMode = m; rewind(g, 86400); return g.computeOfflineProgress().bossKills; };
+  const a = kills(g.FARM_MODE_OFF), b = kills(g.FARM_MODE_MAD);
+  t.ok('兩個模式都算得到', a > 0 && b > 0, `普通 ${a} / 瘋狂 ${b}`);
+  t.ok('瘋狂模式打得慢，離線隻數就少', b < a, `普通 ${a} / 瘋狂 ${b}`);
+}
+
 /* ---- 舊存檔沒有這一格 ---- */
 {
   const { g } = bossScene();
@@ -395,6 +444,21 @@ function fakeKill(g, id, sec) {
   t.ok('舊存檔讀得起來', g.loadGame());
   t.ok('讀檔後自動補上頭目紀錄欄位', !!g.state.bossKills);
   t.eq('補上的是空表', Object.keys(g.state.bossKills).length, 0);
+}
+{
+  /* #137 初版的平鋪紀錄（沒分模式）要搬得動。
+     搬到「普通」那一格：三種模式裡它最快，歸錯的方向是「之後要重新量」，
+     而不是「白拿五倍」。 */
+  const { g, list } = bossScene();
+  g.state.bossKills = {};
+  g.state.bossKills[list[0]] = { n: 2, lastMs: 99000, bestMs: 88000, at: 1 };
+  g.migrateBossKills(g.state);
+  t.ok('舊的平鋪紀錄搬進「普通」那一格', !!g.bossKillRecord(list[0], g.FARM_MODE_OFF));
+  t.eq('搬過去的數字沒變', g.bossKillRecord(list[0], g.FARM_MODE_OFF).lastMs, 99000);
+  t.eq('不會憑空出現在打寶模式', !!g.bossKillRecord(list[0], g.FARM_MODE_NORMAL), false);
+  // 已經是新格式的不可以被重複包一層
+  g.migrateBossKills(g.state);
+  t.eq('重複遷移不會再包一層', g.bossKillRecord(list[0], g.FARM_MODE_OFF).lastMs, 99000);
 }
 
 process.exit(t.report('掛機結算與收益紀錄'));
