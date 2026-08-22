@@ -46,6 +46,8 @@ const SUITES = [
   'test_idle_offline.js',// 掛機結算：切分頁即離線、隊友也要算、收益紀錄（#135）
   'test_cardfx_136.js',  // 巴風特濺射、達納托斯卡片、無視物防要對普攻生效（#136）
   'test_drops_138.js',   // 緋紅上架、自動念咒吃學習等級、圖鑑分類（#138）
+  'test_vending_ore_148.js', // 露天商店上架與原石全部合成（#148）
+  'test_spawn_sfx_146.js', // 生怪速度顯示與事件音效（#146）
   'test_offline_kill_drops_145.js', // 離線結算漏掉的擊殺時效果（#145）
   'test_boxes_143.js',   // 箱子一次開啟：數量守恆、紀錄合併、上限（#143）
   'test_equipsets_144.js',// 說明欄有、實裝沒有的三組裝備套裝（#144）

@@ -348,12 +348,12 @@ g.state.rebirthPath = null; g.state.rebirthCount = 0;
    漏判一筆就會刪到還在用的東西——而那不會噴錯，只會變成掉落表掉出 undefined、
    套裝永遠湊不齊、配方按下去沒反應。所以反過來從引用端驗一次。
 
-   已知本來就斷的兩筆（刪之前就斷了，不是刪出來的）：
-     · 潛水套裝的 oxygen_bomb_k —— ITEMS 裡從來沒有這件，這套永遠湊不齊
-     · 某張卡的 pool=food
-   修好之後把下面的 KNOWN 一起清掉。 */
+   `food` 是某張卡的 killDrop 分類池名（不是道具 id），走 ITEM_POOLS 那條，
+   所以查不到 ITEMS 是正常的。
+   （潛水套裝那筆已於 #146 整組刪除——它的 oxygen_bomb_k 在 ITEMS 裡從來不存在，
+     那套永遠湊不齊。） */
 {
-  const KNOWN = ['oxygen_bomb_k', 'food'];
+  const KNOWN = ['food'];
   const bad = [];
   const chk = (where, id) => {
     if (typeof id !== 'string' || !id || g.ITEMS[id] || KNOWN.includes(id)) return;

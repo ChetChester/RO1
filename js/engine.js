@@ -312,7 +312,8 @@ function createCharacter(name, statAlloc, gender) {
        近戰一次五隻對剛進遊戲的人來說畫面太滿。
        舊存檔沒有這個欄位時照樣退回 'melee'（見 loadGame），不改變既有角色的行為。 */
     encounterMode: 'ranged', // 'melee'=近戰, 'ranged'=遠攻
-    mvpMode: false,         // MVP 模式開關
+    mvpMode: false,         // MVP 模式開關（#147 之後只管正牌 MVP）
+    miniMode: false,        // 迷你王模式開關（#147）：跟 MVP 各自獨立勾選
     farmMode: 0,            // 打寶模式（#110）：0 關／1 一般／2 瘋狂
     lastSpawnTime: 0,     // 上次生怪時間
     hp: 1, sp: 1, maxHp: 1, maxSp: 1,
@@ -2980,10 +2981,11 @@ function estimateMapYield(mapObj) {
      每隻的實際週期是 T + 0.5 秒，而不是 T。
 
      先前這裡寫成「上限 = 1/3 隻每秒」，等於假設緩衝永遠是空的，把擊殺數低估了一半以上。 */
-  // 跟 spawnMonster() 讀同一個旗標，不然這裡的估算會跟實際生怪速度對不上
-  const ridePassive = state.hasRiding;
-  const refillSec = (ridePassive ? 2250 : 3000) / 1000;
-  const emptyGapSec = (ridePassive ? 375 : 500) / 1000;
+  /* 走跟 spawnMonster() 同一支 spawnDelayMs()，不然估算會跟實際生怪速度對不上。
+     以前這裡只認騎乘術，卡片／合奏／手推車／打寶那四個加速來源全都沒算進去，
+     裝了月夜貓卡的人看到的預估產出一直偏低。 */
+  const refillSec = spawnDelayMs(false) / 1000;
+  const emptyGapSec = spawnDelayMs(true) / 1000;
   const secPerKill = hp > 0 && dps > 0 ? hp / dps : Infinity;
   // 遠攻模式是「死一隻補一隻」，沒有清場等待
   const throttled = state.encounterMode === 'melee' && secPerKill < refillSec;
@@ -6166,9 +6168,67 @@ function effectiveFleeWithBuff() {
 /* ---------------- 怪物 ---------------- */
 function currentMap() { return MAPS.find(m => m.id === state.mapId); }
 
+/* ---- BOSS 名單拆兩半（#147）----
+   `MVP_MAP_DATA` 一直是「這張圖有哪些 BOSS 階級魔物」的混合名單，
+   正牌 MVP 與迷你王混在一起，一個勾選同時決定兩種。使用者要分開：
+   兩個模式各自勾選、各自 20%。
+
+   兩份名單都從同一張表推導，不另外維護第二份資料——
+   多一份就會有一份忘了更新，而那種錯只會表現成「某隻王再也不出現」。 */
+function bossListOf(mapId, kind) {
+  const list = (typeof MVP_MAP_DATA !== 'undefined' && MVP_MAP_DATA[mapId]) || [];
+  return list.filter(id => {
+    const m = MONSTERS[id];
+    if (!m) return false;
+    return kind === 'mvp' ? !!m.isMvp : !m.isMvp;
+  });
+}
+// 這張圖、依目前勾選的兩個開關，實際會出現的 BOSS 名單（離線結算也讀這一支）
+function activeBossLists(mapId) {
+  const out = [];
+  if (state.mvpMode) { const l = bossListOf(mapId, 'mvp'); if (l.length) out.push(l); }
+  if (state.miniMode) { const l = bossListOf(mapId, 'mini'); if (l.length) out.push(l); }
+  return out;
+}
+
+/* ---- 生怪速度（#146）----
+   本作沒有「移動」這個維度，所以官方所有「移動速度上升」的效果一律換算成
+   **生怪加速**（騎乘術的說明也是直接寫「生怪速度+25%」）。來源目前有四個，
+   全部相乘，每一步都夾 100ms 下限——間隔太短會讓場上永遠是滿的，
+   等於單方面拉高挨打量。
+
+   抽成函式是為了讓角色分頁顯示同一個數字：以前這段只寫在 spawnMonster() 裡面，
+   畫面上沒有任何地方看得到，玩家點了騎乘術也不知道到底有沒有變快。
+   兩邊各算一次的話遲早會算出不一樣的值，所以共用這一支。 */
+const SPAWN_BASE_MS = { empty: 500, some: 3000 };
+function spawnSpeedSources() {
+  const out = [];
+  if (state.hasRiding) out.push({ name: '騎乘術／弓身彈影', pct: 33 });   // 500→375、3000→2250
+  if (state.cardSpawnSpeedPct) out.push({ name: '卡片', pct: state.cardSpawnSpeedPct });
+  const cb = buffMult('spawnspeed').mult;
+  if (cb !== 1) out.push({ name: '手推車加速', pct: Math.round((cb - 1) * 100) });
+  if (state.songSpawnSpeedPct) out.push({ name: '合奏', pct: state.songSpawnSpeedPct });
+  const fm = farmMult('spawn');
+  if (fm !== 1) out.push({ name: '打寶模式', pct: Math.round((1 / fm - 1) * 100) });
+  return out;
+}
+// empty=true 代表場上一隻都沒有（補第一批的間隔比較短）
+function spawnDelayMs(empty) {
+  const ride = state.hasRiding;
+  let delay = empty ? (ride ? 375 : SPAWN_BASE_MS.empty) : (ride ? 2250 : SPAWN_BASE_MS.some);
+  const clamp = v => Math.max(100, Math.round(v));
+  const spawnPct = state.cardSpawnSpeedPct || 0;
+  if (spawnPct) delay = clamp(delay / (1 + spawnPct / 100));
+  const cb = buffMult('spawnspeed').mult;
+  if (cb !== 1) delay = clamp(delay / cb);
+  if (state.songSpawnSpeedPct) delay = clamp(delay / (1 + state.songSpawnSpeedPct / 100));
+  if (farmMult('spawn') !== 1) delay = clamp(delay * farmMult('spawn'));
+  return delay;
+}
+
 function spawnMonster() {
   const map = currentMap();
-  if (!map.monsters.length && !(state.mvpMode && MVP_MAP_DATA[map.id])) {
+  if (!map.monsters.length && !activeBossLists(map.id).length) {
     state.monsters = [];
     return;
   }
@@ -6177,30 +6237,12 @@ function spawnMonster() {
   if (!state.lastSpawnTime) state.lastSpawnTime = Date.now();
 
   const maxMonsters = state.maxMonsters || MELEE_MAX_MONSTERS;
-  /* 生怪加速的旗標。以前這行是 `state.learnedSkills['riding']`——直接寫死技能 id，
-     而 recomputeDerived() 設的 `state.hasRiding` **從來沒有人讀**（寫了兩處、讀 0 處，
-     這個專案第五次的「推了卻沒人讀」）。#70 的弓身彈影也走同一個效果，
-     改成讀旗標之後兩個技能共用同一個消費點，之後再加第三個也不必動這裡。 */
-  const ridePassive = state.hasRiding;
-
   // 近戰模式：0隻時0.5秒補一批、1隻以上時3秒補一批，每批 1~3 隻，場上上限 MELEE_MAX_MONSTERS
   if (state.encounterMode === 'melee') {
     if (state.monsters.length >= maxMonsters) return;
     const now = Date.now();
-    let delay = state.monsters.length === 0 ? (ridePassive ? 375 : 500) : (ridePassive ? 2250 : 3000);
-    /* 卡片的生怪加速（#55，月夜貓）。官方是「無限移動加速」，本作沒有移動，
-       使用者決定比照騎乘術改成加快生怪——騎乘術寫的也是「生怪速度+25%」，
-       同一個維度，兩者會相乘。
-       **下限 100ms**：補怪間隔太短會讓場上永遠是滿的，等於單方面拉高挨打量。 */
-    const spawnPct = state.cardSpawnSpeedPct || 0;
-    if (spawnPct) delay = Math.max(100, Math.round(delay / (1 + spawnPct / 100)));
-    // 手推車加速（#60）：同一個維度的第三個來源，一樣相乘、一樣吃 100ms 下限
-    const cb = buffMult('spawnspeed').mult;
-    if (cb !== 1) delay = Math.max(100, Math.round(delay / cb));
-    // 操控樂器／練習舞蹈（#68）：官方是合奏時移速上升，照慣例改成生怪加速
-    if (state.songSpawnSpeedPct) delay = Math.max(100, Math.round(delay / (1 + state.songSpawnSpeedPct / 100)));
-    // 打寶模式補怪更快（#110）：跟上面三個加速來源一樣相乘、一樣吃 100ms 下限
-    if (farmMult('spawn') !== 1) delay = Math.max(100, Math.round(delay * farmMult('spawn')));
+    // 生怪間隔的四個加速來源都在 spawnDelayMs() 裡（角色分頁顯示的是同一支）
+    const delay = spawnDelayMs(state.monsters.length === 0);
     if (now - state.lastSpawnTime < delay) return;
     state.lastSpawnTime = now;
   }
@@ -6209,7 +6251,7 @@ function spawnMonster() {
     if (state.monsters.length > 0) return;
   }
 
-  const mvpList = MVP_MAP_DATA[map.id];
+  const bossLists = activeBossLists(map.id);      // 已經照兩個開關過濾過（#147）
   /* 近戰模式一次生 1~3 隻（使用者 2026-08-16 指定）。遠攻模式照舊一次一隻。
      批量會被**剩餘空位**夾住，所以場上永遠不超過 maxMonsters。 */
   const room = Math.max(0, maxMonsters - state.monsters.length);
@@ -6220,11 +6262,15 @@ function spawnMonster() {
   for (let i = 0; i < batch; i++) {
     // MVP 帶小弟時會自己把空位填滿，所以每一輪都要重新確認還有沒有位置
     if (state.monsters.length >= maxMonsters) break;
-    // MVP 模式：20% 機率出 MVP Boss（需該地圖有 MVP 數據，且當前無 MVP 存活）
+    /* BOSS 抽選（#147）。MVP 與迷你王各自 20%、各自檢查「同類還活著沒」——
+       兩邊都中的時候不是各生一隻（一輪只有一個空位），而是從中選一個。
+       這樣任一邊單獨開啟時的機率跟以前一模一樣，兩邊都開也不會變成 40%。 */
     let defId;
-    const hasMvpAlive = mvpList && state.monsters.some(m => mvpList.includes(m.defId));
-    if (state.mvpMode && mvpList && !hasMvpAlive && Math.random() * 100 < MVP_SPAWN_CHANCE_PCT) {
-      defId = mvpList[Math.floor(Math.random() * mvpList.length)];
+    const hit = bossLists.filter(l =>
+      !state.monsters.some(m => l.includes(m.defId)) && Math.random() * 100 < MVP_SPAWN_CHANCE_PCT);
+    if (hit.length) {
+      const l = hit[Math.floor(Math.random() * hit.length)];
+      defId = l[Math.floor(Math.random() * l.length)];
     } else {
       defId = pickWeightedMonster(map.monsters);
     }
@@ -6240,9 +6286,16 @@ function spawnMonster() {
     state.monsters.push({ defId, hp, maxHp: hp, id: state.monsterIdCounter, spawnedAt: Date.now(), farmMode: farmMode() });
     applyDontForgetMe(state.monsters[state.monsters.length - 1]);
     codexRecordSeen(defId);
-    const isMvp = mvpList && mvpList.includes(defId);
-    logMsg(isMvp ? `⚠️ ${def.icon} ${def.name}（MVP）降臨了！` : `一隻 ${def.icon} ${def.name} 出現了！`);
-    if (isMvp) summonBossSlaves(def);
+    /* 只有**正牌 MVP** 才帶小弟（#147）。以前是「在 MVP_MAP_DATA 裡就帶」，
+       所以迷你王也會把場子填滿，訊息還印成「（MVP）」。 */
+    if (def.isMvp) {
+      logMsg(`⚠️ ${def.icon} ${def.name}（MVP）降臨了！`);
+      summonBossSlaves(def);
+    } else if (def.isBoss) {
+      logMsg(`⚠️ ${def.icon} ${def.name}（迷你王）出現了！`);
+    } else {
+      logMsg(`一隻 ${def.icon} ${def.name} 出現了！`);
+    }
   }
   state.monster = state.monsters[0];
 }
@@ -7564,6 +7617,9 @@ function killMonster(def, monObj) {
   logMsg(`擊敗了 ${def.name}！獲得 ${gotExp} 經驗與 ${gotJobExp} 職業經驗。`,
     _allyActing ? 'ally' : 'main');   // 隊友補的刀還是留在隊友欄
   codexRecordKill(monKey);
+  /* 打贏 MVP 的音效（#146）。只認正牌 MVP，迷你王不放——
+     迷你王在 #147 之後是獨立的一類，出現頻率高得多，每隻都放會變成背景音。 */
+  if (def.isMvp && !acting && typeof playEventSfx === 'function') playEventSfx('mvp');
   withOwner(() => gainExp(gotExp, gotJobExp));
   const goldGain = Math.round((3 + def.level * 1.4) * buffMult('gold').mult * farmMult('gold'));
   owner.gold += goldGain;
@@ -7746,10 +7802,14 @@ function statCapOf(jobId) {
 }
 
 function gainExp(baseExp, jobExp) {
+  /* 升級音效（#146）**整支只放一次**，不是每升一級放一次：
+     離線回來可能一口氣升十幾級，一級一聲會疊成一串爆音。 */
+  let leveled = false;
   state.baseExp += baseExp;
   const baseLevelCap = baseLevelCapOf();
   let need = expToNextBaseLevel(state.baseLevel);
   while (state.baseExp >= need && state.baseLevel < baseLevelCap) {
+    leveled = true;
     state.baseExp -= need;
     state.baseLevel++;
     const gained = statPointsAtLevel(state.baseLevel);
@@ -7772,10 +7832,12 @@ function gainExp(baseExp, jobExp) {
       state.jobSkillPoints[state.jobId]++;
       state.skillPoints = Object.values(state.jobSkillPoints).reduce((a, b) => a + b, 0);
       logMsg(`✨ 職業等級提升到 ${state.jobLevel}！獲得 1 點技能點（${currentJob().name}）。`);
+      leveled = true;
       jneed = expToNextJobLevel(state.jobLevel, job.tier);
     }
     if (state.jobLevel >= job.jobLevelMax) { state.jobExp = 0; }
   }
+  if (leveled && typeof playEventSfx === 'function') playEventSfx('levelup');
   recomputeDerived(false);
 }
 
@@ -11588,6 +11650,26 @@ function synthesizeOre(key) {
   saveGame();
   return true;
 }
+/* 一次把湊得滿的份數全部合成（#148）。
+
+   原石是五個換一個，掛機一晚回來動輒好幾百個——一次一次點要點六十下，
+   而且每點一次都寫一行紀錄，戰鬥紀錄整頁被推走。
+   所以這裡**先算好份數再一次結算**，訊息只留一行。
+   除不盡的餘數留在背包裡，不會被吞掉。 */
+function synthesizeOreAll(key) {
+  const r = ORE_SYNTHESIS[key];
+  if (!r) return 0;
+  const n = Math.floor(getItemQty(r.from) / r.need);
+  if (n < 1) {
+    logMsg(`⚠️ ${ITEMS[r.from].name} 不足 ${r.need} 個。`);
+    return 0;
+  }
+  removeItem(r.from, n * r.need);
+  addItem(r.to, n);
+  logMsg(`⚒️ ${ITEMS[r.from].name} ×${n * r.need} 合成出 ${ITEMS[r.to].name} ×${n}！`);
+  saveGame();
+  return n;
+}
 
 /* ---------------- 裝備精煉 ---------------- */
 // 注意：操作對象是「裝備欄位」，精煉結果掛在那一件裝備的個體紀錄上，跟背包裡同名的其他份無關
@@ -11646,6 +11728,7 @@ function refineItem(slotKey, materialType) {
     // 成功
     inst.refine = currentLevel + 1;
     logMsg(`🔨 精煉成功！${item.name} 提升至 +${currentLevel + 1}！`);
+    if (typeof playEventSfx === 'function') playEventSfx('refine');
     recomputeDerived(false);
     saveGame();
     return true;
@@ -12174,13 +12257,19 @@ function exchangeRelicTicket() {
 /* 刺客：互斥的倍率階梯。由高倍率往低比對，中了就停，所以 10/5/2 三段不會疊。
    期望值 ×1.39（0.01×10 + 0.05×5 + 0.10×2 + 0.84×1）。 */
 function rollRelicDamageMult() {
-  if (!state.relicProcs || !state.relicProcs.assassin) return 1;
-  const r = Math.random() * 100;
-  let acc = 0;
-  for (const step of RELIC_PROC_ASSASSIN.ladder) {
-    acc += step.chance;
-    if (r < acc) return step.mult;
+  const p = state.relicProcs || {};
+  if (p.assassin) {
+    const r = Math.random() * 100;
+    let acc = 0;
+    for (const step of RELIC_PROC_ASSASSIN.ladder) {
+      acc += step.chance;
+      if (r < acc) return step.mult;
+    }
   }
+  /* 法師 5 件的第三條（#148）：10% 機率兩倍傷害。
+     跟刺客那條梯子共用同一個出口是安全的——兩套的 5 件不可能同時成立
+     （八個遺物欄位放不下兩個五件套），所以永遠不會互相疊乘。 */
+  if (p.mage && Math.random() * 100 < RELIC_PROC_MAGE.doubleChance) return RELIC_PROC_MAGE.doubleMult;
   return 1;
 }
 /* 刺客：攻速恆定。走 buff 陣列，recomputeDerived 的 ASPD 上限那行讀它。
@@ -12262,7 +12351,14 @@ function tryCardSplashProc(dmg, mainTarget) {
 function relicNegatesHit() {
   const p = state.relicProcs || {};
   if (p.knight && Math.random() * 100 < RELIC_PROC_KNIGHT.immuneChance) return '🛡️ 騎士遺物';
-  if (p.monk && Math.random() * 100 < RELIC_PROC_MONK.immuneChance) return '📿 佛法無邊';
+  /* 武僧的免疫從 5% 提到 10%，但加上 1 秒冷卻（#148）。
+     沒有冷卻的機率免疫在挨連打時是純粹的機率疊加——一波五隻怪各打一下
+     就有四成機率至少免掉一發；加了冷卻之後同一秒內最多免一下。 */
+  if (p.monk && Date.now() >= (state.relicMonkImmuneReadyAt || 0)
+      && Math.random() * 100 < RELIC_PROC_MONK.immuneChance) {
+    state.relicMonkImmuneReadyAt = Date.now() + RELIC_PROC_MONK.immuneCooldownSec * 1000;
+    return '📿 佛法無邊';
+  }
   return null;
 }
 
@@ -12275,7 +12371,12 @@ function tryRelicMonkGatling(target, monDef) {
   if (now < (state.relicMonkReadyAt || 0)) return;
   if (Math.random() * 100 >= RELIC_PROC_MONK.procChance) return;
   state.relicMonkReadyAt = now + RELIC_PROC_MONK.cooldownSec * 1000;
-  const dmg = RELIC_PROC_MONK.fixedDamage;
+  /* 3600 是固定值，等級一高就形同虛設，所以在它之上再追加
+     ATK 100% + MATK 100%（#148），讓這一發跟著角色成長。
+     整包一樣**不吃怪物防禦**——這條的節流閥從頭到尾都是那 1 秒冷卻。 */
+  const dmg = RELIC_PROC_MONK.fixedDamage
+    + Math.round((state.atk || 0) * RELIC_PROC_MONK.atkPct / 100)
+    + Math.round((state.matk || 0) * RELIC_PROC_MONK.matkPct / 100);
   target.hp -= dmg;
   ailBreakOnDamage(target, monDef);
   if (typeof showGatlingFloats === 'function') showGatlingFloats(target.id, RELIC_PROC_MONK.gatlingHits);
@@ -12808,16 +12909,33 @@ function changeMap(mapId) {
   return true;
 }
 
-/* ---------------- MVP 模式切換 ----------------
+/* ---------------- MVP／迷你王 模式切換 ----------------
 
-   **只能在近戰模式開啟**（使用者 2026-08-09 指定）。理由是召喚小弟：
-   BOSS 一出場就把場上空位填滿，而遠攻模式的 `maxMonsters` 是 1，
-   一隻小弟都放不下——開了等於只有 BOSS 沒有隨從，跟設計意圖不符。 */
+   **MVP 只能在近戰模式開啟**（使用者 2026-08-09 指定）。理由是召喚小弟：
+   MVP 一出場就把場上空位填滿，而遠攻模式的 `maxMonsters` 是 1，
+   一隻小弟都放不下——開了等於只有 MVP 沒有隨從，跟設計意圖不符。
+
+   **迷你王沒有這個限制**（#147）：牠不帶小弟，遠攻模式一隻也放得下。 */
 function mvpModeBlockReason() {
-  if ((state.encounterMode || 'melee') !== 'melee') return 'BOSS 模式只能在近戰模式開啟（遠攻模式場上只有 1 隻，放不下 BOSS 的手下）。';
+  if ((state.encounterMode || 'melee') !== 'melee') return 'MVP 模式只能在近戰模式開啟（遠攻模式場上只有 1 隻，放不下 MVP 的手下）。';
   const map = currentMap();
-  if (!map || !MVP_MAP_DATA[map.id]) return '這張地圖沒有 BOSS 階級魔物。';
+  if (!map || !bossListOf(map.id, 'mvp').length) return '這張地圖沒有 MVP。';
   return null;
+}
+function miniModeBlockReason() {
+  const map = currentMap();
+  if (!map || !bossListOf(map.id, 'mini').length) return '這張地圖沒有迷你王。';
+  return null;
+}
+function toggleMiniMode(enabled) {
+  if (enabled) {
+    const blocked = miniModeBlockReason();
+    if (blocked) { logMsg('⚠️ ' + blocked); state.miniMode = false; saveGame(); return false; }
+  }
+  state.miniMode = enabled;
+  logMsg(enabled ? '👺 迷你王模式已開啟，迷你王可能隨時出現！' : '迷你王模式已關閉。');
+  saveGame();
+  return true;
 }
 function toggleMvpMode(enabled) {
   if (enabled) {
@@ -12825,7 +12943,7 @@ function toggleMvpMode(enabled) {
     if (blocked) { logMsg('⚠️ ' + blocked); state.mvpMode = false; saveGame(); return false; }
   }
   state.mvpMode = enabled;
-  logMsg(enabled ? '🎯 BOSS 模式已開啟，MVP 與迷你王可能隨時降臨（並會帶著手下一起出現）！' : 'BOSS 模式已關閉。');
+  logMsg(enabled ? '🎯 MVP 模式已開啟，MVP 可能隨時降臨（並會帶著手下一起出現）！' : 'MVP 模式已關閉。');
   saveGame();
   return true;
 }
@@ -12879,6 +12997,10 @@ function loadGame() {
     if (typeof state.autoReviveAlly !== 'boolean') state.autoReviveAlly = true;
     if (!state.allyPotion) state.allyPotion = { enabled: true, primary: '', fallback: ALLY_POTION_FALLBACK, hpThreshold: 50 };
     if (typeof state.autoBuyAllyPotion !== 'boolean') state.autoBuyAllyPotion = true;
+    /* 迷你王模式（#147）：以前 mvpMode 一個開關同時管 MVP 與迷你王，
+       所以本來開著 BOSS 模式的人，遷移後兩個都要開——不然他們會突然
+       「迷你王再也不出現了」，而畫面上看不出是為什麼。 */
+    if (typeof state.miniMode !== 'boolean') state.miniMode = !!state.mvpMode;
     // 打寶模式（#110）：舊存檔補 0（關閉）；不是進階二轉的話一律關掉
     if (typeof state.farmMode !== 'number') state.farmMode = 0;
     if (state.farmMode && !farmModeUnlocked()) state.farmMode = 0;
@@ -13313,8 +13435,13 @@ function computeOfflineProgress(minMs) {
      等於幾乎整段時間都在打牠。寧可少給。 */
   const bossGained = [];
   let bossKills = 0;
-  if (state.mvpMode && typeof MVP_MAP_DATA !== 'undefined') {
-    const mvpList = (MVP_MAP_DATA[map.id] || []).filter(id => MONSTERS[id]);
+  if (typeof MVP_MAP_DATA !== 'undefined') {
+    /* 兩個模式各自 20%（#147）。兩邊都開的時候，線上一輪只會生一隻，
+       所以這裡也是把整份頭目時間預算分給兩張名單，不是各給 20%。 */
+    const lists = activeBossLists(map.id);
+    const mvpList = lists.length
+      ? [].concat.apply([], lists).filter(id => MONSTERS[id])
+      : [];
     if (mvpList.length) {
       // 名單是等機率抽的，所以每一隻分到的是「頭目時間 ÷ 名單長度」，不是 ÷ 打得動的隻數
       const perBossSec = elapsedSec * (MVP_SPAWN_CHANCE_PCT / 100) / mvpList.length;

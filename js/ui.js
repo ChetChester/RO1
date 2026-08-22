@@ -387,6 +387,9 @@ function enterGame() {
   renderMapBackground();
   updatePlayerSprite();
   initVolumeSliders();
+  /* 進遊戲的音效（#146）。放在 initVolumeSliders 之後，音量設定已經就緒。
+     新角色與讀檔走的都是這一支，所以只掛這裡就夠。 */
+  playEventSfx('login');
   const muteBtn = document.getElementById('btn-mute');
   if (muteBtn) muteBtn.textContent = state.muted ? '🔇' : '🔊';
   /* 掛機收益面板每次進場都要收起來重置（#135）：換存檔格時面板若留在開啟狀態，
@@ -1508,6 +1511,30 @@ function playSfx(url, minGapMs) {
 // 檔名有中文，路徑要編碼過再交給 Audio
 function sfxUrl(dir, name) { return dir + encodeURIComponent(name) + '.wav'; }
 
+/* ---- 事件音效（#146）----
+   升級、精煉成功、打贏 MVP、進遊戲各一段。
+
+   檔名刻意用**英文**：既有那四個資料夾是中文名，而 `file://`（單機版就是雙擊
+   index.html 打開的）不會自己補 URL 編碼，當初整批 404 過一次，
+   註解就寫在上面 SFX_DIR_* 那一段。英文路徑不必編碼，也就沒有那個坑。
+
+   走 playSfx()，所以靜音開關與音效音量都是現成的。
+   minGap 是為了擋連發：一次 gainExp 可能連升好幾級（離線回來尤其），
+   精煉連點也一樣，不擋的話會變成一串疊在一起的爆音。 */
+const SFX_EVENT = {
+  levelup: { file: 'levelup.ogg', gap: 1200 },
+  refine: { file: 'refine_success.ogg', gap: 400 },
+  mvp: { file: 'mvp_victory.ogg', gap: 2000 },
+  login: { file: 'login.ogg', gap: 0 },
+};
+function playEventSfx(kind) {
+  const e = SFX_EVENT[kind];
+  if (!e) return;
+  // 隊友換身期間不播：升級的是隊友的快照，玩家沒升級卻聽到升級聲會很莫名
+  if (typeof _allyActing !== 'undefined' && _allyActing) return;
+  playSfx('WAV/event/' + e.file, e.gap);
+}
+
 function currentWeaponSfx() {
   const cat = typeof aspdCategoryOf === 'function' ? aspdCategoryOf(getEquipBaseItemId('weapon')) : 'bare';
   return SFX_WEAPON[cat] || SFX_WEAPON.bare;
@@ -2073,27 +2100,7 @@ function renderMapTab() {
       ${!isCity ? '<div class="map-preview-hint">怪物強度不設限，越級挑戰有風險，也可能有意外的收穫——探索本身就是樂趣！</div>' : ''}
     </div>
     ${!isCity ? renderMapYieldBox(currentMapObj) : ''}
-    ${!isCity && MVP_MAP_DATA[currentMapObj.id] ? `
-    ${/* BOSS 模式只能在近戰模式開（召喚小弟要有空位放）。擋住時把理由寫出來，
-          不然又是「勾了沒反應」——跟職業樹那個問題同一類（#61）。 */''}
-    <label style="display:flex;align-items:center;gap:8px;margin:10px 0;font-size:14px;${
-      (state.encounterMode || 'melee') === 'melee' ? 'cursor:pointer;' : 'cursor:not-allowed;opacity:.55;'}">
-      <input type="checkbox" ${state.mvpMode ? 'checked' : ''}
-        ${(state.encounterMode || 'melee') === 'melee' ? '' : 'disabled'}
-        onchange="doToggleMvpMode(this.checked)" style="width:18px;height:18px;">
-      <span>🎯 BOSS 模式（20% 機率出 BOSS 階級魔物，並帶著手下一起出現）</span>
-    </label>
-    ${(state.encounterMode || 'melee') === 'melee' ? '' :
-      '<div style="font-size:11px;color:var(--ink-dim);margin-top:-6px;margin-bottom:8px;">遠攻模式場上只有 1 隻，放不下 BOSS 的手下——要開請先切回近戰模式。</div>'}
-    <div style="font-size:11px;color:var(--ink-dim);margin-top:-6px;margin-bottom:8px;">此地圖可遭遇：${
-      // 正牌 MVP 排前面，迷你王排後面，兩者官方就是互斥的兩類
-      MVP_MAP_DATA[currentMapObj.id]
-        .map(id => MONSTERS[id] ? { id, m: MONSTERS[id] } : null).filter(Boolean)
-        .sort((a, b) => (b.m.isMvp ? 1 : 0) - (a.m.isMvp ? 1 : 0))
-        .map(({ m }) => `${m.icon}${m.name}<span style="opacity:.7">（${m.isMvp ? 'MVP' : '迷你王'}）</span>`)
-        .join('、')
-    }</div>
-    ` : ''}
+    ${!isCity ? bossModeBox(currentMapObj) : ''}
     ${/* 轉生祭壇只開在安全區。放在這裡而不是轉職樹，是因為轉生是「回到城裡辦一件大事」，
           跟商店同一個場景；而且要先擋在安全區，玩家就不會在野外打到一半按下去 */
       isCity ? renderRebirthPanel() : ''}
@@ -2510,6 +2517,45 @@ function toggleAutoSupportSkill(skillId, enabled) {
 
 // 遇怪模式切換
 // BOSS 模式的勾選：擋下時要把畫面上的勾勾撥回去，否則畫面與 state 會不一致
+/* MVP 與迷你王各一個勾選框（#147）。
+
+   以前是一個「BOSS 模式」同時管兩種，玩家想單刷 MVP 只能連迷你王一起吃。
+   拆開之後兩邊各自 20%、各自檢查「同類還活著沒」。
+
+   **只有 MVP 需要近戰模式**：牠出場會召喚小弟把場子填滿，遠攻模式
+   `maxMonsters` 是 1，一隻小弟都放不下。迷你王不帶小弟，所以不擋。
+   被擋住時一定要把理由寫在旁邊——不然又是「勾了沒反應」（#61 同一類問題）。 */
+function bossModeRow(kind, list) {
+  if (!list.length) return '';
+  const melee = (state.encounterMode || 'melee') === 'melee';
+  const isMvp = kind === 'mvp';
+  const blocked = isMvp && !melee;
+  const on = isMvp ? state.mvpMode : state.miniMode;
+  const label = isMvp
+    ? `🎯 MVP 模式（20% 機率降臨，並帶著手下一起出現）`
+    : `👺 迷你王模式（20% 機率出現，不帶手下）`;
+  const names = list.map(id => MONSTERS[id])
+    .map(m => `${m.icon}${m.name}`).join('、');
+  return `
+    <label style="display:flex;align-items:center;gap:8px;margin:10px 0 2px;font-size:14px;${
+      blocked ? 'cursor:not-allowed;opacity:.55;' : 'cursor:pointer;'}">
+      <input type="checkbox" ${on ? 'checked' : ''} ${blocked ? 'disabled' : ''}
+        onchange="${isMvp ? 'doToggleMvpMode' : 'doToggleMiniMode'}(this.checked)" style="width:18px;height:18px;">
+      <span>${label}　<span style="opacity:.7">${list.length} 種</span></span>
+    </label>
+    ${blocked ? '<div style="font-size:11px;color:var(--ink-dim);margin:0 0 6px;">遠攻模式場上只有 1 隻，放不下 MVP 的手下——要開請先切回近戰模式。</div>' : ''}
+    <div style="font-size:11px;color:var(--ink-dim);margin:0 0 8px;">${names}</div>`;
+}
+function bossModeBox(map) {
+  const mvp = bossListOf(map.id, 'mvp');
+  const mini = bossListOf(map.id, 'mini');
+  if (!mvp.length && !mini.length) return '';
+  return bossModeRow('mvp', mvp) + bossModeRow('mini', mini);
+}
+function doToggleMiniMode(checked) {
+  toggleMiniMode(checked);
+  if (typeof renderMapTab === 'function') renderMapTab();
+}
 function doToggleMvpMode(checked) {
   toggleMvpMode(checked);
   if (typeof renderMapTab === 'function') renderMapTab();
@@ -2518,11 +2564,12 @@ function doToggleMvpMode(checked) {
 function setEncounterMode(mode) {
   state.encounterMode = mode;
   state.lastSpawnTime = 0; // 重置生怪計時
-  /* 切到遠攻就把 BOSS 模式關掉：遠攻場上只有 1 隻，BOSS 的手下一隻都放不下。
-     留著開啟只會變成「勾了卻沒有隨從」，跟召喚小弟的設計意圖對不上。 */
+  /* 切到遠攻就把 MVP 模式關掉：遠攻場上只有 1 隻，MVP 的手下一隻都放不下。
+     留著開啟只會變成「勾了卻沒有隨從」，跟召喚小弟的設計意圖對不上。
+     **迷你王模式不用關**（#147）：牠不帶小弟，遠攻放得下。 */
   if (mode !== 'melee' && state.mvpMode) {
     state.mvpMode = false;
-    logMsg('🎯 切換到遠攻模式，BOSS 模式已自動關閉。');
+    logMsg('🎯 切換到遠攻模式，MVP 模式已自動關閉。');
   }
   recomputeDerived(false);  // maxMonsters 由遇怪模式推導，改完要重算
   saveGame();
@@ -2939,7 +2986,10 @@ const CODEX_CATS = {
   mon: [
     { k: 'all', label: '全部' },
     { k: 'normal', label: '普通怪', test: id => !MONSTERS[id].isBoss },
-    { k: 'boss', label: 'BOSS', test: id => !!MONSTERS[id].isBoss },
+    /* MVP 與迷你王分開列（#147）：兩者在遊戲裡已經是兩個獨立的勾選模式，
+       圖鑑再混成一格「BOSS」的話，玩家查「這張圖有什麼迷你王」還是得自己認。 */
+    { k: 'mvp', label: 'MVP', test: id => !!MONSTERS[id].isMvp },
+    { k: 'mini', label: '迷你王', test: id => !!MONSTERS[id].isBoss && !MONSTERS[id].isMvp },
   ],
   card: [
     { k: 'all', label: '全部' },
@@ -4407,9 +4457,12 @@ function renderInventoryTab() {
             const k = Object.keys(ORE_SYNTHESIS).find(x => ORE_SYNTHESIS[x].from === row.item);
             if (!k) return '';
             const r = ORE_SYNTHESIS[k];
+            const times = Math.floor(row.qty / r.need);
             return `<button class="btn-small" ${row.qty >= r.need ? '' : 'disabled'}
               onclick="synthesizeOre('${k}');renderInventoryTab();renderTopBar();"
-              title="${r.need} 個合成 1 個${ITEMS[r.to].name}">合成(${row.qty}/${r.need})</button>`;
+              title="${r.need} 個合成 1 個${ITEMS[r.to].name}">合成(${row.qty}/${r.need})</button>`
+              + (times > 1 ? `<button class="btn-small" onclick="synthesizeOreAll('${k}');renderInventoryTab();renderTopBar();"
+                title="湊得滿的 ${times} 份一次合成完，除不盡的留在背包">全部合成(${times})</button>` : '');
           })()}
           ${canUse ? `<button class="btn-small" onclick="useItem('${row.item}');renderInventoryTab();">${def.type === 'consumable' ? '使用' : '裝備'}</button>` : ''}
           ${def.boxOpen && row.qty > 1 ? `<button class="btn-small" onclick="openAllBoxes('${row.item}');renderInventoryTab();renderTopBar();" title="手上這 ${row.qty} 個一次開完，紀錄會合併成一份清單">全部開啟(${row.qty})</button>` : ''}
@@ -4450,7 +4503,7 @@ function renderInventoryTab() {
       vendingHtml = `<div class="vending-panel">
         <h3 class="panel-title">🏪 露天商店</h3>
         <div class="vending-info">已選擇：${itemNames}${readyIn > 0 ? `（下次販售倒數 ${readyIn}s）` : ''}</div>
-        <button class="btn-small" onclick="showVendingSelect()">設定販售道具</button>
+        <button class="btn-small" onclick="showVendingWindow()">設定販售道具</button>
       </div>`;
     }
 
@@ -4764,6 +4817,23 @@ function renderCharacterTab() {
       })()}
       <div>攻擊速度 ASPD：${state.aspd}${state.buffs.some(b => b.type === 'aspd') ? ' <span class="buff-active">BUFF</span>' : ''}</div>
       <div>攻擊間隔：${(state.attackInterval / 1000).toFixed(2)} 秒</div>
+      ${/* 生怪速度（#146）。本作沒有「移動」，官方所有「移動速度上升」的效果
+           一律換算成生怪加速——但畫面上以前沒有任何地方看得到，
+           玩家點了騎乘術／裝了月夜貓卡也不知道到底有沒有生效。
+           數字跟 spawnMonster() 走同一支 spawnDelayMs()，不會各算各的。 */''}
+      ${(() => {
+        if (typeof spawnDelayMs !== 'function') return '';
+        const src = typeof spawnSpeedSources === 'function' ? spawnSpeedSources() : [];
+        const gap = spawnDelayMs(false), first = spawnDelayMs(true);
+        const tag = src.length
+          ? ` <span class="buff-active">快 ${Math.round((3000 / gap - 1) * 100)}%</span>`
+          : '';
+        const list = src.length
+          ? `　<span class="dim">${src.map(x => x.name + ' +' + x.pct + '%').join('、')}</span>`
+          : '　<span class="dim">目前沒有加速來源</span>';
+        return `<div title="本作沒有移動，所以官方「移動速度上升」的效果一律換算成生怪加速。場上清空時補第一批比較快。">`
+          + `生怪間隔：${(gap / 1000).toFixed(2)} 秒（清場後 ${(first / 1000).toFixed(2)} 秒）${tag}${list}</div>`;
+      })()}
       <div>命中 HIT：${effectiveHit}${effectiveHit > state.hit ? ` <span class="buff-active">(+${effectiveHit - state.hit})</span>` : ''}</div>
       <div title="場上怪愈多，迴避上限愈低：1隻95%／2隻90%／3隻85%／4隻80%／5隻75%。夾的是上限，FLEE 還沒堆到頂的話不受影響">迴避 FLEE：${state.flee}${typeof fleeCapPct === 'function'
         ? `　<span class="dim">上限 ${fleeCapPct()}%（場上 ${Math.max(1, (state.monsters || []).length)} 隻）</span>` : ''}</div>
@@ -5446,65 +5516,148 @@ function doRefineSlot(slotKey) {
 }
 
 /* ---------------- 露天商店 UI ---------------- */
-let _vendingTempSelection = [];
-function showVendingSelect() {
+/* ---------------- 露天商店 UI（#148）----------------
+
+   舊版是把 `#tab-inventory` 的內容整個換掉：開著就看不到背包，要按「← 返回」
+   才回得去，而且每點一次道具整頁重畫、捲動歸零。跟鍛造與倉庫當初的問題一樣。
+
+   改成跟自動販賣同一套**非阻斷浮動視窗**：左邊背包、右邊要賣的（最多 3 樣），
+   點一下就搬過去，立刻生效不必再按確認。CSS 直接共用 `.wh-*`，
+   捲動位置與「剛移過去的排最上面」也共用 keepListScroll / sortRowsWithRecent。 */
+const VENDING_MAX = 3;
+let vdCategory = 'all';
+let vdSearch = '';
+function setVdCategory(c) { vdCategory = c; renderVendingWindow(); }
+function onVdSearch(v, ev) {
+  if (imeComposing(ev)) return;
+  vdSearch = (v || '').trim().toLowerCase();
+  renderVendingWindow();
+  refocusSearch('vd-search');
+}
+function vendingList() {
   if (!state.vendingConfig) state.vendingConfig = { items: [] };
-  _vendingTempSelection = [...state.vendingConfig.items];
-  renderVendingSelectUI();
+  return state.vendingConfig.items;
 }
-function renderVendingSelectUI() {
-  const el = document.getElementById('tab-inventory');
-  if (!el) return;
-  const sk = findSkillById('vending');
-  const sellMult = sk.sellMultiplier || 10;
-  const sellableItems = state.inventory.filter(row => {
-    if (row.instanceId) return false;   // 精煉/插卡過的裝備不列入自動販售，免得整件連卡帶精煉被賣掉
-    const def = ITEMS[row.item];
-    return def && def.sell > 0;
-  });
-  let html = `<h3 class="panel-title">🏪 選擇露天商店販售道具（最多3樣）</h3>`;
-  html += `<button class="btn-small" onclick="renderInventoryTab()">← 返回</button>`;
-  html += `<div class="empty-hint">已選 ${_vendingTempSelection.length}/3，每${sk.internalCooldown || 60}秒自動以${sellMult}倍價格各賣出1個</div>`;
-  if (sellableItems.length === 0) {
-    html += `<div class="empty-hint">背包裡沒有可販售的道具。</div>`;
-  } else {
-    html += '<div class="card-list">';
-    sellableItems.forEach(row => {
-      const def = ITEMS[row.item];
-      const selected = _vendingTempSelection.includes(row.item);
-      html += `<div class="card-row${selected ? ' enabled' : ''}">
-        <div class="card-info">
-          <span class="card-icon">${def.icon || '📦'}</span>
-          <div class="card-details">
-            <span class="card-name">${def.name} x${row.qty}</span>
-            <span class="card-desc">原價${def.sell} → ${sellMult}倍價${def.sell * sellMult}</span>
-          </div>
-        </div>
-        <button class="btn-small" onclick="toggleVendingItem('${row.item}')">${selected ? '取消' : '選擇'}</button>
-      </div>`;
-    });
-    html += '</div>';
-  }
-  html += `<button class="btn btn-primary" ${_vendingTempSelection.length === 0 ? 'disabled' : ''} onclick="confirmVendingSelect()">確認設定</button>`;
-  el.innerHTML = html;
-}
-function toggleVendingItem(itemId) {
-  const idx = _vendingTempSelection.indexOf(itemId);
-  if (idx >= 0) {
-    _vendingTempSelection.splice(idx, 1);
-  } else {
-    if (_vendingTempSelection.length >= 3) {
-      showToast('最多只能選3樣道具');
-      return;
-    }
-    _vendingTempSelection.push(itemId);
-  }
-  renderVendingSelectUI();
-}
-function confirmVendingSelect() {
-  setVendingItems(_vendingTempSelection);
-  showToast('露天商店設定完成！');
+function vdAdd(itemId) {
+  const list = vendingList();
+  if (list.includes(itemId)) return;
+  if (isItemLocked(itemId)) { showToast('🔒 已鎖定，無法放上露天商店。'); return; }
+  if (list.length >= VENDING_MAX) { showToast(`最多只能擺 ${VENDING_MAX} 樣`); return; }
+  setVendingItems(list.concat(itemId));
+  markListRecent('right', itemId);
+  renderVendingWindow();
   renderInventoryTab();
+}
+function vdRemove(itemId) {
+  setVendingItems(vendingList().filter(i => i !== itemId));
+  markListRecent('left', itemId);
+  renderVendingWindow();
+  renderInventoryTab();
+}
+
+function showVendingWindow() {
+  let win = document.getElementById('vending-window');
+  if (!win) {
+    win = document.createElement('div');
+    win.id = 'vending-window';
+    win.className = 'wh-window';
+    win.innerHTML = `<div id="vending-frame" class="wh-frame">
+        <header id="vending-drag" class="wh-header">
+          <div><h3>🏪 露天商店</h3><span class="wh-sub">左邊背包，點一下移右邊＝擺上架（最多 ${VENDING_MAX} 樣）</span></div>
+          <div class="wh-header-btns">
+            <button class="btn-small ghost" onclick="closeVendingWindow()">✕ 關閉</button>
+          </div>
+        </header>
+        <div id="vending-body" class="wh-body"></div>
+      </div>`;
+    document.body.appendChild(win);
+    makeDraggable(document.getElementById('vending-drag'), document.getElementById('vending-frame'));
+  }
+  win.classList.remove('hidden');
+  renderVendingWindow();
+}
+function closeVendingWindow() {
+  const win = document.getElementById('vending-window');
+  if (win) win.classList.add('hidden');
+}
+function renderVendingWindow() {
+  keepListScroll('vending-body', renderVendingWindowInner);
+}
+function renderVendingWindowInner() {
+  const body = document.getElementById('vending-body');
+  if (!body || !state) return;
+  const sk = findSkillById('vending');
+  const sellMult = (sk && sk.sellMultiplier) || 10;
+  const cdSec = (sk && sk.internalCooldown) || 60;
+  const picked = vendingList();
+  const readyIn = Math.max(0, Math.ceil(((state.vendingReadyAt || 0) - Date.now()) / 1000));
+
+  /* 左邊：背包裡賣得掉、而且還沒上架的。
+     個體裝備（精煉過／插過卡）一律不列——那一件被賣掉等於連卡帶精煉一起消失。 */
+  const all = state.inventory.filter(r => !r.instanceId && ITEMS[r.item] && (ITEMS[r.item].sell || 0) > 0);
+  const left = all.filter(r => !picked.includes(r.item));
+  /* 右邊是「上架紀錄」：背包暫時沒貨也照樣列著，之後打到就會被賣。
+     跟自動販賣同一個道理。 */
+  const right = picked
+    .map(id => ({ item: id, qty: (state.inventory.find(r => r.item === id && !r.instanceId) || {}).qty || 0 }))
+    .filter(r => ITEMS[r.item]);
+
+  const inCat = list => vdCategory === 'all' ? list : list.filter(r => invCategoryOf(r.item) === vdCategory);
+  const apply = (list, side) => {
+    let out = inCat(list);
+    if (vdSearch) out = out.filter(r => (ITEMS[r.item].name || '').toLowerCase().includes(vdSearch));
+    return sortRowsWithRecent(out, side);
+  };
+  const listHtml = (rows, side) => rows.length
+    ? rows.map(r => {
+        const d = ITEMS[r.item];
+        const locked = side === 'left' && isItemLocked(r.item);
+        const full = side === 'left' && picked.length >= VENDING_MAX;
+        const action = side === 'left' ? `vdAdd('${r.item}')` : `vdRemove('${r.item}')`;
+        const price = Math.round((d.sell || 0) * sellMult);
+        const hint = side === 'left' ? (locked ? '（已鎖定）' : full ? '（已滿）' : '＋') : '✕';
+        return `<div class="wh-row" onclick="${action}" title="${side === 'left'
+          ? `點一下＝上架，每 ${cdSec} 秒以 ${sellMult} 倍價（${price}z）賣出 1 個`
+          : '點一下＝下架'}">
+          <img src="${itemImgSrc(r.item)}" onerror="this.onerror=null;this.src='${placeholderImgSrc(itemPlaceholderKind(d))}'">
+          <span class="wh-row-name">${locked ? '🔒 ' : ''}${getItemDisplayName(r.item)}</span>
+          <span class="wh-row-qty">×${r.qty}　<span style="color:var(--gold-soft)">${price}z</span>　<span style="color:var(--ink-dim)">${hint}</span></span>
+        </div>`;
+      }).join('')
+    : `<div class="empty-hint">${side === 'left' ? '背包裡沒有賣得掉的道具。' : '還沒擺任何東西上架。'}</div>`;
+
+  const catCount = {};
+  INV_CATEGORIES.forEach(c => { catCount[c.key] = 0; });
+  all.forEach(r => { catCount[invCategoryOf(r.item)]++; });
+
+  body.innerHTML = `
+    <div class="wh-hint">每 <b>${cdSec}</b> 秒自動以 <b>${sellMult} 倍</b>原價各賣出 1 個，最多擺 <b>${VENDING_MAX}</b> 樣。
+      ${readyIn > 0 ? `下次販售倒數 <b>${readyIn}s</b>。` : ''}<br>
+      已鎖定的道具不會上架；精煉過或插過卡的裝備不列入（賣掉等於連卡帶精煉一起消失）。</div>
+
+    <div class="inv-cats">
+      <button class="btn-small ${vdCategory === 'all' ? 'active' : ''}" onclick="setVdCategory('all')">全部 <span class="inv-cat-n">${all.length}</span></button>
+      ${INV_CATEGORIES.filter(c => catCount[c.key] > 0).map(c =>
+        `<button class="btn-small ${vdCategory === c.key ? 'active' : ''}" onclick="setVdCategory('${c.key}')">${c.icon} ${c.name} <span class="inv-cat-n">${catCount[c.key]}</span></button>`
+      ).join('')}
+    </div>
+
+    <div class="wh-toolbar">
+      <input id="vd-search" class="codex-search" type="text" placeholder="🔍 搜尋名稱…"
+        value="${vdSearch.replace(/"/g, '&quot;')}" oninput="onVdSearch(this.value, event)">
+    </div>
+
+    <div class="wh-cols">
+      <div class="wh-col">
+        <div class="wh-col-head">背包（點一下上架 ▶）　${left.length}</div>
+        <div class="wh-list">${listHtml(apply(left, 'left'), 'left')}</div>
+      </div>
+      <div class="wh-col">
+        <div class="wh-col-head">上架中（點一下下架 ✕）　${right.length}/${VENDING_MAX}</div>
+        <div class="wh-list">${listHtml(apply(right, 'right'), 'right')}</div>
+      </div>
+    </div>
+  `;
 }
 
 /* ---------------- 鐵匠鍛造 UI（#103）----------------

@@ -6,9 +6,16 @@ const H = require('./harness');
 
 const t = H.tester();
 
-// 找一張「有一般配怪、也有 BOSS 名單」的圖
+/* 找一張「有一般配怪、也有**正牌 MVP**」的圖。
+
+   #147 把 MVP_MAP_DATA 拆成兩類之後不能再只看名單長不長：
+   168 張圖裡有 122 張只有其中一種，隨便挑一張很可能只有迷你王，
+   MVP 模式就會回「這張地圖沒有 MVP」而整批斷言全紅。 */
 function bossMap(g) {
-  return g.MAPS.find(m => (m.monsters || []).length >= 2 && (g.MVP_MAP_DATA[m.id] || []).length);
+  return g.MAPS.find(m => (m.monsters || []).length >= 2 && g.bossListOf(m.id, 'mvp').length);
+}
+function miniMap(g) {
+  return g.MAPS.find(m => (m.monsters || []).length >= 2 && g.bossListOf(m.id, 'mini').length);
 }
 
 /* ---------- 1. BOSS 模式只能在近戰模式開 ---------- */
@@ -39,9 +46,37 @@ function bossMap(g) {
   const plain = g.MAPS.find(m => (m.monsters || []).length && !g.MVP_MAP_DATA[m.id]);
   if (plain) {
     g.changeMap(plain.id);
-    t.ok('沒有 BOSS 名單的地圖也擋', /沒有 BOSS 階級魔物/.test(g.mvpModeBlockReason() || ''));
+    t.ok('沒有 BOSS 名單的地圖也擋', /沒有 MVP/.test(g.mvpModeBlockReason() || ''));
   } else {
     t.ok('（所有地圖都有 BOSS 名單，這條跳過）', true);
+  }
+}
+
+/* ---------- 1b. 迷你王是另一個開關，而且**不受近戰限制**（#147）----------
+   兩者以前共用一個 mvpMode，玩家想單刷 MVP 只能連迷你王一起吃。
+   迷你王不召喚小弟，所以遠攻模式放得下，不該跟著被擋。 */
+{
+  const g = H.boot();
+  H.mkChar(g, { path: ['swordsman', 'knight'] });
+  const map = miniMap(g);
+  t.ok('找得到有迷你王的地圖', !!map);
+  g.changeMap(map.id);
+  g.state.encounterMode = 'ranged';
+  g.recomputeDerived(false);
+  t.eq('遠攻模式也開得起迷你王', g.miniModeBlockReason(), null);
+  t.eq('開起來了', g.toggleMiniMode(true), true);
+  t.eq('兩個開關互不影響', g.state.mvpMode, false);
+  // 只有迷你王的圖，MVP 模式要擋下來並說明原因
+  const onlyMini = g.MAPS.find(m => (m.monsters || []).length
+    && g.bossListOf(m.id, 'mini').length && !g.bossListOf(m.id, 'mvp').length);
+  if (onlyMini) {
+    g.changeMap(onlyMini.id);
+    g.state.encounterMode = 'melee';
+    g.recomputeDerived(false);
+    t.ok('只有迷你王的圖擋下 MVP 模式', /沒有 MVP/.test(g.mvpModeBlockReason() || ''));
+    t.eq('但迷你王模式開得起來', g.miniModeBlockReason(), null);
+  } else {
+    t.ok('（沒有「只有迷你王」的地圖，這條跳過）', true);
   }
 }
 
@@ -58,7 +93,7 @@ function bossMap(g) {
   t.eq('近戰上限＝MELEE_MAX_MONSTERS', max, g.MELEE_MAX_MONSTERS);
   t.ok('近戰上限至少 2 隻，BOSS 才帶得出小弟', max >= 2, '實際 ' + max);
 
-  const mvpList = g.MVP_MAP_DATA[map.id];
+  const mvpList = g.bossListOf(map.id, 'mvp');
   const bossId = mvpList.find(id => g.MONSTERS[id]);
   const bossDef = g.MONSTERS[bossId];
 
@@ -102,7 +137,7 @@ function bossMap(g) {
   g.state.encounterMode = 'melee';
   g.recomputeDerived(false);
   g.toggleMvpMode(true);
-  const mvpList = g.MVP_MAP_DATA[map.id];
+  const mvpList = g.bossListOf(map.id, 'mvp');
 
   let sawBossWithSlaves = 0, sawBoss = 0;
   for (let i = 0; i < 400; i++) {

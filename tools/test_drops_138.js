@@ -130,7 +130,10 @@ function autoSpellLv(gg, tries) {
   // 這三組要跟 ui.js 的 CODEX_CATS 對齊；那邊改了這裡沒改，下面的總和就會對不上
   const CATS = {
     mon: { list: pool.monsters, tests: [
-      id => !g.MONSTERS[id].isBoss, id => !!g.MONSTERS[id].isBoss] },
+      id => !g.MONSTERS[id].isBoss,
+      // BOSS 在 #147 之後拆成 MVP 與迷你王兩格
+      id => !!g.MONSTERS[id].isMvp,
+      id => !!g.MONSTERS[id].isBoss && !g.MONSTERS[id].isMvp] },
     card: { list: pool.cards, tests: ['weapon', 'armor', 'shield', 'headgear', 'garment', 'footgear', 'accessory']
       .map(s => id => (g.CARDS[id] || {}).slot === s) },
     item: { list: pool.items, tests: [

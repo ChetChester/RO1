@@ -161,6 +161,23 @@ function field(n) {
   t.eq('持續時間封頂在設定值（刷新不累加）', b.msRemaining, g.RELIC_PROC_ASSASSIN.aspdSec * 1000);
 }
 
+/* ---------- 法師：5 件的第三條「10% 兩倍傷害」（#148）---------- */
+{
+  mk('wizard', { stats: { str: 99, agi: 60, vit: 50, int: 99, dex: 99, luk: 1 } });
+  t.eq('沒穿滿 5 件時不會有倍率', g.rollRelicDamageMult(), 1);
+  wearN(MAGE, 5);
+  const P = g.RELIC_PROC_MAGE;
+  const N = 200000;
+  const tally = {};
+  for (let i = 0; i < N; i++) { const m = g.rollRelicDamageMult(); tally[m] = (tally[m] || 0) + 1; }
+  t.near('兩倍的實測機率', (tally[P.doubleMult] || 0) / N * 100, P.doubleChance, 0.4);
+  /* 只會擲出 1 或那個倍率——擲出第三種值代表跟刺客那條梯子接在一起了。
+     兩套的 5 件不可能同時成立（八個欄位放不下兩個五件套），所以不該互相污染。 */
+  t.eq('不會擲出其他倍率',
+    Object.keys(tally).filter(k => +k !== 1 && +k !== P.doubleMult).join(','), '');
+  t.ok('法師沒有刺客那條梯子的 10 倍', !tally[10]);
+}
+
 /* ---------- 法師：黑暗與濺射 ---------- */
 {
   mk('wizard', { stats: { str: 99, agi: 60, vit: 50, int: 99, dex: 99, luk: 1 } });
@@ -337,7 +354,15 @@ function field(n) {
       if (mon.hp < before) hits++;
     }
     t.eq('CD 內只打得出一發', hits, 1);
-    t.eq('那一發就是固定傷害', 9e9 - mon.hp, P.fixedDamage);
+    /* #148：3600 固定值之上再追加 ATK 100% + MATK 100%，讓這一發跟著角色成長。
+       這裡不抄 3600 那個數字對答案，而是拿**角色當下的 ATK/MATK** 推期望值——
+       只有一邊接錯（例如漏了 MATK）才會對不上。 */
+    const expect = P.fixedDamage
+      + Math.round(g.state.atk * P.atkPct / 100)
+      + Math.round(g.state.matk * P.matkPct / 100);
+    t.eq('那一發＝固定值＋ATK＋MATK', 9e9 - mon.hp, expect,
+      `ATK ${g.state.atk}／MATK ${g.state.matk}`);
+    t.ok('確實比純固定值高（追加的那兩段有生效）', expect > P.fixedDamage);
 
     fake += P.cooldownSec * 1000 + 1;
     let again = 0;
@@ -350,19 +375,47 @@ function field(n) {
 
     /* 固定傷害的重點是「不吃防禦」——高防與低防的怪要掉一樣多血。
        這條壞掉的話它會安靜地變成一般傷害，DPS 直接砍掉一截 */
+    const dmgByMon = {};
     ['poring', 'seyren'].forEach(id => {
       const m2 = { defId: id, hp: 9e9, maxHp: 9e9, id: 'g_' + id, ail: {} };
       g.state.monsters = [m2]; g.state.monster = m2;
       fake += P.cooldownSec * 1000 + 1;
       let d = 0;
       for (let i = 0; i < 300 && !d; i++) { const b = m2.hp; g.tryRelicMonkGatling(m2, g.MONSTERS[id]); d = b - m2.hp; }
-      t.eq('固定傷害不吃 ' + g.MONSTERS[id].name + ' 的防禦', d, P.fixedDamage);
+      dmgByMon[id] = d;
     });
+    /* 重點是「不吃防禦」——高防與低防的怪要掉一樣多血。
+       這條壞掉的話它會安靜地變成一般傷害，DPS 直接砍掉一截。
+       比的是兩隻之間**相等**，不是等於某個寫死的數字。 */
+    t.eq('高防與低防的怪掉一樣多血（不吃防禦）', dmgByMon.poring, dmgByMon.seyren,
+      JSON.stringify(dmgByMon));
+    t.ok('而且真的有打到', dmgByMon.poring > P.fixedDamage);
   } finally { Date.now = real; }
 
-  let imm = 0; const N = 200000;
-  for (let i = 0; i < N; i++) if (g.relicNegatesHit()) imm++;
-  t.near('武僧免傷率照資料', imm / N * 100, P.immuneChance, 0.3);
+  /* 免疫在 #148 之後是 10% **加 1 秒冷卻**。
+     冷卻的意義是「同一秒內最多免一下」——沒有它的話，一波五隻怪各打一下
+     就有四成機率至少免掉一發，機率會純粹疊加。
+     所以要分兩件事驗：擲骰機率仍是 10%，以及冷卻真的擋得住連打。 */
+  {
+    const real2 = Date.now; let fake2 = real2();
+    Date.now = () => fake2;
+    try {
+      // 同一毫秒連打：最多只能免一下
+      g.state.relicMonkImmuneReadyAt = 0;
+      let burst = 0;
+      for (let i = 0; i < 500; i++) if (g.relicNegatesHit()) burst++;
+      t.eq('同一瞬間最多只免得掉一下', burst, 1);
+
+      // 每次都把時鐘推過冷卻 → 回到純機率，長期就是 10%
+      let imm = 0; const N = 200000;
+      for (let i = 0; i < N; i++) {
+        fake2 += P.immuneCooldownSec * 1000 + 1;
+        if (g.relicNegatesHit()) imm++;
+      }
+      t.near('冷卻過了之後的免傷率照資料', imm / N * 100, P.immuneChance, 0.3);
+      t.ok('免傷率確實提高到 10%（原本 5%）', P.immuneChance === 10, '資料寫 ' + P.immuneChance);
+    } finally { Date.now = real2; }
+  }
 }
 
 /* ---------- 牧師：復活與承傷 ---------- */

@@ -70,6 +70,11 @@ const RELIC_PROC_MAGE = {
   blindChance: 20,        // 普攻有多少 % 觸發「全場黑暗」
   blindPerMonster: 50,    // 觸發後，每隻怪各自再擲這個 % 決定中不中
   splashChance: 30,       // 普攻有多少 % 改成打全體
+  /* 5 件的第三條（#148）：普攻機率打兩倍。
+     跟上面兩條**各自獨立擲骰**——黑暗、全體、兩倍傷害可以同時發生，
+     那也是這套 5 件的定位（法師靠亂數翻盤，不是靠穩定輸出）。 */
+  doubleChance: 10,
+  doubleMult: 2,
 };
 const RELIC_PROC_ASSASSIN = {
   /* **互斥**（使用者指定）：擲一次骰，由高倍率往低倍率比對，中了就停。
@@ -92,8 +97,15 @@ const RELIC_PROC_KNIGHT = { immuneChance: 20 };
    改成 1 秒後循環 2.7 秒 → +50%，跟刺客／法師那兩套對齊。 */
 const RELIC_PROC_MONK = {
   procChance: 20, fixedDamage: 3600, cooldownSec: 1,
+  /* 3600 是**固定值**，等級一高就形同虛設。#148 在它之上再追加
+     ATK 100% + MATK 100%，讓這一發跟著角色一起成長。
+     兩邊都算，所以純物理與純魔法的武僧各拿一半、混合的兩邊都吃。 */
+  atkPct: 100, matkPct: 100,
   gatlingHits: 12,          // 飄字要跳幾顆「-1」（純特效，傷害還是一次結算）
-  immuneChance: 5,
+  /* 免疫從 5% 提到 10%，代價是**加上 1 秒冷卻**（#148）。
+     沒有冷卻的機率免疫在被連續攻擊時是純粹的機率疊加，一波五隻怪各打一下
+     就有 4 成機率至少免一發；加了冷卻之後，同一秒內最多只免一下。 */
+  immuneChance: 10, immuneCooldownSec: 1,
 };
 /* 牧師：倒下後自動站起來。放置遊戲裡死亡的代價是掛機中斷（被抬回安全區），
    所以這條的價值不在數字而在「整晚不用管」——次數用完要換圖才回滿，
@@ -129,7 +141,7 @@ const RELIC_SETS = {
          見 playerAttackInner 的註解），所以這三十點是在餵下面那條 5 件的普攻效果。 */
       { need: 3, bonus: { atk: 30, hit: 10 }, text: 'ATK +30、命中 +10' },
       { need: 5, bonus: {}, proc: 'mage',
-        text: '普攻 20% 機率讓全場敵人各 50% 判定黑暗；30% 機率普攻改為打全體' },
+        text: '普攻 20% 機率讓全場敵人各 50% 判定黑暗；30% 機率普攻改為打全體；10% 機率造成 2 倍傷害' },
     ],
   },
   assassin: {
@@ -178,7 +190,7 @@ const RELIC_SETS = {
       { need: 2, bonus: { int: 10, dex: 10 }, text: 'INT +10、DEX +10' },
       { need: 3, bonus: { vit: 10, agi: 5 }, text: 'VIT +10、AGI +5' },
       { need: 5, bonus: {}, proc: 'monk',
-        text: '普攻 20% 機率造成 3600 固定傷害（冷卻 1 秒）；被攻擊時 5% 機率完全免疫傷害' },
+        text: '普攻 20% 機率造成 3600 固定傷害＋ATK 100%＋MATK 100%（冷卻 1 秒）；被攻擊時 10% 機率完全免疫傷害（冷卻 1 秒）' },
     ],
   },
   priest: {

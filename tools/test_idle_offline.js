@@ -251,7 +251,11 @@ function bossScene() {
   const mapId = Object.keys(g.MVP_MAP_DATA).find(id =>
     g.MAPS.some(m => m.id === id && (m.monsters || []).length) && (g.MVP_MAP_DATA[id] || []).length >= 2);
   g.state.mapId = mapId;
+  /* #147 之後 MVP 與迷你王是兩個獨立開關，離線只算**有開的那一類**。
+     這一組測試驗的是「擊殺紀錄與時間預算」，跟哪一類無關，
+     所以兩個都開，名單才會等於整份 MVP_MAP_DATA（就是拆分前的行為）。 */
   g.state.mvpMode = true;
+  g.state.miniMode = true;
   g.recomputeDerived(true);
   return { g, mapId, list: g.MVP_MAP_DATA[mapId].filter(i => g.MONSTERS[i]) };
 }
@@ -297,6 +301,41 @@ function fakeKill(g, id, sec, mode) {
   g.withAlly(g.state.allies[0], () => g.killMonster(def, mon));
   t.ok('隊友補刀也算玩家的紀錄', !!g.bossKillRecord(list[0]));
   t.eq('紀錄沒有寫進隊友快照', !!(g.state.allies[0].bossKills), false);
+}
+
+/* ---- 離線只算「有勾的那一類」（#147）----
+   兩個模式拆開之後，關掉的那一類不該還在離線裡刷。
+   這個錯不會噴任何東西，只會表現成「我明明沒開迷你王，收益卻含迷你王」。 */
+{
+  const { g } = bossScene();
+  const mvpOnly = g.bossListOf(g.state.mapId, 'mvp');
+  const miniOnly = g.bossListOf(g.state.mapId, 'mini');
+  if (mvpOnly.length && miniOnly.length) {
+    // 兩類各殺一隻，紀錄都在
+    fakeKill(g, mvpOnly[0], 600);
+    fakeKill(g, miniOnly[0], 600);
+    g.state.mvpMode = true; g.state.miniMode = false;
+    rewind(g, 86400);
+    const a = g.computeOfflineProgress();
+    t.eq('只開 MVP：明細裡沒有迷你王',
+      a.bossList.filter(b => miniOnly.includes(b.id)).length, 0,
+      a.bossList.map(b => b.name).join('、'));
+    t.ok('只開 MVP：MVP 還是算得到', a.bossList.some(b => mvpOnly.includes(b.id)));
+
+    g.state.mvpMode = false; g.state.miniMode = true;
+    rewind(g, 86400);
+    const b2 = g.computeOfflineProgress();
+    t.eq('只開迷你王：明細裡沒有 MVP',
+      b2.bossList.filter(x => mvpOnly.includes(x.id)).length, 0,
+      b2.bossList.map(x => x.name).join('、'));
+    t.ok('只開迷你王：迷你王算得到', b2.bossList.some(x => miniOnly.includes(x.id)));
+
+    g.state.mvpMode = false; g.state.miniMode = false;
+    rewind(g, 86400);
+    t.eq('兩個都關：一隻頭目都不算', g.computeOfflineProgress().bossKills, 0);
+  } else {
+    t.ok('（這張圖只有其中一類，拆分守門員跳過）', true);
+  }
 }
 
 /* ---- 離線：沒殺過就沒有 ---- */
@@ -357,7 +396,9 @@ function fakeKill(g, id, sec, mode) {
 {
   const { g, list } = bossScene();
   fakeKill(g, list[0], 600);
+  // #147 之後有兩個開關，兩個都要關（bossScene 兩個都開著）
   g.state.mvpMode = false;
+  g.state.miniMode = false;
   rewind(g, 86400);
   const off = g.computeOfflineProgress();
   t.eq('關掉 BOSS 模式時離線沒有頭目', off.bossKills, 0);

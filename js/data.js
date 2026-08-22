@@ -9710,11 +9710,6 @@ const EQUIP_SETS = {
     items: ['supper_swimsuit_k', 'scuba_mask_k'],
     bonus: { perfectDodge: 10 },     // 官方另有變動詠唱減少，本作技能瞬發
   },
-  oxygen_set: {
-    name: '潛水套裝',
-    items: ['oxygen_bomb_k', 'scuba_mask_k'],
-    bonus: { aspdFlat: 1 },
-  },
   scarlet_set: {
     name: '血染斗篷套裝',
     items: ['scarlet_poncho', ['critical_ring', 'critical_ring_c']],
