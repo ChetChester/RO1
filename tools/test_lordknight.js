@@ -186,8 +186,11 @@ const LK = { path: ['swordsman', 'knight'], rebirth: true, job: 'lordknight' };
   H.mon(g, { size: 'medium', isBoss: false });
   t.ok('施放成功', g.castSkill('lk_aurablade'));
   g.recomputeDerived(true);
-  t.eq('低防怪 +100', dmg(lowDef) - b.low, 100);
-  t.eq('高防怪也 +100（＝無視防禦）', dmg(hiDef) - b.hi, 100);
+  /* 使用者 2026-08-22 改公式：固定傷害＝玩家等級 × perLevel。
+     H.learn 預設學滿 Lv5 → perLevel=10；mkChar baseLevel=99 → 990 */
+  const expectFlat = g.state.baseLevel * g.SKILLS['lk_aurablade'].perLevel[4];
+  t.eq('低防怪 +' + expectFlat, dmg(lowDef) - b.low, expectFlat);
+  t.eq('高防怪也 +' + expectFlat + '（＝無視防禦）', dmg(hiDef) - b.hi, expectFlat);
 }
 
 /* ---------- 7. 集中攻擊（ATK＋／DEF−）---------- */
@@ -223,7 +226,8 @@ const LK = { path: ['swordsman', 'knight'], rebirth: true, job: 'lordknight' };
   H.wield(g, 'sword2');
   g.state.sp = g.state.maxSp; g.state.cooldowns = {};
   H.mon(g, { size: 'medium', isBoss: false });
-  t.ok('拿雙手劍放不出來', g.castSkill('lk_spiralpierce') === false);
+  /* 官方擴充（使用者 2026-08-22 指定）：雙手劍也能放螺旋擊刺 */
+  t.ok('拿雙手劍也放得出來', g.castSkill('lk_spiralpierce'));
 
   // 無視體型：小型怪不該再吃 0.75 懲罰
   H.wield(g, 'spear1');

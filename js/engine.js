@@ -10289,15 +10289,17 @@ function castSkillInner(skillId, opts) {
       logMsg(`🔱 「${sk.name}」Lv${lv} 發動！攻速 +${Math.round((mult - 1) * 100)}%、暴擊 +${cri}、迴避 +${fle}，持續 ${dur} 秒。`);
       break;
     }
-    /* 靈氣劍（#58）：每次攻擊附加固定傷害且無視防禦。
+    /* 靈氣劍（#58）：每次攻擊與施放技能都附加固定傷害且無視防禦。
+       使用者 2026-08-22 指定：固定傷害＝玩家等級 × perLevel[lv]。
        存成 `auraflat` 型的 buff，recomputeDerived 會收斂成 state.auraBladeFlat，
        實際加在 raceFlatBonus()——那是防禦之後才加的那一項。 */
     case 'buff_auraflat': {
       const dur = Array.isArray(sk.duration) ? sk.duration[lv - 1] : sk.duration;
-      const flat = Array.isArray(sk.flatDmg) ? sk.flatDmg[lv - 1] : sk.flatDmg;
+      const perLv = Array.isArray(sk.perLevel) ? sk.perLevel[lv - 1] : (sk.perLevel || 0);
+      const flat = Math.round((state.baseLevel || 1) * perLv);
       state.buffs.push({ type: 'auraflat', mult: 1, flatBonus: flat, msRemaining: dur * 1000, skillId: sk.id });
       recomputeDerived(false);
-      logMsg(`✨ 「${sk.name}」Lv${lv} 發動，攻擊附加 ${flat} 點無視防禦的傷害！`);
+      logMsg(`✨ 「${sk.name}」Lv${lv} 發動，攻擊與技能附加 ${flat} 點（等級${state.baseLevel}×${perLv}）無視防禦的傷害，持續 ${dur} 秒！`);
       break;
     }
     case 'buff_aspd': {
@@ -12111,9 +12113,29 @@ function effectiveGearBonuses() {
     if (!def) return;
     const host = { slot, refine: d.refine, itemId: d.itemId };
     mergeBonus(total, def.bonus);
+    /* 平鋪的特殊鍵（perBaseLv10_atk 等）也要進總表——getCardBonus() 會按前綴解析。
+       只挑底線開頭的鍵，避免把 atk/def 那些平鋪數值重複算一次。 */
+    for (const [k, v] of Object.entries(def)) {
+      if (/^per(BaseLv10|JobLv10|Stat)_/.test(k) && typeof v === 'number') total[k] = (total[k] || 0) + v;
+    }
     if (def.perRefine) {
       const r = def.perRefineCap != null ? Math.min(d.refine, def.perRefineCap) : d.refine;
       mergeBonus(total, def.perRefine, r);
+    }
+    /* perRefineSquare：官方「ATK增加至(精煉*精煉)」＝精煉²。cap 同樣支援。
+       緋紅色系列（ATK增加至精煉*精煉，套用至精煉+15）就是這條。 */
+    if (def.perRefineSquare) {
+      const r = def.perRefineCap != null ? Math.min(d.refine, def.perRefineCap) : d.refine;
+      mergeBonus(total, def.perRefineSquare, r * r);
+    }
+    /* 緋紅色的 MATK 版：全額與半額（(精煉*精煉)/2）兩種 */
+    if (def.perRefineSquareMatk) {
+      const r = def.perRefineCap != null ? Math.min(d.refine, def.perRefineCap) : d.refine;
+      mergeBonus(total, def.perRefineSquareMatk, r * r);
+    }
+    if (def.perRefineSquareMatkHalf) {
+      const r = def.perRefineCap != null ? Math.min(d.refine, def.perRefineCap) : d.refine;
+      mergeBonus(total, def.perRefineSquareMatkHalf, r * r / 2);
     }
     (def.condBonus || []).forEach(cb => { if (condMet(cb.when, host, lo)) mergeBonus(total, cb.bonus); });
   });
@@ -12528,6 +12550,15 @@ const BASE_STAT_KEYS = ['str', 'agi', 'vit', 'int', 'dex', 'luk'];
 function getCardBonus(stat) {
   const all = effectiveGearBonuses();
   let total = all[stat] || 0;
+  /* perBaseLv10_<目標>（緋紅色系列）：官方「角色等級 70 以上，BaseLv 每上升 10 時 ATK+5」。
+     看的是**基礎等級**，70 級起算——不足 70 不生效。 */
+  for (const k in all) {
+    if (!k.startsWith('perBaseLv10_')) continue;
+    const target = k.slice('perBaseLv10_'.length);
+    if (target !== stat) continue;
+    if ((state.baseLevel || 0) < 70) continue;
+    total += Math.floor((state.baseLevel - 70) / 10 + 1) * all[k];
+  }
   if (!BASE_STAT_KEYS.includes(stat)) return total;
   // All State+N（古埃及王卡片）：六項素質一起加
   if (all.allStat) total += all.allStat;
