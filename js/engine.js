@@ -12104,11 +12104,29 @@ function condMet(when, host, lo) {
   if (when.weaponReq && !weaponReqMet(when.weaponReq)) return false;
   if (when.withCards && !when.withCards.every(c => lo.cards.has(c))) return false;
   if (when.withItems && !when.withItems.every(i => lo.items.has(i))) return false;
+  /* withAnyItem：陣列中**任一件**有裝就算成立（官方同一件裝備常有無孔/有孔兩個 id，
+     「與XX一起裝備」應該兩種都算——沙漠雙劍那次踩過同一個坑）。 */
+  if (when.withAnyItem && !when.withAnyItem.some(i => lo.items.has(i))) return false;
   /* when.ammo：目前裝備的箭矢（陣列＝任一種都算）。箭矢不在裝備欄、
      buildLoadout() 特別帶了 `ammo` 欄位出來——大地之弓＋地靈箭矢那類配對用。 */
   if (when.ammo) {
     const need = Array.isArray(when.ammo) ? when.ammo : [when.ammo];
     if (!lo.ammo || !need.includes(lo.ammo)) return false;
+  }
+  /* when.refineSumMin / refineSumOf：多件裝備的精煉值**合計**門檻
+     （時光超越者斗篷+戰靴「精煉值總和為22以上」）。
+     refineSumOf 是裝備 id 陣列，只算身上有的那些件。 */
+  if (when.refineSumMin != null) {
+    const of = when.refineSumOf || [];
+    let sum = 0;
+    of.forEach(i => { const s = lo.slots && Object.values(lo.slots).find(d => d && d.itemId === i); if (s) sum += s.refine || 0; });
+    if (sum < when.refineSumMin) return false;
+  }
+  /* when.statSumMin：多素質**合計**門檻（時光戰靴「淨STR108以上」那類是單項，
+     用 statMin；這裡提供合計版給「ALL State+2」之類的衍生判斷用）。 */
+  if (when.statSumMin != null && when.statSumOf) {
+    const sum = when.statSumOf.reduce((s, k) => s + ((state.stats || {})[k] || 0), 0);
+    if (sum < when.statSumMin) return false;
   }
   /* 素質門檻（官方寫「VIT77以上」「純粹AGI90以上」那種）。
      這裡看的是**加點的基礎素質**，不含裝備加成——官方的「純粹」就是這個意思，
@@ -12191,6 +12209,22 @@ function effectiveGearBonuses() {
     if (def.per2Refine) {
       const r = def.perRefineCap != null ? Math.min(d.refine, def.perRefineCap) : d.refine;
       mergeBonus(total, def.per2Refine, Math.floor(r / 2));
+    }
+    /* per2RefineExtra：同一件裝備第二組「每+2」效果（時光超越者斗篷的
+       ATK%1/MATK%1/遠距1%/CRI3/暴傷1 與既有那組並存）。 */
+    if (def.per2RefineExtra) {
+      const r = def.perRefineCap != null ? Math.min(d.refine, def.perRefineCap) : d.refine;
+      mergeBonus(total, def.per2RefineExtra, Math.floor(r / 2));
+    }
+    /* per3Refine：官方「精煉每+3時 ○○」（時光超越者-LT 的 B 階級）＝floor(精煉/3)。 */
+    if (def.per3Refine) {
+      const r = def.perRefineCap != null ? Math.min(d.refine, def.perRefineCap) : d.refine;
+      mergeBonus(total, def.per3Refine, Math.floor(r / 3));
+    }
+    /* per4Refine：官方「每精煉+4 ○○」（時光超越者斗篷）＝floor(精煉/4)。 */
+    if (def.per4Refine) {
+      const r = def.perRefineCap != null ? Math.min(d.refine, def.perRefineCap) : d.refine;
+      mergeBonus(total, def.per4Refine, Math.floor(r / 4));
     }
     /* 緋紅色的 MATK 版：全額與半額（(精煉*精煉)/2）兩種 */
     if (def.perRefineSquareMatk) {
