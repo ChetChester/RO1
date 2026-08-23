@@ -11247,6 +11247,49 @@ function removeItem(itemId, qty) {
    稀有的（MVP／迷你王卡、售價 5 萬以上）還是各自列一行——那是開箱子的重點，
    混在「共 37 種」裡面等於沒看到。 */
 const BOX_OPEN_ALL_MAX = 999;              // 一次最多開這麼多，避免手滑卡住畫面
+const BOX_OPEN_CHUNK = 50;                 // 每批開這麼多就讓出主執行緒（玩家回報一次開太多會當掉）
+const BOX_OPEN_CHUNK_DELAY_MS = 30;        // 批次之間的間隔：讓瀏覽器真的有空檔重繪，低階機也撐得住
+/* 分批開箱（保守版）：每 BOX_OPEN_CHUNK 個就讓出主執行緒，批次間再隔
+   BOX_OPEN_CHUNK_DELAY_MS——setTimeout 0 在某些瀏覽器會被併進同一個影格，
+   間隔拉開才保證畫面有真的呼吸空間。同步一口氣開完幾百個後，
+   renderInventoryTab() 要重建兩千多列背包 HTML，凍結就發生在那裡。
+   每批都 saveGame()：中途關掉分頁也不會丟進度。 */
+function openAllBoxesAsync(itemId, onDone) {
+  const def = ITEMS[itemId];
+  const row = state.inventory.find(r => r.item === itemId && !r.instanceId);
+  if (!def || !def.boxOpen || !row || row.qty < 1) return false;
+  const total = Math.min(row.qty, BOX_OPEN_ALL_MAX);
+  let openedTotal = 0;
+  const savedLog = logMsg;
+  let running = false;
+  const step = () => {
+    if (openedTotal >= total) {
+      logMsg = savedLog;
+      logMsg(`📦 ${def.name} 全部開完，共 ${openedTotal} 個。`);
+      if (typeof onDone === 'function') onDone();
+      return;
+    }
+    if (running) return;               // 保險絲：上一批還沒跑完不疊下一批
+    running = true;
+    // 批次內靜音：中間的彙總訊息丟掉，只留最後一筆
+    logMsg = () => {};
+    let opened = 0;
+    try { opened = openAllBoxes(itemId); }
+    catch (e) { console.error('開箱失敗', e); }
+    finally { logMsg = savedLog; running = false; }
+    openedTotal += opened;
+    // 開不出東西（池空/數量異常）就停，避免空轉
+    if (opened <= 0) {
+      logMsg(`📦 ${def.name} 開了 ${openedTotal} 個後停止。`);
+      if (typeof onDone === 'function') onDone();
+      return;
+    }
+    setTimeout(step, BOX_OPEN_CHUNK_DELAY_MS);
+  };
+  logMsg(`📦 開始開啟 ${def.name}（最多 ${total} 個，每 ${BOX_OPEN_CHUNK} 個一批）……`);
+  setTimeout(step, BOX_OPEN_CHUNK_DELAY_MS);
+  return true;
+}
 function openAllBoxes(itemId) {
   const def = ITEMS[itemId];
   const row = state.inventory.find(r => r.item === itemId && !r.instanceId);

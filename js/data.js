@@ -27390,6 +27390,9 @@ function isTwoHanded(itemId) {
   const cat = item.weaponCat || item.weaponType;
   if (cat === 'katar') return true;
   const desc = item.desc || '';
+  /* 「雙手用短劍」（沙漠之風/沙漠之暮）官方語意是**成對雙持用**的單手短劍，
+     不是佔兩格的雙手武器——誤判的話第二把進不了左手，刺客雙持不了（玩家回報）。 */
+  if (/雙手用|成對/.test(desc)) return false;
   return desc.includes('雙手') || desc.includes('two_hand') || desc.includes('Two-Handed');
 }
 

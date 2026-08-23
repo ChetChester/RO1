@@ -4465,7 +4465,7 @@ function renderInventoryTab() {
                 title="湊得滿的 ${times} 份一次合成完，除不盡的留在背包">全部合成(${times})</button>` : '');
           })()}
           ${canUse ? `<button class="btn-small" onclick="useItem('${row.item}');renderInventoryTab();">${def.type === 'consumable' ? '使用' : '裝備'}</button>` : ''}
-          ${def.boxOpen && row.qty > 1 ? `<button class="btn-small" onclick="openAllBoxes('${row.item}');renderInventoryTab();renderTopBar();" title="手上這 ${row.qty} 個一次開完，紀錄會合併成一份清單">全部開啟(${row.qty})</button>` : ''}
+          ${def.boxOpen && row.qty > 1 ? `<button class="btn-small" onclick="openAllBoxesAsync('${row.item}', function(){renderInventoryTab();renderTopBar();});" title="手上這 ${row.qty} 個一次開完（每 100 個一批，不卡畫面）">全部開啟(${row.qty})</button>` : ''}
           ${locked || def.type === 'relic' ? '' : `<button class="btn-small ghost" onclick="sellItem('${row.item}',1);renderInventoryTab();renderTopBar();">賣出(${def.sell})</button>`}
           ${!locked && def.type !== 'relic' && row.qty > 1 ? `<button class="btn-small ghost" onclick="sellItemAll('${row.item}');renderInventoryTab();renderTopBar();">全部賣出</button>` : ''}
           <button class="btn-small ghost" onclick="depositToWarehouse('${row.item}',1);renderInventoryTab();renderTopBar();">存倉庫</button>
