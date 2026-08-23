@@ -12066,7 +12066,10 @@ function buildLoadout() {
   });
   let jobLine = [];
   try { jobLine = getAllLearnedJobs(); } catch (e) { jobLine = []; }
-  return { slots, cardHosts, cards, items, jobLine: new Set(jobLine) };
+  /* 目前裝備的箭矢也要進 loadout：箭矢配對效果（大地之弓＋地靈箭矢那類）
+     的 when.ammo 判斷要查這裡。 */
+  const ammo = getEquippedAmmoId() || null;
+  return { slots, cardHosts, cards, items, ammo, jobLine: new Set(jobLine) };
 }
 
 /* 條件成立與否。host 是「這張卡插在哪一件裝備上」，套裝沒有宿主就傳 null */
@@ -12081,6 +12084,12 @@ function condMet(when, host, lo) {
   if (when.weaponReq && !weaponReqMet(when.weaponReq)) return false;
   if (when.withCards && !when.withCards.every(c => lo.cards.has(c))) return false;
   if (when.withItems && !when.withItems.every(i => lo.items.has(i))) return false;
+  /* when.ammo：目前裝備的箭矢（陣列＝任一種都算）。箭矢不在裝備欄、
+     buildLoadout() 特別帶了 `ammo` 欄位出來——大地之弓＋地靈箭矢那類配對用。 */
+  if (when.ammo) {
+    const need = Array.isArray(when.ammo) ? when.ammo : [when.ammo];
+    if (!lo.ammo || !need.includes(lo.ammo)) return false;
+  }
   /* 素質門檻（官方寫「VIT77以上」「純粹AGI90以上」那種）。
      這裡看的是**加點的基礎素質**，不含裝備加成——官方的「純粹」就是這個意思，
      而且加成表是在 recomputeDerived() 裡算的，拿總素質判斷會變成循環相依。 */
@@ -12120,6 +12129,8 @@ function effectiveGearBonuses() {
     return d ? `${d.itemId}+${d.refine}[${d.cards.join(',')}]` : '-';
   }).join('|') + '#' + state.jobId
     + '#' + BASE_STAT_KEYS.map(k => (state.stats && state.stats[k]) || 0).join(',')
+    /* 箭矢也要進簽章：when.ammo 的配對加成（大地之弓＋地靈箭矢）換箭要重算 */
+    + '#' + (lo.ammo || '-')
     /* 遺物也要進簽章，否則換遺物不會重算——條件式加成卡在舊值那個坑（見上面）
        在這裡會變成「拔掉整套遺物，加成還在」。 */
     + '#' + (typeof RELIC_SLOTS === 'undefined' ? '' :
@@ -12155,6 +12166,11 @@ function effectiveGearBonuses() {
     if (def.perRefineSquare) {
       const r = def.perRefineCap != null ? Math.min(d.refine, def.perRefineCap) : d.refine;
       mergeBonus(total, def.perRefineSquare, r * r);
+    }
+    /* per2Refine：官方「精煉每+2時 ○○+1」（海鷹召喚者的攻速）＝floor(精煉/2)。 */
+    if (def.per2Refine) {
+      const r = def.perRefineCap != null ? Math.min(d.refine, def.perRefineCap) : d.refine;
+      mergeBonus(total, def.per2Refine, Math.floor(r / 2));
     }
     /* 緋紅色的 MATK 版：全額與半額（(精煉*精煉)/2）兩種 */
     if (def.perRefineSquareMatk) {
