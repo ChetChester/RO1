@@ -2380,6 +2380,8 @@ function recomputeDerived(fullHeal) {
   /* 魔法反射（#17）：跟物理反射是兩回事。官方蟻后卡片是「把法術原樣彈回去」——
      成功時**玩家完全不受傷**，怪物吃下整發，所以這裡存的是機率不是比例。 */
   state.cardMagicReflectChance = Math.min(100, getCardBonus('magicReflectChance'));
+  /* 黃金蟲卡片：怪物技能完全免疫（傷害與隊友的增益/狀態技能一起擋）。 */
+  state.cardMonSkillImmune = getCardBonus('monSkillImmune') > 0;
   /* 鎧甲屬性（#17）：幽靈波利＝念、天使波利＝聖、巫婆＝暗。
      用 `armorEle_<屬性>` 一族的數字鍵而不是單一字串鍵——加成表是「同名相加」的
      數字表（mergeBonus），塞字串進去會壞掉。
@@ -6875,6 +6877,15 @@ function monsterCastSkillInner(mon, monDef, sk) {
     return;
   }
 
+  /* 黃金蟲卡片（使用者 2026-08-22 指定）：怪物技能**完全免疫傷害**，
+     但隊友的增益/狀態技能也一併擋掉（官方「避免被施任何魔法包括治癒術」的近似）。
+     放在命中判定之前——免疫是連打都不打的。 */
+  if (state.cardMonSkillImmune) {
+    logMsg(`🪲 黃金蟲卡片免疫了 ${nameOf()}！`);
+    if (typeof showPlayerFloat === 'function') showPlayerFloat('免疫', 'miss');
+    return;
+  }
+
   // 命中判定：魔法無視閃避，物理照常擲
   if (!sk.magic) {
     if (Math.random() * 100 < state.perfectDodge) {
@@ -9152,6 +9163,15 @@ function castSkillInner(skillId, opts) {
   if (!sk) return false;
   // 沉默：完全不能施放技能（連卡片的自動念咒也一起擋，官方沉默就是這樣）
   if (playerSilenced()) { if (!free) logMsg(`🤐 沉默中，無法施放「${sk.name}」！`); return false; }
+  /* 黃金蟲卡片：官方「可避免被施任何魔法（包括治癒術在內）」——
+     使用者指定連**隊友也不能幫忙上狀態**，所以增益/治療/狀態類技能全部放不出來。
+     傷害型技能不受影響（那是打怪，不是「被施魔法」）。 */
+  if (state.cardMonSkillImmune && !['damage', 'magic', 'magic_aoe', 'damage_aoe', 'damage_multi',
+    'damage_multihit', 'dot', 'poison_proc', 'field_phys_aoe', 'field_magic_aoe', 'field_aoe_magic',
+    'multi_dot_stun', 'special_charge'].includes(sk.type)) {
+    logMsg(`🪲 黃金蟲卡片：無法被施放「${sk.name}」（含增益/治療/狀態）！`);
+    return false;
+  }
   let lv;
   if (opts && opts.forceLv) lv = Math.max(1, Math.min(sk.maxLv || opts.forceLv, opts.forceLv));
   else lv = skillLv(skillId);
