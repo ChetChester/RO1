@@ -2430,7 +2430,7 @@ function recomputeDerived(fullHeal) {
   state.itemHealBonus = {};     // 指定道具的回復量加成（道具id → %）
   state.ailResist = {};         // 玩家的異常狀態抗性（狀態 → %，100 以上＝免疫）
   // 自動念咒與異常狀態：都依觸發時機分籃，戰鬥時直接取用不必再掃卡片
-  state.cardAutoSpells = { attack: [], hit: [] };
+  state.cardAutoSpells = { attack: [], hit: [], chain: [] };
   state.cardAilments = { attack: [], hit: [], magic: [] };
   state.cardKillDrops = [];
   {
@@ -10493,8 +10493,36 @@ function castSkillInner(skillId, opts) {
   /* 雙倍投擲（#76）：整招都結算完了才複製，不然複製出來的那一發會插在
      傷害與擊殺判定中間。放在 saveGame 之前，複製那一發自己也會存一次。 */
   tryDoubleCast(sk, lv);
+  /* 元素之劍那類的「魔法連鎖」（on:'chain'）：這招施放成功後觸發下一招。
+     放在 saveGame 前面，連鎖那一發自己也會存一次。 */
+  tryChainSpells(sk.id, lv);
   saveGame();
   return true;
+}
+
+/* 魔法連鎖（元素之劍）：autoSpell 條目寫 `on:'chain', after:'技能id'`，
+   當 `after` 那招**成功施放**時按 chance 擲下一次。跟 tryAutoSpells 同一套
+   資料格式與觸發管線（state.cardAutoSpells.chain），差別只在觸發點是
+   「某招成功施放之後」而不是普攻/受擊。
+   連鎖的每一環照陣列順序觸發——同一批裡有兩個 after 相同的條目時，
+   先進先出，不會互相插隊。 */
+function tryChainSpells(afterSkillId, afterLv) {
+  const list = state.cardAutoSpells && state.cardAutoSpells.chain;
+  if (!list || !list.length) return;
+  const melee = !isBowWeapon(getEquipBaseItemId('weapon'));
+  for (const e of list) {
+    if (e.after !== afterSkillId) continue;
+    if (e.melee && !melee) continue;
+    if (Math.random() * 100 >= e.chance) continue;
+    const sk = findSkillAnywhere(e.skill);
+    if (!sk) continue;
+    const ok = sk.type === 'passive'
+      ? applyPassiveSkillOnce(sk, e.lv || 1, 'chain', state.monsters && state.monsters[0])
+      : castSkill(e.skill, { free: true, forceLv: e.lv || 1 });
+    if (ok) logMsg(`🎴 元素連鎖！${sk.name} Lv${e.lv || 1} 發動！`);
+    // 連鎖成功就跳出：一環只接一發，下一環由那一發自己的 tryChainSpells 接手
+    break;
+  }
 }
 
 // 在城鎮安全區休息時，HP/SP每秒都會被townRestore()自動補滿：
