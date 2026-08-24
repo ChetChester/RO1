@@ -361,10 +361,11 @@ function fakeKill(g, id, sec, mode) {
   t.ok('殺過的頭目離線遇得到', off.bossKills > 0, '擊殺 ' + off.bossKills);
   t.eq('明細只列打得動的那一隻', off.bossList.length, 1);
   t.eq('列的是對的那一隻', off.bossList[0].id, list[0]);
-  /* 名單是等機率抽的，所以每隻分到「頭目時間 ÷ 名單長度」，不是 ÷ 打得動的隻數——
-     抽到打不動的那隻本來就是白耗，那份時間要損失掉。 */
-  const expect = 86400 * (g.MVP_SPAWN_CHANCE_PCT / 100) / list.length / 1200;
-  t.ok('擊殺數對得上時間預算', Math.abs(off.bossKills - expect) <= 1,
+  /* 2026-08-22 改為方案A（逐隻模擬線上循環）：
+     每 3 秒一輪擲 20%，中了殺 3/1200 隻 → 期望 = 86400/3 × 0.2 × 3/1200
+     名單長度不再影響（殺得動哪隻就打哪隻，跟線上一致）。 */
+  const expect = 86400 / 3 * (g.MVP_SPAWN_CHANCE_PCT / 100) * (3 / 1200);
+  t.ok('擊殺數對得上線上循環', Math.abs(off.bossKills - expect) <= 1,
     `預期約 ${expect.toFixed(1)}，實得 ${off.bossKills}`);
   /* 頭目佔掉的時間要從雜魚那邊扣，不然兩邊加起來超過 100%。
      **總經驗可能因此變少**——那是對的：低階頭目給的經驗比同一段時間的雜魚少，

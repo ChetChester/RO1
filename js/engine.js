@@ -13620,41 +13620,51 @@ function computeOfflineProgress(minMs) {
   state.equip.ammo = _snap.equipAmmo;
   logMsg = _origLog;
   _dpsPaused = false;
-  /* ---- 頭目（#137）----
-     開著 BOSS 模式時，線上每次補怪有 MVP_SPAWN_CHANCE_PCT 的機率抽到頭目。
-     這裡照同一個數字切一份**時間預算**給頭目，剩下的才留給雜魚，兩邊加起來剛好 100%。
+  /* ---- 頭目（#137，2026-08-22 改為方案A：逐隻模擬線上循環）----
 
-     三條規則都刻意保守：
-       1. 只有**實際殺過**的頭目才算（bossKillRecord），沒殺過的那份時間直接損失——
-          官方名單是等機率抽的，抽到你打不動的那隻本來就是白耗。
-       2. 速度用最近一次的實測耗時，不是歷史最快。
-       3. 一隻一隻打（線上也是「場上有頭目就不再生下一隻」），
-          所以是「時間 ÷ 耗時」而不是併行。
+     線上的規則（spawnMonster）：每次補怪（≤3 秒一次）擲 MVP_SPAWN_CHANCE_PCT，
+     中了就生一隻名單裡的頭目，場上有同類頭目時不重生。頭目死後下一批再擲——
+     所以頭目的期望速率是 1/(殺耗時+15s)，跟「殲滅速度」直接掛鉤。
 
-     這個模型比線上實際偏低：線上頭目一出現就佔著場子直到被打死，
-     等於幾乎整段時間都在打牠。寧可少給。 */
+     舊版離線把 20% 解讀成「頭目佔總時間的上限」，又再 ÷ 名單長度，
+     結果只有線上的 1/2~1/63（殺越慢落差越大），玩家回報「離線 MVP 差很多」就是這條。
+
+     新版照線上同一個循環逐隻模擬：
+       · 每 BOSS_ROLL_SEC 秒擲一次 20%，中了就從名單抽一隻（等機率）
+       · 查該頭目在當下打寶模式的實測耗時（bossKillRecord），沒殺過就跳過換下一輪
+         ——抽到打不動的，那段時間本來就是白耗，跟線上一致
+       · 殺得動的照耗時結算隻數，直到 24 小時的時間用完
+     效能：24h ≈ 5,760 次擲骰、~1,150 隻，每隻都是 O(1) 查表，總計 < 10ms。 */
   const bossGained = [];
   let bossKills = 0;
+  const BOSS_ROLL_SEC = 3;   // 跟線上補怪週期一致（場上有怪時 3 秒/批）
   if (typeof MVP_MAP_DATA !== 'undefined') {
-    /* 兩個模式各自 20%（#147）。兩邊都開的時候，線上一輪只會生一隻，
-       所以這裡也是把整份頭目時間預算分給兩張名單，不是各給 20%。 */
     const lists = activeBossLists(map.id);
-    const mvpList = lists.length
+    const bossPool = lists.length
       ? [].concat.apply([], lists).filter(id => MONSTERS[id])
       : [];
-    if (mvpList.length) {
-      // 名單是等機率抽的，所以每一隻分到的是「頭目時間 ÷ 名單長度」，不是 ÷ 打得動的隻數
-      const perBossSec = elapsedSec * (MVP_SPAWN_CHANCE_PCT / 100) / mvpList.length;
-      mvpList.forEach(id => {
-        /* 只認**當下這個打寶模式**的紀錄：怪的血量差三到五倍，
-           拿普通模式的耗時去算瘋狂模式的離線會多給五倍。 */
+    if (bossPool.length) {
+      // 殺得動的頭目先過濾出來：擲中了卻沒紀錄的，那一輪時間照樣損失（跟線上抽到打不動的一樣）
+      const killable = bossPool.filter(id => {
         const rec = bossKillRecord(id, farmMode());
-        if (!rec || !(rec.n > 0) || !(rec.lastMs > 0)) return;
-        const n = perBossSec / (rec.lastMs / 1000);
-        if (!(n > 0)) return;
-        bossGained.push({ id, kills: n });
-        bossKills += n;
+        return rec && rec.n > 0 && rec.lastMs >= BOSS_KILL_MIN_MS;
       });
+      const rolls = Math.floor(elapsedSec / BOSS_ROLL_SEC);
+      for (let i = 0; i < rolls; i++) {
+        if (Math.random() * 100 >= MVP_SPAWN_CHANCE_PCT) continue;
+        // 等機率抽：先從殺得動的抽；全都殺不動時，這一輪照樣損失
+        const pickFrom = killable.length ? killable : bossPool;
+        const id = pickFrom[Math.floor(Math.random() * pickFrom.length)];
+        if (!killable.includes(id)) continue;   // 抽到殺不動的 → 白耗一輪
+        const rec = bossKillRecord(id, farmMode());
+        const killSec = rec.lastMs / 1000;
+        const n = BOSS_ROLL_SEC / killSec;      // 這一輪 3 秒能殺幾隻（可為小數）
+        if (!(n > 0)) continue;
+        const exist = bossGained.find(b => b.id === id);
+        if (exist) exist.kills += n;
+        else bossGained.push({ id, kills: n });
+        bossKills += n;
+      }
     }
   }
   // 頭目佔掉的時間不能同時拿去打雜魚，兩邊的時間預算要加得起來
