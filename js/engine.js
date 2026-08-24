@@ -12657,18 +12657,22 @@ function getCardBonus(stat) {
     if ((state.baseLevel || 0) < 70) continue;
     total += Math.floor((state.baseLevel - 70) / 10 + 1) * all[k];
   }
-  if (!BASE_STAT_KEYS.includes(stat)) return total;
-  // All State+N（古埃及王卡片）：六項素質一起加
-  if (all.allStat) total += all.allStat;
-  // perStat_<來源>_<每N點>_<目標>：官方「每 N 點基礎素質換 1 點另一項素質」
-  // （黑曜石卡片那一組，看的是純素質，不含裝備／卡片／技能加的點數）
+  /* perStat_<來源>_<每N點>_<目標>：官方「純粹XX每N時 ○○+M」。
+     來源限六項素質（看**加點的基礎值**，不含裝備／卡片／技能——官方的「純粹」），
+     目標可以是任何加成鍵（atk/matk/critRate/critDmgPct/hit/aspdPct/eleReduce_none…）。
+     原本只支援目標＝六項素質，賭徒之印那批（CRI/ATK/MATK 隨 LUK 成長）補齊時放寬。 */
   for (const k in all) {
     if (!k.startsWith('perStat_')) continue;
-    const parts = k.split('_');            // perStat, from, per, to
-    if (parts[3] !== stat) continue;
+    const parts = k.split('_');            // perStat, from, per, to(可含底線)
+    if (parts[1] == null || parts[2] == null) continue;
+    const to = parts.slice(3).join('_');
+    if (to !== stat) continue;
     const base = (state.stats && state.stats[parts[1]]) || 0;
     total += Math.floor(base / (+parts[2] || 1)) * all[k];
   }
+  if (!BASE_STAT_KEYS.includes(stat)) return total;
+  // All State+N（古埃及王卡片）：六項素質一起加
+  if (all.allStat) total += all.allStat;
   return total;
 }
 /* ---------------- 道具鎖定 ----------------
