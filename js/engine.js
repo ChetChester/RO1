@@ -4302,7 +4302,11 @@ function tryRogueProcs(target, monDef) {
   }
 
   // 脅持：官方的位移做不了（本作沒有座標），只留傷害那半
+  // 闇●盜賊卡五件套（blockSnatch）：官方「不能使用脅持」——裝了套裝就封印這招
   if (state.intimidateProc && target && target.hp > 0 && monDef) {
+    if (getCardBonus('blockSnatch') > 0) {
+      logMsg(`🚫 闇●盜賊卡片套裝封印了「脅持」。`);
+    } else {
     const p = state.intimidateProc;
     if (Math.random() * 100 < p.chance && ready('rg_intimidate', p.cdSec)) {
       const em = getElementMultiplierVsMonster('neutral', monDef, target);
@@ -4313,6 +4317,7 @@ function tryRogueProcs(target, monDef) {
       logMsg(`🤝 「${p.name}」！對 ${monDef.name} 造成 ${dmg} 點傷害。`);
       if (typeof showDamageFloatAt === 'function') showDamageFloatAt(target.id, '-' + dmg, 'normal');
       if (target.hp <= 0) killMonster(monDef, target);
+    }
     }
   }
 
