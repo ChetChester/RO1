@@ -1390,11 +1390,15 @@ const SKILLS = {
     spCost: [0], cooldown: [0],
     requires: { skillId: 'mo_fingeroffensive', level: 3 },
     mult: [8, 8, 8, 8, 8],
-    procChance: [20, 20, 20, 20, 20], spiritCost: 5,
-    spScale: 100, flatBonus: [400, 550, 700, 850, 1000],
-    desc: '被動技能。必須在爆氣狀態，猛龍誇強觸發後有 20% 機率接上：'
-        + '消耗 5 顆氣球體與**全部 SP**，造成無視迴避與防禦的巨大傷害'
-        + '（ATK 倍率 800% ＋ 消耗SP÷100，另加 400~1000 點固定傷害），放完解除爆氣狀態。'
+    /* 使用者 2026-08-22 指定（最終版）：
+       直發機率 5%（爆氣中普攻）；連段接技 40% 維持。
+       SP 轉傷倍率 spScale 100→20（同樣 SP 換 5 倍傷害）。
+       flatBonus 同步 ×5：400/550/700/850/1000 → 2000/2750/3500/4250/5000。 */
+    procChance: [40, 40, 40, 40, 40], directChance: [5, 5, 5, 5, 5], spiritCost: 5,
+    spScale: 20, flatBonus: [2000, 2750, 3500, 4250, 5000],
+    desc: '被動技能。必須在爆氣狀態：普攻有 5% 機率直接發動；猛龍誇強或氣絕崩擊觸發後也有 40% 機率接上。'
+        + '發動時消耗 5 顆氣球體與**全部 SP**，造成無視迴避與防禦的巨大傷害'
+        + '（ATK 倍率 800% ＋ 消耗SP÷20，另加 2000~5000 點固定傷害），放完解除爆氣狀態。'
   },
   mo_bodyrelocation: {
     id: 'mo_bodyrelocation', name: '弓身彈影 Body Relocation', maxLv: 1,

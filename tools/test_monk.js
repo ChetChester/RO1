@@ -407,7 +407,8 @@ function learnChain(g, pairs) {
     ['mo_explosionspirits', 5], ['mo_dodge', 5], ['mo_tripleattack', 10],
     ['mo_chaincombo', 5], ['mo_combofinish', 5], ['mo_bladestop', 5],
     ['mo_investigate', 5], ['mo_fingeroffensive', 5], ['mo_extremityfist', 5]]);
-  t.eq('阿修羅 Lv5 固定傷害 1000', g.state.extremityFist.flat, 1000);
+  /* 使用者 2026-08-22 調整：flatBonus ×5（1000→5000）、spScale 100→20 */
+  t.eq('阿修羅 Lv5 固定傷害 5000', g.state.extremityFist.flat, 5000);
   t.eq('阿修羅消耗 5 顆氣球體', g.state.extremityFist.cost, 5);
 
   H.mon(g, { minHp: 100000 });

@@ -1712,6 +1712,8 @@ function recomputeDerived(fullHeal) {
             spScale: sk.spScale || 100,
             flat: Array.isArray(sk.flatBonus) ? sk.flatBonus[lv - 1] : sk.flatBonus,
             chance: Array.isArray(sk.procChance) ? sk.procChance[lv - 1] : sk.procChance,
+            /* 直發機率（方案C）：爆氣中普攻直接發動，不走前置連段。 */
+            directChance: Array.isArray(sk.directChance) ? sk.directChance[lv - 1] : (sk.directChance || 20),
           };
           break;
         }
@@ -2570,8 +2572,10 @@ function recomputeDerived(fullHeal) {
      相加會變成 −40%，四段全滿時差距更大。 */
   /* 武術宗師（#79）：氣球體上限從 5 提高到 7。
      新增的伏虎拳與氣絕崩擊各花 1 顆，不提高上限的話阿修羅的 5 顆會拿不到
-     ——#70 已經踩過一次那個死鎖。 */
-  if (state.spiritsMax > 0 && state.jobId === 'champion') state.spiritsMax = CHAMPION_SPIRITS_MAX;
+     ——#70 已經踩過一次那個死鎖。
+     修羅（三轉）同樣 7 顆（使用者 2026-08-22 指定）——三轉借的是母職整份技能，
+     蓄氣上限照樣吃得到。 */
+  if (state.spiritsMax > 0 && (state.jobId === 'champion' || state.jobId === 'sura')) state.spiritsMax = CHAMPION_SPIRITS_MAX;
   if (state._pitcherPct) state.hpItemEffectBonusPct += state._pitcherPct;
   {
     const base = state._alchemyZenyMult == null ? 1 : state._alchemyZenyMult;
@@ -4598,10 +4602,21 @@ function tryChampionProcs(target, monDef) {
     logMsg(`🔵 「狂蓄氣」一口氣聚起 ${state.spirits - before} 顆氣球體！`);
   }
 
+  /* 阿修羅霸凰拳直發（使用者 2026-08-22 指定方案C）：爆氣中普攻直接 20% 機率發動，
+     不用走六合拳→連環→猛龍那條 4.5% 的前置連段。
+     放在猛虎硬派山的檢查之前——沒學猛虎硬派山的修羅也照樣發動。 */
+  const x = state.extremityFist;
+  if (x && monkExplosionActive() && !isBowWeapon(getEquipBaseItemId('weapon'))
+      && (state.spirits || 0) >= x.cost && Math.random() * 100 < x.directChance) {
+    fireAsura(target, monDef);
+    return;
+  }
+
   const ps = state.palmStrike;
   if (!ps || !target || target.hp <= 0 || !monDef) return;
   if (!monkExplosionActive()) return;                 // 官方限爆氣狀態
   if (isBowWeapon(getEquipBaseItemId('weapon'))) return;
+
   if (Math.random() * 100 >= ps.chance) return;
   if (!ready('ch_palmstrike', ps.cdSec)) return;
 
