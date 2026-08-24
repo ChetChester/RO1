@@ -5490,10 +5490,70 @@ function showRefinePanel(slotKey) {
         <button class="btn-small" ${canRefine ? '' : 'disabled'} onclick="doRefineSlot('${slotKey}')">
           精煉（成功率 ${rate}%）
         </button>
+        ${!ctx.maxed && ctx.mats.length ? `<select id="refine-bulk-target" class="refine-bulk-select">
+          ${Array.from({length: REFINEMENT_MAX - ctx.level}, (_, i) => ctx.level + i + 1).map(lv => `<option value="${lv}">強化到 +${lv}</option>`).join('')}
+          <option value="break">強化到爆掉／材料用完</option>
+        </select>
+        <button class="btn-small" ${canRefine ? '' : 'disabled'} onclick="doRefineBulk('${slotKey}')">一鍵強化</button>` : ''}
         ${hint ? `<span class="refine-hint">${hint}</span>` : ''}
       </div>
       ${_refineLog.length ? `<div class="refine-log">${_refineLog.map(l => `<div>${l}</div>`).join('')}</div>` : ''}
     </div>`;
+}
+
+/* 一鍵強化（使用者 2026-08-22 指定）：下拉選目標 +N 或「到爆掉／材料用完」，
+   每 1 秒精煉一次，成功時播音效。中途爆掉／沒材料／沒錢／達標就停。
+   走非同步 setTimeout，畫面不會被連續精煉卡死。 */
+let _refineBulkRunning = false;
+function doRefineBulk(slotKey) {
+  if (_refineBulkRunning) return;
+  const selEl = document.getElementById('refine-bulk-target');
+  const target = selEl ? selEl.value : 'break';
+  _refineBulkRunning = true;
+  const step = () => {
+    const ctx = refineContext(slotKey);
+    if (!ctx) { _refineBulkRunning = false; return; }
+    // 停止條件：已達指定目標／已爆（等級下降或歸零且低於原本）／已達上限
+    const lv = getRefinementLevel(slotKey);
+    if (target !== 'break' && lv >= parseInt(target, 10)) {
+      logMsg(`🔨 一鍵強化完成：${ctx.item.name} +${lv}。`);
+      _refineBulkRunning = false;
+      showRefinePanel(slotKey); renderTopBar();
+      return;
+    }
+    if (ctx.maxed) {
+      logMsg(`🔨 ${ctx.item.name} 已達最大精煉 +${REFINEMENT_MAX}。`);
+      _refineBulkRunning = false;
+      showRefinePanel(slotKey); renderTopBar();
+      return;
+    }
+    const sel = currentRefineMat(slotKey, ctx);
+    if (!sel || state.gold < ctx.cost) {
+      logMsg(`🔨 一鍵強化停止：${!sel ? '材料用完' : '鋅幣不足'}（目前 +${lv}）。`);
+      _refineBulkRunning = false;
+      showRefinePanel(slotKey); renderTopBar();
+      return;
+    }
+    const before = lv;
+    const success = refineItem(slotKey, sel.key);
+    const after = getRefinementLevel(slotKey);
+    _refineLog.unshift(success
+      ? `🔨 成功　${ctx.item.name} +${before} → +${after}（${sel.mat.name}）`
+      : `💥 失敗　${ctx.item.name} +${before} → +${after}（${sel.mat.name}）`);
+    _refineLog = _refineLog.slice(0, 8);
+    if (success && typeof playEventSfx === 'function') playEventSfx('refine');
+    // 爆掉判定：等級比這次成功應有的還低（降3級或損壞歸零）→ 停
+    if (after < before && after <= ctx.safe) {
+      logMsg(`💥 ${ctx.item.name} 精煉失敗受損（+${after}），一鍵強化停止。`);
+      _refineBulkRunning = false;
+      showRefinePanel(slotKey); renderTopBar();
+      return;
+    }
+    showRefinePanel(slotKey);
+    renderTopBar();
+    setTimeout(step, 1000);   // 每 1 秒一次
+  };
+  step();
 }
 
 function doRefineSlot(slotKey) {
