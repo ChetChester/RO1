@@ -577,7 +577,9 @@ function equippedAtk() {
 function equippedMatk() {
   const wId = getEquipBaseItemId('weapon');
   const w = wId ? ITEMS[wId] : null;
-  return w && w.matk ? w.matk : 0;
+  if (!w || !w.matk) return 0;
+  // 官方（renewal）：精煉對有 MATK 的武器同步加 MATK，對照表與 ATK 相同
+  return w.matk + getRefinementAtkBonus(getRefinementLevel('weapon'), getRefineWeaponLv(w));
 }
 function equippedDef() {
   let def = 0;
