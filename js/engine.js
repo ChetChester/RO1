@@ -11272,7 +11272,9 @@ function openNpcShop(shopId) {
         <div class="shop-item-actions">
           <span class="shop-item-price">${item.buyPrice} 💰</span>
           <span class="shop-item-owned">持有 ${qty}</span>
-          <button class="btn-small" ${canAfford ? '' : 'disabled'} onclick="buyItem('${id}',1);openNpcShop('${shopId}');renderTopBar();">購買</button>
+          <input type="number" class="shop-buy-qty" id="shop-qty-${id}" value="1" min="1" max="9999"
+            style="width:52px;padding:2px 4px;" onkeydown="if(event.key==='Enter'){buyItemFromShop('${id}','${shopId}');}">
+          <button class="btn-small" ${canAfford ? '' : 'disabled'} onclick="buyItemFromShop('${id}','${shopId}');">購買</button>
         </div>
       </div>`;
     });

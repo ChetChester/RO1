@@ -2975,6 +2975,7 @@ let codexFilter = 'all';    // all | found | missing
 let codexSearch = '';
 let codexPage = 0;
 let codexOpenId = null;
+let codexJobFilter = false;  // 只顯示本職業裝得上的裝備
 
 /* 分類篩選（#138）。圖鑑一頁 60 格、道具有一千四百多筆，只有「已發現／未發現」
    根本翻不完——使用者要的是按類別收斂。三個分頁各有自己的一組分類，
@@ -3018,6 +3019,7 @@ const CODEX_CATS = {
 let codexCat = { mon: 'all', card: 'all', item: 'all' };
 function setCodexView(v) { codexView = v; codexPage = 0; codexOpenId = null; renderCodexTab(); }
 function setCodexFilter(f) { codexFilter = f; codexPage = 0; renderCodexTab(); }
+function setCodexJobFilter(v) { codexJobFilter = v; codexPage = 0; renderCodexTab(); }
 function setCodexCat(k) { codexCat[codexView] = k; codexPage = 0; renderCodexTab(); }
 // 目前分頁的分類列，順便標出每一類有幾筆（0 筆的直接讓玩家看得出來，不必點進去）
 function codexCatBar(ids) {
@@ -3114,6 +3116,16 @@ function renderCodexTab() {
      從「收集紀錄」改成「查東西在哪打」——查不到還沒發現的東西就等於沒用。 */
   if (codexSearch) rows = rows.filter(r => (r.name || '').toLowerCase().includes(codexSearch));
 
+  /* 職業篩選（使用者 2026-08-22 指定）：武器/防具分頁可只顯示本職業裝得上的裝備 */
+  if (codexView === 'item' && codexJobFilter) {
+    rows = rows.filter(r => {
+      const d = ITEMS[r.id];
+      if (!d) return false;
+      if (d.type !== 'weapon' && d.type !== 'armor') return true;
+      return !equipBlockReason(r.id);
+    });
+  }
+
   const totalPages = Math.max(1, Math.ceil(rows.length / CODEX_PAGE_SIZE));
   if (codexPage >= totalPages) codexPage = totalPages - 1;
   const pageRows = rows.slice(codexPage * CODEX_PAGE_SIZE, (codexPage + 1) * CODEX_PAGE_SIZE);
@@ -3132,6 +3144,10 @@ function renderCodexTab() {
     <div class="codex-controls">
       <input id="codex-search" class="codex-search" type="text" placeholder="搜尋名稱，找到就能看到去哪裡打…"
         value="${codexSearch.replace(/"/g, '&quot;')}" oninput="onCodexSearch(this.value, event)">
+      ${codexView === 'item' ? `<label style="display:inline-flex;align-items:center;gap:4px;margin-left:8px;cursor:pointer;">
+        <input type="checkbox" ${codexJobFilter ? 'checked' : ''} onchange="setCodexJobFilter(this.checked);" style="accent-color:var(--gold);">
+        只顯示本職業
+      </label>` : ''}
       <div class="codex-filters">
         <button class="btn-small ${codexFilter === 'all' ? 'active' : ''}" onclick="setCodexFilter('all')">全部</button>
         <button class="btn-small ${codexFilter === 'found' ? 'active' : ''}" onclick="setCodexFilter('found')">已發現</button>
@@ -4339,6 +4355,17 @@ function renderEquipTab() {
     el.innerHTML = `<div class="empty-hint">裝備分頁載入錯誤：${e.message}</div>`;
     console.error('renderEquipTab error:', e);
   }
+}
+
+
+/* 商店購買（含數量選擇）：讀下拉選單的數量，一次買 N 個。
+   錢不夠買 N 個就買買得起的最多數量，買 0 個就提示。 */
+function buyItemFromShop(itemId, shopId) {
+  const sel = document.getElementById('shop-qty-' + itemId);
+  const qty = sel ? Math.max(1, parseInt(sel.value) || 1) : 1;
+  buyItem(itemId, qty);
+  openNpcShop(shopId);
+  renderTopBar();
 }
 
 function renderInventoryTab() {
