@@ -12250,7 +12250,7 @@ function effectiveGearBonuses() {
     /* 平鋪的特殊鍵（perBaseLv10_atk 等）也要進總表——getCardBonus() 會按前綴解析。
        只挑底線開頭的鍵，避免把 atk/def 那些平鋪數值重複算一次。 */
     for (const [k, v] of Object.entries(def)) {
-      if (/^per(BaseLv10|JobLv10|Stat)_/.test(k) && typeof v === 'number') total[k] = (total[k] || 0) + v;
+      if (/^per(BaseLv10|BaseLv15|JobLv10|Stat)_/.test(k) && typeof v === 'number') total[k] = (total[k] || 0) + v;
     }
     if (def.perRefine) {
       const r = def.perRefineCap != null ? Math.min(d.refine, def.perRefineCap) : d.refine;
@@ -12713,6 +12713,14 @@ function getCardBonus(stat) {
     if (target !== stat) continue;
     if ((state.baseLevel || 0) < 70) continue;
     total += Math.floor((state.baseLevel - 70) / 10 + 1) * all[k];
+  }
+  /* perBaseLv15_<目標>（成長型武器系列）：官方「BaseLv 每+15時 MATK+3（上限為Lv195）」。
+     desc 沒寫起算門檻，從 Lv1 起算、封頂 195（195/15＝13 層）。 */
+  for (const k in all) {
+    if (!k.startsWith('perBaseLv15_')) continue;
+    const target = k.slice('perBaseLv15_'.length);
+    if (target !== stat) continue;
+    total += Math.floor(Math.min(state.baseLevel || 0, 195) / 15) * all[k];
   }
   /* perStat_<來源>_<每N點>_<目標>：官方「純粹XX每N時 ○○+M」。
      來源限六項素質（看**加點的基礎值**，不含裝備／卡片／技能——官方的「純粹」），
