@@ -1,0 +1,66 @@
+[
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ }
+]

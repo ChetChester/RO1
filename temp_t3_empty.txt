@@ -1,0 +1,197 @@
+chrome_twohand_sword | 鉻合金雙手巨劍 | weapon
+sinister_fist | 邪念之升龍拳套 [1] | weapon
+sinister_viollin | 邪念之小提琴 [1] | weapon
+giant_shield | 巨人護盾 [1] | armor
+ur_seal | 烏魯茲符文印記 [1] | armor
+peuz_seal | 珀斯符文印記 [1] | armor
+ancient_dagger | 遠古短劍 | weapon
+aztoe_nail | 湛青魔短劍 | weapon
+scarletto_nail | 猩紅魔短劍 | weapon
+face_worm_queen_leg | 人面蟲皇后的腳 [2] | weapon
+chrome_sword | 鉻合金單手劍 | weapon
+sinister_saber | 邪念之騎兵劍 [1] | weapon
+sealed_evil_sword | 封印超能邪劍 [2] | weapon
+peuz_plate | 珀斯符文盔甲 | armor
+item_16033 | 機器人的機械手臂 [2] | weapon
+sinister_mace | 邪念之鐵錘 [1] | weapon
+bottle | 酒瓶 [3] | weapon
+mystic_bow | 神秘之弓 | weapon
+sinister_bow | 邪念之弓 [1] | weapon
+bow_of_storm | 風暴之弓 [1] | weapon
+giant_blade | 巨人手劍 [1] | weapon
+sinister_twohand_sword | 邪念之雙手巨劍 [1] | weapon
+sinister_twohand_axe | 邪念之雙手斧 [1] | weapon
+sinister_dagger | 邪念之短劍 [1] | weapon
+ep172_1h_dagger | 雷士光劍 [2] | weapon
+ep172_bh_sword | 希波克里西巨劍 [2] | weapon
+sinister_spear | 邪念之長矛 [1] | weapon
+poison_forged_spear | 劇毒長槍 [3] | weapon
+sinister_lance | 邪念之長矛 [1] | weapon
+giant_lance | 巨人戰矛 | weapon
+undine_spear | 水精靈之槍 | weapon
+snake_encyclopedia | 蛇類百科全集 | weapon
+sinister_rod | 邪念之權杖 [1] | weapon
+rafini_staff | 拉菲尼之杖 | weapon
+staff_of_evil_slayer | 戰勝魔神的杖 [1] | weapon
+ru_blue_wand | 戰慄法杖 | weapon
+rafini_staff_s | 守護精靈魔杖 [2] | weapon
+sinister_wire | 邪念之鐵鞭 [1] | weapon
+golden_rod_staff | 黃金領主之杖 [2] | weapon
+aqua_staff | 流水之杖 [2] | weapon
+crimson_staff | 赤紅之杖 [2] | weapon
+forest_staff | 森林之杖 [2] | weapon
+golden_rod_staff2 | 黃金領主之杖 II [1] | weapon
+aqua_staff2 | 流水之杖 II [1] | weapon
+crimson_staff2 | 赤紅之杖 II [1] | weapon
+forest_staff2 | 森林之杖 II [1] | weapon
+ganbantein | 咖般塔音 | weapon
+d_staff_of_infinite | 無限雙手杖 [1] | weapon
+sinister_staff | 邪念之法杖 [1] | weapon
+probation_staff | 見習大法師魔杖 [1] | weapon
+staff_of_miracle | 天降奇蹟法杖 [2] | weapon
+gravitation_staff | 萬有引力法杖 [2] | weapon
+ein_bhstaff | 感測魔杖 [2] | weapon
+r_magician_staff | 皇室魔杖 [2] | weapon
+facewormqueen_leg | 人面蟲皇后的腳 [2] | weapon
+magical_blade | 魔法血劍 | weapon
+ru_blue_sword | 戰慄詭劍 | weapon
+racing_c_warlock | 競速頭盔(大法師) [1] | armor
+racing_c_rune | 競速頭盔(符文騎士) [1] | armor
+racing_c_super | 競速頭盔(超級初學者) [1] | armor
+racing_c_star | 競速頭盔(拳聖) [1] | armor
+probation_th_sword | 見習符文騎士雙手巨劍 [1] | weapon
+staff_of_elder | 長老手杖 [3] | weapon
+rutilus_stick_os | 紅魔鬼法杖-OS [2] | weapon
+crimson_rose_stick | 碧血玫瑰魔杖 [2] | weapon
+ein_1hwand | 焊接魔杖 [2] | weapon
+r_magician_wand | 皇室高級魔杖 [2] | weapon
+katar_of_evil_slayer | 撕碎魔神的拳刃 [1] | weapon
+sinister_katar | 邪念之拳刃 [1] | weapon
+meuchler_os | 綠光拳刃-OS [2] | weapon
+sinister_book | 邪念之書 [1] | weapon
+circuit_board_os | 殺人電路板-OS [2] | weapon
+metal_stick | 合金烙印長槍 [3] | weapon
+argen_blanco | 複合金十字槍 [2] | weapon
+cannonconverter_tw | 加農改造器 [1] | armor
+2020maypay_05 | 潛能激發冒險帽 [1] | armor
+noblesse_breath_armor | 貴族龍之氣息鎧甲 [1] | armor
+noblesse_knight_armor | 貴族致命爆裂鎧甲 [1] | armor
+noblesse_crimson_robe | 貴族碧血隕石長袍 [1] | armor
+noblesse_frost_robe | 貴族凍僵術長袍 [1] | armor
+imperial_breath_armor | 帝國龍之氣息鎧甲 [1] | armor
+imperial_knight_armor | 帝國致命爆裂鎧甲 [1] | armor
+imperial_crimson_robe | 帝國碧血隕石長袍 [1] | armor
+imperial_frost_robe | 帝國凍僵術長袍 [1] | armor
+noblesse_snovice_suit | 貴族超級初學者戰袍 [1] | armor
+noblesse_snovice_robe | 貴族超級初學者長袍 [1] | armor
+imperial_snovice_suit | 帝國超級初學者戰袍 [1] | armor
+imperial_snovice_robe | 帝國超級初學者長袍 [1] | armor
+ep172_bh_spear | 盧克蘇里亞長矛 [2] | weapon
+hb_b_t_spear | 符文騎士百矛龍息雙手矛 | weapon
+adulter_f_lance | 虛偽信念騎士長矛 [2] | weapon
+vivatus_f_lance | 活力信念騎士長矛 [2] | weapon
+ep172_bh_staff | 普萊特斯通手杖 [2] | weapon
+cs_b_staff | 大法師碧血地牛雙手杖 | weapon
+cj_b_staff | 大法師凍僵連鎖電擊雙手杖 | weapon
+adulter_f_t_staff | 虛偽信念雙手杖 [2] | weapon
+adulter_f_rod | 虛偽信念魔杖 [2] | weapon
+vivatus_f_t_staff | 活力信念雙手杖 [2] | weapon
+vivatus_f_rod | 活力信念魔杖 [2] | weapon
+witchsbroomstick | 女巫掃帚 [2] | weapon
+glacier_b_sword | 冰晶初階長劍 | weapon
+cannon_rapier_ad | 加農刺劍-OS-AD [2] | weapon
+d_glacier_sword | 黯淡冰晶長劍 [1] | weapon
+d_glacier_b_sword | 黯淡冰晶初階長劍 [1] | weapon
+hs_cr_sword | 希羅斯里亞十字軍長劍 | weapon
+hs_cr_guardian_sword | 希羅斯里亞守護者長劍 | weapon
+hs_nv_sword | 希羅斯里亞初階長劍 | weapon
+d_glacier_spear | 黯淡冰晶長矛 [1] | weapon
+hs_cr_spear | 希羅斯里亞長矛 | weapon
+glacier_book | 冰晶之書 | weapon
+circuit_board_ad | 殺人電路板-OS-AD [2] | weapon
+d_glacier_book | 黯淡冰晶之書 [1] | weapon
+hs_sa_elemental_book | 希羅斯里亞元素之書 | weapon
+hs_sa_book | 希羅斯里亞魔法之書 | weapon
+hs_pr_bible | 希羅斯里亞惡靈之書 | weapon
+hs_sg_star_book | 希羅斯里亞神聖之書 | weapon
+hs_sg_gladiator_book | 希羅斯里亞戰術之書 | weapon
+hs_sg_book | 希羅斯里亞拳法之書 | weapon
+glacier_wand | 冰晶法杖 | weapon
+rutilus_stick_ad | 紅魔鬼法杖-OS-AD [2] | weapon
+d_glacier_wand | 黯淡冰晶法杖 [1] | weapon
+hs_wz_wand | 希羅斯里亞巫師魔杖 | weapon
+hs_sa_wand | 希羅斯里亞咒術魔杖 | weapon
+hs_pr_holy_wand | 希羅斯里亞神聖魔杖 | weapon
+hs_pr_wand | 希羅斯里亞言靈魔杖 | weapon
+hs_nv_rod | 希羅斯里亞初階手杖 | weapon
+hs_nv_wand | 希羅斯里亞初階魔杖 | weapon
+hs_dc_rope | 希羅斯里亞皮鞭 | weapon
+hs_dc_whip | 希羅斯里亞瑪哪鞭子 | weapon
+meuchler_ad | 綠光拳刃-OS-AD [2] | weapon
+hs_asc_katar | 希羅斯里亞卡塔勒拳刃 | weapon
+hs_wz_magical_staff | 希羅斯里亞智慧魔杖 | weapon
+claw_of_flash | 閃爍拳套 | weapon
+fox_armguard | 狐紋護手 [1] | armor
+wolf_armguard | 狼紋護手 [1] | armor
+crescent_armguard | 月紋護手 [1] | armor
+ur_greave | 烏魯茲符文護脛 [1] | armor
+peuz_greave | 珀斯符文護脛 [1] | armor
+ur_manteau | 烏魯茲符文斗篷 | armor
+peuz_manteau | 珀斯符文斗篷 | armor
+rune_circlet | 符文冠冕 [1] | armor
+raksasa_dagger | 羅釵短劍 [1] | weapon
+mikatsuki | 三日月 [1] | weapon
+octo_kitchen_knife | 章魚料理廚刀 | weapon
+dagger_of_evil_slayer | 刺殺魔神的短劍 [1] | weapon
+ru_blue_ashura | 戰慄匕首 | weapon
+cannon_rapier_os | 加農刺劍-OS [2] | weapon
+ur_plate | 烏魯茲符文盔甲 | armor
+ninja_scale_armor | 忍者鱗甲 [1] | armor
+tenebris_latitantes | 霧中暗影 [1] | armor
+armor_of_gray | 土色盔甲 [1] | armor
+gray_robe | 土色外袍 [1] | armor
+jupiter_armor_tw | 朱比特輕甲 [1] | armor
+apollo_armor_tw | 阿波羅盔甲 [1] | armor
+mars_armor_tw | 馬爾斯戰甲 [1] | armor
+vinus_armor_tw | 維納斯羽甲 [1] | armor
+mercury_suits | 墨丘利夜行衣 [1] | armor
+hammer_of_evil_slayer | 破壞魔神的鋼斧 [1] | weapon
+bow_of_evil_slayer | 擊穿魔神的弓 [1] | weapon
+heavy_sword | 沉重的巨劍 [1] | weapon
+tw_sword_of_evil_slayer | 割傷魔神的劍 [1] | weapon
+beam_claymore_os | 綠光巨劍-OS [2] | weapon
+volar | 絕地黑光劍 [2] | weapon
+vernan | 絕地雙刃劍 [2] | weapon
+g_knight_sword | 守護騎士十字巨劍 [2] | weapon
+agenda_shoes_tw | 審判決議長靴 [1] | armor
+dagger_of_infinite | 無限短劍 [1] | weapon
+kuroiro_os | 暗黑白珠短劍-OS [2] | weapon
+sharp_wind_sword | 銳風劍 [2] | weapon
+fog_dew_sword | 霧露劍 [2] | weapon
+cannon_converter_tw | 加農改造器 [1] | armor
+item_2020maypay_05 | 潛能激發冒險帽 [1] | armor
+hero_token_dk | 英雄吊墜(龍騎士) [1] | armor
+record_mage2_tw | 思念體忿恨因子研究記錄(魔法師) [1] | armor
+record_sward2_tw | 思念體忿恨因子研究錄(劍士) [1] | armor
+record_merchant2_tw | 思念體忿恨因子研究記錄(商人) [1] | armor
+record_thief2_tw | 思念體忿恨因子研究記錄(盜賊) [1] | armor
+record_acolyte2_tw | 思念體忿恨因子研究記錄(服事) [1] | armor
+record_acher2_tw | 思念體忿恨因子研究記錄(弓箭手) [1] | armor
+up_fog_dew_sword | 神話霧露劍 [2] | weapon
+dragonic_slayer | 古代龍紋巨劍 [2] | weapon
+adulter_f_t_sword | 虛偽信念雙手巨劍 [2] | weapon
+vivatus_f_t_sword | 活力信念雙手巨劍 [2] | weapon
+glacier_sword | 冰晶長劍 | weapon
+glacier_b_knife | 冰晶初階短劍 | weapon
+kuroiro_ad | 暗黑白珠短劍-OS-AD [2] | weapon
+hs_nj_dagger | 希羅斯里亞忍者短劍Ⅰ | weapon
+glacier_axe | 冰晶斧 | weapon
+d_glacier_axe | 黯淡冰晶斧 [1] | weapon
+hs_bs_axe | 希羅斯里亞斧 | weapon
+hs_mo_knuckle | 希羅斯里亞拳套 | weapon
+hs_mo_claw | 希羅斯里亞龍爪拳套 | weapon
+hs_mo_mace | 希羅斯里亞武道家鐵錘 | weapon
+glacier_t_sword | 冰晶雙手巨劍 | weapon
+beam_claymore_ad | 綠光巨劍-OS-AD [2] | weapon
+d_glacier_t_sword | 黯淡冰晶雙手巨劍 [1] | weapon
+hs_kn_zweihander | 羅斯里亞巨大雙手劍 | weapon

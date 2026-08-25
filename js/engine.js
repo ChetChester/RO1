@@ -2436,6 +2436,7 @@ function recomputeDerived(fullHeal) {
   // 自動念咒與異常狀態：都依觸發時機分籃，戰鬥時直接取用不必再掃卡片
   state.cardAutoSpells = { attack: [], hit: [], chain: [] };
   state.cardAilments = { attack: [], hit: [], magic: [] };
+  state.cardAttackBuffs = { attack: [], hit: [] };
   state.cardKillDrops = [];
   {
     const lo = buildLoadout();
@@ -2459,6 +2460,11 @@ function recomputeDerived(fullHeal) {
         const bucket = state.cardAilments[e.on];
         if (bucket) bucket.push(e);
       });
+      (c.onAttackBuff || []).forEach(e => {
+        if (!pass(e)) return;
+        const bucket = state.cardAttackBuffs[e.on];
+        if (bucket) bucket.push(e);
+      });
       (c.killDrop || []).forEach(e => { if (pass(e)) state.cardKillDrops.push(e); });
     });
     /* 裝備**自己**的觸發型特效（#127）。跟卡片走同一組籃子、同一套資料格式——
@@ -2478,6 +2484,11 @@ function recomputeDerived(fullHeal) {
       (def.ailment || []).forEach(e => {
         if (!pass(e)) return;
         const bucket = state.cardAilments[e.on];
+        if (bucket) bucket.push(e);
+      });
+      (def.onAttackBuff || []).forEach(e => {
+        if (!pass(e)) return;
+        const bucket = state.cardAttackBuffs[e.on];
         if (bucket) bucket.push(e);
       });
       (def.killDrop || []).forEach(e => { if (pass(e)) state.cardKillDrops.push(e); });
@@ -6657,6 +6668,7 @@ function playerAttackInner() {
   withLogLane('skill', () => {
     tryCardAilments('attack', target);
     tryAutoSpells('attack', target);
+    tryAttackBuffs('attack', target);
     tryOnAttackStrikes(target, monDef);  // 傷害增壓／巧打（#58）
     tryEdpProc(target);                  // 致命塗毒（#59）：目標中毒時才觸發
     tryMeltdown(target, monDef);         // 野蠻凶砍（#60）：削弱目標的攻防
@@ -9047,6 +9059,27 @@ function effectiveCooldownMs(skillId, baseCdSec) {
   // 布萊奇之詩（#68）：冷卻 −N%。乘在固定值增減之後，跟 #55 那批卡片同一條路
   const pct = Math.max(0, 1 - buffMult('skillcd').flatBonus / 100);
   return Math.max(MIN_COOLDOWN_MS, (base + delta) * pct);
+}
+
+/* 攻擊時機率觸發臨時 buff（凡貝爾克 CRI+100、依斯拉施法時間-50% 等）。
+   資料寫在 CARDS[x].onAttackBuff，跟 autoSpell/ailment 同一套格式：
+     { on:'attack', chance:5, durSec:5, buffType:'crit', buffFlat:100, buffName:'...' }
+   buffType 對應 buffMult() 的 type（crit/aspd/atk/flee/fixedcast 等）。
+   觸發後推一個臨時 buff 到 state.buffs，到期自動還原。 */
+function tryAttackBuffs(trigger, mon) {
+  const list = state.cardAttackBuffs && state.cardAttackBuffs[trigger];
+  if (!list || !list.length) return;
+  for (const e of list) {
+    if (Math.random() * 100 >= e.chance) continue;
+    // 同名 buff 已在身上就不重複推
+    if (state.buffs.some(b => b.buffName === e.buffName && b.msRemaining > 0)) continue;
+    state.buffs.push({
+      type: e.buffType, mult: 1, flatBonus: e.buffFlat,
+      msRemaining: e.durSec * 1000, skillId: 'card_' + e.buffName,
+    });
+    recomputeDerived(false);
+    logMsg(`✨ 「${e.buffName}」發動！持續 ${e.durSec} 秒。`);
+  }
 }
 
 function skillReady(skillId) {

@@ -1,0 +1,10814 @@
+[
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 1,
+  "items": [
+   "mastering_card",
+   "poring_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 3,
+  "items": [
+   "toad_card",
+   "roda_frog_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 4,
+  "items": [
+   "vagabond_wolf_card",
+   "wolf_card"
+  ],
+  "effect": "FLEE + 18",
+  "bonus": {
+   "flee": 18
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 7,
+  "items": [
+   "alarm_card",
+   "clock_card",
+   "c_tower_manager_card",
+   "punk_card"
+  ],
+  "effect": "MDEF + 3 DEF + 3",
+  "bonus": {
+   "mdef": 3,
+   "def": 3
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 11,
+  "items": [
+   "dark_illusion_card",
+   "dark_lord_card"
+  ],
+  "effect": "MHP + 20% MSP + 20% 变动咏唱时间-10%",
+  "bonus": {
+   "hp": 20,
+   "sp": 20,
+   "afterCastPct": -10
+  },
+  "hasUnimpl": false
+ },
+ {
+  "dvgId": 21,
+  "items": [
+   "mummy_card",
+   "ancient_mummy_card"
+  ],
+  "effect": "变成不能闪躲的诱导攻击+20",
+  "bonus": {},
+  "hasUnimpl": true
+ },
+ {
+  "dvgId": 24,
+  "items": [
+   "pecopeco_card",
+   "grand_peco_card"
+  ],
+  "effect": "DEF + 3 VIT + 3",
+  "bonus": {
+   "def": 3,
+   "vit": 3
+  },
+  "hasUnimpl": false
+ }
+]
