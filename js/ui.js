@@ -3455,7 +3455,8 @@ const CARD_BONUS_LABELS = {
   bossDmgPct: '對首領類傷害', allTargetDmgPct: '物理傷害', rangedDmgPct: '遠距離傷害',
   rangedDmgTakenPct: '受遠距離傷害', bossDmgTakenPct: '受首領類傷害',
   normalDmgTakenPct: '受一般魔物傷害', spCostPct: '技能SP消耗', defPct: 'DEF',
-  rangedCritRate: '遠距離攻擊暴擊率'
+  rangedCritRate: '遠距離攻擊暴擊率',
+  expAllPct: '經驗值', dropPct: '掉寶率'
 };
 function cardArtSrc(cardId) {
   const it = ITEMS[cardId];
@@ -3465,7 +3466,8 @@ function cardArtSrc(cardId) {
 const CARD_PCT_KEYS = [
   'hpPct', 'spPct', 'hpRegenPct', 'spRegenPct', 'aspdPct', 'critDmgPct',
   'bossDmgPct', 'allTargetDmgPct', 'rangedDmgPct', 'rangedDmgTakenPct',
-  'bossDmgTakenPct', 'normalDmgTakenPct', 'spCostPct', 'defPct', 'matkPct'
+  'bossDmgTakenPct', 'normalDmgTakenPct', 'spCostPct', 'defPct', 'matkPct',
+  'expAllPct', 'dropPct'
 ];
 /* 數值一律帶正負號，減益卡片才不會顯示成「MaxHP +-25%」 */
 function signed(v, pct) { return (v > 0 ? '+' : '') + v + (pct ? '%' : ''); }

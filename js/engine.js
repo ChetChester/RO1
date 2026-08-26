@@ -507,7 +507,7 @@ function raceFlatBonus(monDef) {
    一律透過 getEquipBaseItemId() 取得真正的道具id，別直接拿 state.equip[slot] 去查 ITEMS。
 ------------------------------------------------- */
 function getEquipBaseItemId(slot) {
-  const ref = state.equip[slot];
+  const ref = state.equip && state.equip[slot];   // 離線結算等場景可能帶未初始化的 state 快照
   if (ref && state.instances && state.instances[ref]) return state.instances[ref].item;
   return ref;
 }
@@ -7649,7 +7649,9 @@ function killMonster(def, monObj) {
   // 卡片的種族經驗加成（狂暴野豬那一組：擊殺該族經驗+10%，代價是被該族打得更痛）
   // 經驗值倍增（#68）跟卡片的種族經驗加成相乘
   const expMult = (1 + ((def.race && state.cardExpRace && state.cardExpRace[def.race]) || 0))
-    * (1 + buffMult('exp').flatBonus / 100);
+    * (1 + buffMult('exp').flatBonus / 100)
+    /* 裝備的經驗值加成（快樂氣球 EXP+5%、艾咪斯可魯背包每+2 +1%）。過去只進表沒人讀。 */
+    * (1 + getCardBonus('expAllPct') / 100);
   const gotExp = Math.round(def.exp * expMult * farmMult('exp'));
   const gotJobExp = Math.round(def.jobExp * expMult * farmMult('exp'));
   /* **隊友打死的怪，獎勵要記在玩家頭上。** 隊友是靠 withAlly() 換身跑
@@ -7704,7 +7706,7 @@ function killMonster(def, monObj) {
   }
   /* 掉落率的打寶加成（#110）。夾在 1 以下：本來就 100% 的掉落乘上去沒有意義，
      而 >1 的機率會讓「稀有度」在偷竊那類加權計算裡失真。 */
-  const dropMult = farmMult('drop');
+  const dropMult = farmMult('drop') * (1 + getCardBonus('dropPct') / 100);   // 裝備掉寶率（快樂氣球+10%）
   (def.drops || []).forEach(d => {
     if (Math.random() < Math.min(1, d.chance * dropMult)) addItem(d.item, 1);
   });
@@ -13762,7 +13764,7 @@ function computeOfflineProgress(minMs) {
 
      全部走同一張 dropAgg：那張表的單位是「每次擊殺的期望件數」，
      最後統一乘上 totalKills，所以只要把各自的期望值加進來就好。 */
-  const dropMult = farmMult('drop');
+  const dropMult = farmMult('drop') * (1 + getCardBonus('dropPct') / 100);   // 裝備掉寶率（快樂氣球+10%）
   const dropAgg = {};
   const addExp2 = (id, n) => { if (n > 0 && ITEMS[id]) dropAgg[id] = (dropAgg[id] || 0) + n; };
   /* 加權掉落表的期望分佈：偷竊與貪婪都是「照掉落率加權抽一件」（pickWeightedDrop），
