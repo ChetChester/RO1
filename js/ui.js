@@ -3028,7 +3028,12 @@ const CODEX_CATS = {
   ],
 };
 let codexCat = { mon: 'all', card: 'all', item: 'all', hidden: 'all' };
-function setCodexView(v) { codexView = v; codexPage = 0; codexOpenId = null; renderCodexTab(); }
+function setCodexView(v) {
+  codexView = v; codexPage = 0; codexOpenId = null;
+  /* 進隱藏圖鑑時重置篩選，避免殘留的「已發現」把未開出的卡藏起來 */
+  if (v === 'hidden') { codexFilter = 'all'; codexSearch = ''; }
+  renderCodexTab();
+}
 function setCodexFilter(f) { codexFilter = f; codexPage = 0; renderCodexTab(); }
 function setCodexJobFilter(v) { codexJobFilter = v; codexPage = 0; renderCodexTab(); }
 function setCodexCat(k) { codexCat[codexView] = k; codexPage = 0; renderCodexTab(); }
@@ -3119,7 +3124,8 @@ function renderCodexTab() {
   // 分類列要顯示**各類的總數**，所以算數量用的是還沒篩過的全表
   const allIds = codexView === 'mon' ? pool.monsters
     : codexView === 'card' ? pool.cards
-    : codexView === 'hidden' ? getBoxCodexPool().concat(getAlbumOnlyCards())
+    /* 卡冊限定卡排最前面：7 張混在 1.2 萬件後面永遠翻不到 */
+    : codexView === 'hidden' ? getAlbumOnlyCards().concat(getBoxCodexPool())
     : pool.items;
   const catBar = codexCatBar(allIds);
   const ids = codexCatFilter(allIds);
