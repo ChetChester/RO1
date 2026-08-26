@@ -7373,6 +7373,27 @@ function getBoxCodexPool() {
     .sort((a, b) => (ITEMS[a].name || '').localeCompare(ITEMS[b].name || '', 'zh-Hant'));
   return _boxCodexIds;
 }
+/* 卡冊限定卡：卡冊抽得到、但來源怪根本沒實裝（打不到）的卡片。
+   這些也納入隱藏圖鑑讓玩家收集——來源只有卡冊。 */
+let _albumOnlyCards = null;
+function getAlbumOnlyCards() {
+  if (_albumOnlyCards) return _albumOnlyCards;
+  const drawable = Object.keys(CARDS).filter(k => ITEMS[k] && /卡片$/.test(CARDS[k].name));
+  const farmable = new Set();
+  Object.entries(MONSTER_CARD_DROPS || {}).forEach(([mon, cd]) => {
+    if (MONSTERS[mon] && ITEMS[cd.card]) farmable.add(cd.card);
+  });
+  Object.values(MONSTERS).forEach(m => (m.drops || []).forEach(d => {
+    if (d.item && CARDS[d.item]) farmable.add(d.item);
+  }));
+  _albumOnlyCards = drawable.filter(c => !farmable.has(c));
+  return _albumOnlyCards;
+}
+/* 卡冊開出的卡若是「卡冊限定」也記進隱藏圖鑑 */
+function codexRecordBoxCardIfAlbumOnly(cardId) {
+  if (!state || !cardId) return;
+  if (getAlbumOnlyCards().includes(cardId)) ensureCodex().box[cardId] = 1;
+}
 
 // 可收集清單是靜態資料算出來的，只算一次後快取
 let _codexPoolCache = null;
@@ -11486,6 +11507,7 @@ function openAllBoxes(itemId) {
   Object.entries(got).forEach(([id, q]) => {
     addItem(id, q);
     if (def.boxOpen === 'any' || def.boxOpen === 'violet') codexRecordBox(id);
+    if (def.boxOpen === 'card' || def.boxOpen === 'cardFlat' || String(def.boxOpen).indexOf('card_') === 0) codexRecordBoxCardIfAlbumOnly(id);
     worth += (ITEMS[id].sell || 0) * q;
   });
 
@@ -11520,6 +11542,7 @@ function useItem(itemId) {
       removeItem(itemId, 1);
       addItem(got, 1);
       if (def.boxOpen === 'any' || def.boxOpen === 'violet') codexRecordBox(got);
+      if (def.boxOpen === 'card' || def.boxOpen === 'cardFlat' || String(def.boxOpen).indexOf('card_') === 0) codexRecordBoxCardIfAlbumOnly(got);
       const g = ITEMS[got];
       // 卡片跟高價道具各自有自己的「中大獎」提示
       const kind = CARDS[got] ? bossCardKind(got) : null;

@@ -3015,14 +3015,16 @@ const CODEX_CATS = {
     { k: 'material', label: '素材', test: id => !['weapon', 'armor', 'consumable', 'ammo', 'relic'].includes(ITEMS[id].type)
       && id !== (typeof RELIC_TICKET_ID !== 'undefined' ? RELIC_TICKET_ID : '') },
   ],
-  /* 隱藏圖鑑（神秘箱挑戰）：池子已排除卡片與箱子本身，照道具類型分類 */
+  /* 隱藏圖鑑（神秘箱挑戰）：池子已排除卡片與箱子本身，照道具類型分類。
+     另收「卡冊限定卡」——來源怪沒實裝、只能靠卡冊開出來的 7 張。 */
   hidden: [
     { k: 'all', label: '全部' },
     { k: 'weapon', label: '武器', test: id => ITEMS[id].type === 'weapon' },
     { k: 'armor', label: '防具', test: id => ITEMS[id].type === 'armor' && ITEMS[id].armorType !== 'accessory' },
     { k: 'accessory', label: '飾品', test: id => ITEMS[id].type === 'armor' && ITEMS[id].armorType === 'accessory' },
     { k: 'consumable', label: '消耗品', test: id => ITEMS[id].type === 'consumable' || ITEMS[id].type === 'ammo' },
-    { k: 'material', label: '素材', test: id => !['weapon', 'armor', 'consumable', 'ammo'].includes(ITEMS[id].type) },
+    { k: 'albumcard', label: '卡冊限定卡', test: id => !!(CARDS[id] && typeof getAlbumOnlyCards === 'function' && getAlbumOnlyCards().includes(id)) },
+    { k: 'material', label: '素材', test: id => !['weapon', 'armor', 'consumable', 'ammo'].includes(ITEMS[id].type) && !(CARDS[id] && typeof getAlbumOnlyCards === 'function' && getAlbumOnlyCards().includes(id)) },
   ],
 };
 let codexCat = { mon: 'all', card: 'all', item: 'all', hidden: 'all' };
@@ -3117,7 +3119,7 @@ function renderCodexTab() {
   // 分類列要顯示**各類的總數**，所以算數量用的是還沒篩過的全表
   const allIds = codexView === 'mon' ? pool.monsters
     : codexView === 'card' ? pool.cards
-    : codexView === 'hidden' ? getBoxCodexPool()
+    : codexView === 'hidden' ? getBoxCodexPool().concat(getAlbumOnlyCards())
     : pool.items;
   const catBar = codexCatBar(allIds);
   const ids = codexCatFilter(allIds);
@@ -3234,22 +3236,24 @@ function codexItemCell(r, book) {
   </div>`;
 }
 
-/* 隱藏圖鑑格子：只看「有沒有從神秘箱開出來」，不看持有數。 */
+/* 隱藏圖鑑格子：只看「有沒有從神秘箱/卡冊開出來」，不看持有數。 */
 function codexBoxCell(r, book) {
-  const d = ITEMS[r.id];
+  const isCard = !!CARDS[r.id];
+  const d = ITEMS[r.id] || {};
   const got = !!(book.box && book.box[r.id]);
-  const sub = ITEM_TYPE_LABELS[d.type] || d.type || '';
+  const sub = isCard ? '卡片（卡冊限定）' : (ITEM_TYPE_LABELS[d.type] || d.type || '');
+  const img = isCard ? cardArtSrc(r.id) : itemImgSrc(r.id);
   return `<div class="codex-cell ${codexOpenId === r.id ? 'open' : ''} ${got ? '' : 'unfound'}" onclick="toggleCodexDetail('${r.id}')">
-    <img class="codex-icon" src="${itemImgSrc(r.id)}" alt="${d.name}" onerror="this.onerror=null;this.src='${placeholderImgSrc(itemPlaceholderKind(d))}'">
-    <div class="codex-cell-name">${getItemDisplayName(r.id)}</div>
+    <img class="codex-icon" src="${img}" alt="${isCard ? (CARDS[r.id].name || '') : d.name}" onerror="this.onerror=null;this.src='${placeholderImgSrc(isCard ? 'card' : itemPlaceholderKind(d))}'">
+    <div class="codex-cell-name">${isCard ? (CARDS[r.id].name || r.id) : getItemDisplayName(r.id)}</div>
     <div class="codex-cell-sub">${sub}</div>
     <div class="codex-cell-count ${got ? '' : 'zero'}">${got ? '✔ 已開出' : '未開出'}</div>
   </div>`;
 }
 
-/* 隱藏圖鑑進度條（解鎖後才會出現） */
+/* 隱藏圖鑑進度條（解鎖後才會出現）：神秘箱池＋卡冊限定卡 */
 function codexBoxBar(book) {
-  const ids = getBoxCodexPool();
+  const ids = getBoxCodexPool().concat(getAlbumOnlyCards());
   const found = ids.reduce((n, id) => n + ((book.box && book.box[id]) ? 1 : 0), 0);
   const p = ids.length ? Math.min(100, found / ids.length * 100) : 0;
   return `<div class="codex-prog">
