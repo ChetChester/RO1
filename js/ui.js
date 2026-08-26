@@ -3579,6 +3579,10 @@ function formatCardBonus(k, v, all) {
   if (k === 'regenTickSp') return `每 10 秒回復 ${v} SP`;
   if (k.startsWith('magicEleDmg_')) return `${ELEMENT_NAMES[k.slice(12)] || k.slice(12)}屬性魔法傷害 ${signed(v, 1)}`;
   // 這一條必須排在 familyDmg_ 前面比對，否則前綴會被前者先吃掉
+  if (k.startsWith('raceDmgTaken_')) {
+    const r = k.slice(14);
+    return `受${RACE_LABELS[r] || r}系傷害 ${signed(v, 1)}`;
+  }
   if (k.startsWith('familyDmgTaken_')) {
     const f = typeof MONSTER_FAMILIES !== 'undefined' ? MONSTER_FAMILIES[k.slice(15)] : null;
     return `受${f ? f.name + '族' : k.slice(15)}傷害 ${signed(v, 1)}`;

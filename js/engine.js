@@ -2428,6 +2428,7 @@ function recomputeDerived(fullHeal) {
   state.cardSizeDmgReduce = {};
   state.cardFamilyDmgBonus = {}; // 打某個魔物家族時增傷（哥布靈族、獸人族…）
   state.cardFamilyDmgTaken = {}; // 被某個魔物家族打時的傷害變動（妖道：殭屍 +100%）
+  state.cardRaceDmgTaken = {};   // 被某個種族打時的傷害變動（天龍防具：受龍族 -2%）
   state.cardMonsterDmgBonus = {}; // 指名單一隻怪的增傷（熔岩巨石卡片）
   state.cardDefIgnoreRace = {}; // 只對某種族無視物防（#127，天龍短劍那一批）
   state.cardRaceCrit = {};      // 對某種族的 CRI 加點（點數，不是%）
@@ -2506,6 +2507,7 @@ function recomputeDerived(fullHeal) {
     'sizeDmg_': 'cardSizeDmgBonus',
     'familyDmg_': 'cardFamilyDmgBonus',
     'familyDmgTaken_': 'cardFamilyDmgTaken',
+    'raceDmgTaken_': 'cardRaceDmgTaken',
     'monDmg_': 'cardMonsterDmgBonus',
     'eleReduce_': 'cardEleDmgReduce',
     'raceDmgReduce_': 'cardRaceDmgReduce',
@@ -2783,6 +2785,12 @@ function cardFamilyDmgTakenMult(monDef) {
   const fam = familyOfMonster(monDef);
   // 跟其他 cardXxxDmg 桶子一致，分流迴圈已經把百分比除成比例了（+100% → 1）
   const ratio = fam && state.cardFamilyDmgTaken[fam];
+  return ratio ? 1 + ratio : 1;
+}
+/* 種族版承傷（天龍防具「受到龍族怪的傷害-2%」）。同樣吃分流迴圈除好的比例。 */
+function cardRaceDmgTakenMult(monDef) {
+  if (!state.cardRaceDmgTaken || !monDef || !monDef.race) return 1;
+  const ratio = state.cardRaceDmgTaken[monDef.race];
   return ratio ? 1 + ratio : 1;
 }
 
@@ -6983,6 +6991,7 @@ function monsterCastSkillInner(mon, monDef, sk) {
     if (state.cardEleDmgReduce && state.cardEleDmgReduce[el]) raw *= (1 - state.cardEleDmgReduce[el]);
     if (monDef.race && state.cardRaceDmgReduce && state.cardRaceDmgReduce[monDef.race]) raw *= (1 - state.cardRaceDmgReduce[monDef.race]);
     raw *= cardFamilyDmgTakenMult(monDef);   // 妖道：從殭屍受到的傷害 +100%
+    raw *= cardRaceDmgTakenMult(monDef);     // 天龍防具：受到龍族怪的傷害 -2%
     /* 魔法看魔防、物理看物防（#17）。**挑釁的 DEF 下降與狂暴的 DEF −55% 都只作用在物防**——
        官方那兩個削的就是 DEF 不是 MDEF，套到魔法上等於憑空多一份減傷／多一份懲罰。 */
     let hardDef, softDef;
@@ -7239,6 +7248,8 @@ function monsterAttackSingle(mon) {
   }
   // 卡片家族增傷（妖道卡片：從殭屍受到的傷害 +100%）
   raw *= cardFamilyDmgTakenMult(monDef);
+  // 種族承傷（天龍防具：受到龍族怪的傷害 -2%）
+  raw *= cardRaceDmgTakenMult(monDef);
   // 愛麗絲女僕卡片那種取捨型：對首領類大幅減傷，對一般怪反而增傷
   if (monDef.isBoss) {
     if (state.cardBossDmgTakenPct) raw *= (1 + state.cardBossDmgTakenPct / 100);
@@ -12247,6 +12258,9 @@ function effectiveGearBonuses() {
     if (!def) return;
     const host = { slot, refine: d.refine, itemId: d.itemId };
     mergeBonus(total, def.bonus);
+    /* 頂層 hpPct/spPct：官方「MHP+N%」過去被轉檔成平面 hp/sp（等於只加 N 點），
+       修正資料後改用這兩個鍵，這裡併進總表讓百分比乘區吃到。 */
+    if (def.hpPct != null || def.spPct != null) mergeBonus(total, { hpPct: def.hpPct || 0, spPct: def.spPct || 0 });
     /* 平鋪的特殊鍵（perBaseLv10_atk 等）也要進總表——getCardBonus() 會按前綴解析。
        只挑底線開頭的鍵，避免把 atk/def 那些平鋪數值重複算一次。 */
     for (const [k, v] of Object.entries(def)) {
@@ -12329,7 +12343,7 @@ function effectiveGearBonuses() {
     for (const [setId, def] of Object.entries(EQUIP_SETS)) {
       if (!def.items || !def.items.every(hasMember)) continue;
       if (def.when && !condMet(def.when, null, lo)) continue;
-      mergeBonus(total, def.bonus);
+    mergeBonus(total, def.bonus);
       if (def.perRefine && def.perRefine.of) {
         const slot = slotOfMember(def.perRefine.of);
         if (slot) mergeBonus(total, def.perRefine.bonus, lo.slots[slot].refine);
