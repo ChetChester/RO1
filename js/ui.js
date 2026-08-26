@@ -3015,8 +3015,17 @@ const CODEX_CATS = {
     { k: 'material', label: '素材', test: id => !['weapon', 'armor', 'consumable', 'ammo', 'relic'].includes(ITEMS[id].type)
       && id !== (typeof RELIC_TICKET_ID !== 'undefined' ? RELIC_TICKET_ID : '') },
   ],
+  /* 隱藏圖鑑（神秘箱挑戰）：池子已排除卡片與箱子本身，照道具類型分類 */
+  hidden: [
+    { k: 'all', label: '全部' },
+    { k: 'weapon', label: '武器', test: id => ITEMS[id].type === 'weapon' },
+    { k: 'armor', label: '防具', test: id => ITEMS[id].type === 'armor' && ITEMS[id].armorType !== 'accessory' },
+    { k: 'accessory', label: '飾品', test: id => ITEMS[id].type === 'armor' && ITEMS[id].armorType === 'accessory' },
+    { k: 'consumable', label: '消耗品', test: id => ITEMS[id].type === 'consumable' || ITEMS[id].type === 'ammo' },
+    { k: 'material', label: '素材', test: id => !['weapon', 'armor', 'consumable', 'ammo'].includes(ITEMS[id].type) },
+  ],
 };
-let codexCat = { mon: 'all', card: 'all', item: 'all' };
+let codexCat = { mon: 'all', card: 'all', item: 'all', hidden: 'all' };
 function setCodexView(v) { codexView = v; codexPage = 0; codexOpenId = null; renderCodexTab(); }
 function setCodexFilter(f) { codexFilter = f; codexPage = 0; renderCodexTab(); }
 function setCodexJobFilter(v) { codexJobFilter = v; codexPage = 0; renderCodexTab(); }
@@ -3096,16 +3105,28 @@ function renderCodexTab() {
   const book = ensureCodex();
   const prog = getCodexProgress();
 
+  /* 隱藏圖鑑：三大收集全滿之後解鎖（神秘箱挑戰）。沒解鎖就強制回道具分頁。 */
+  const boxUnlocked = prog.monsters.total > 0 && prog.cards.total > 0 && prog.items.total > 0
+    && prog.monsters.found >= prog.monsters.total
+    && prog.cards.found >= prog.cards.total
+    && prog.items.found >= prog.items.total;
+  if (codexView === 'hidden' && !boxUnlocked) codexView = 'item';
+
   // 依目前分頁組出清單，並套用搜尋/篩選
   let rows;
   // 分類列要顯示**各類的總數**，所以算數量用的是還沒篩過的全表
-  const allIds = codexView === 'mon' ? pool.monsters : (codexView === 'card' ? pool.cards : pool.items);
+  const allIds = codexView === 'mon' ? pool.monsters
+    : codexView === 'card' ? pool.cards
+    : codexView === 'hidden' ? getBoxCodexPool()
+    : pool.items;
   const catBar = codexCatBar(allIds);
   const ids = codexCatFilter(allIds);
   if (codexView === 'mon') {
     rows = ids.map(id => ({ id, name: MONSTERS[id].name, found: !!book.seen[id] }));
   } else if (codexView === 'card') {
     rows = ids.map(id => ({ id, name: (CARDS[id] || ITEMS[id]).name, found: !!book.item[id] }));
+  } else if (codexView === 'hidden') {
+    rows = ids.map(id => ({ id, name: ITEMS[id].name, found: !!(book.box && book.box[id]) }));
   } else {
     rows = ids.map(id => ({ id, name: ITEMS[id].name, found: !!book.item[id] }));
   }
@@ -3135,12 +3156,16 @@ function renderCodexTab() {
       ${codexBar('👾 怪物', prog.monsters.found, prog.monsters.total)}
       ${codexBar('🃏 卡片', prog.cards.found, prog.cards.total)}
       ${codexBar('🎒 道具', prog.items.found, prog.items.total)}
+      ${boxUnlocked ? codexBoxBar(book) : ''}
     </div>
     <div class="codex-tabs">
       <button class="btn-small ${codexView === 'mon' ? 'active' : ''}" onclick="setCodexView('mon')">👾 怪物</button>
       <button class="btn-small ${codexView === 'card' ? 'active' : ''}" onclick="setCodexView('card')">🃏 卡片</button>
       <button class="btn-small ${codexView === 'item' ? 'active' : ''}" onclick="setCodexView('item')">🎒 道具</button>
-    </div>
+      ${boxUnlocked ? `<button class="btn-small ${codexView === 'hidden' ? 'active' : ''}" onclick="setCodexView('hidden')">🎁 隱藏</button>` : ''}
+    </div>` +
+    (!boxUnlocked ? `<div class="empty-hint">🔒 三大收集（怪物／卡片／道具）全滿後，解鎖「隱藏圖鑑」——神秘箱挑戰。</div>`
+      : ``) + `
     <div class="codex-controls">
       <input id="codex-search" class="codex-search" type="text" placeholder="搜尋名稱，找到就能看到去哪裡打…"
         value="${codexSearch.replace(/"/g, '&quot;')}" oninput="onCodexSearch(this.value, event)">
@@ -3163,7 +3188,9 @@ function renderCodexTab() {
   } else {
     html += '<div class="codex-grid">';
     pageRows.forEach(r => {
-      html += (codexView === 'mon') ? codexMonCell(r, book) : codexItemCell(r, book);
+      html += (codexView === 'mon') ? codexMonCell(r, book)
+        : (codexView === 'hidden') ? codexBoxCell(r, book)
+        : codexItemCell(r, book);
     });
     html += '</div>';
   }
@@ -3204,6 +3231,30 @@ function codexItemCell(r, book) {
     <div class="codex-cell-name">${getItemDisplayName(r.id)}</div>
     <div class="codex-cell-sub">${sub}</div>
     <div class="codex-cell-count ${got ? '' : 'zero'}">${got ? '×' + got : '未取得'}</div>
+  </div>`;
+}
+
+/* 隱藏圖鑑格子：只看「有沒有從神秘箱開出來」，不看持有數。 */
+function codexBoxCell(r, book) {
+  const d = ITEMS[r.id];
+  const got = !!(book.box && book.box[r.id]);
+  const sub = ITEM_TYPE_LABELS[d.type] || d.type || '';
+  return `<div class="codex-cell ${codexOpenId === r.id ? 'open' : ''} ${got ? '' : 'unfound'}" onclick="toggleCodexDetail('${r.id}')">
+    <img class="codex-icon" src="${itemImgSrc(r.id)}" alt="${d.name}" onerror="this.onerror=null;this.src='${placeholderImgSrc(itemPlaceholderKind(d))}'">
+    <div class="codex-cell-name">${getItemDisplayName(r.id)}</div>
+    <div class="codex-cell-sub">${sub}</div>
+    <div class="codex-cell-count ${got ? '' : 'zero'}">${got ? '✔ 已開出' : '未開出'}</div>
+  </div>`;
+}
+
+/* 隱藏圖鑑進度條（解鎖後才會出現） */
+function codexBoxBar(book) {
+  const ids = getBoxCodexPool();
+  const found = ids.reduce((n, id) => n + ((book.box && book.box[id]) ? 1 : 0), 0);
+  const p = ids.length ? Math.min(100, found / ids.length * 100) : 0;
+  return `<div class="codex-prog">
+    <div class="codex-prog-head"><span>🎁 神秘箱挑戰</span><span>${found} / ${ids.length}　${p.toFixed(1)}%</span></div>
+    <div class="bar-track"><div class="bar-fill codex-prog-fill" style="width:${p}%"></div></div>
   </div>`;
 }
 

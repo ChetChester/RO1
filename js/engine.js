@@ -7341,6 +7341,7 @@ function ensureCodex() {
   if (!state.codex.seen) state.codex.seen = {};
   if (!state.codex.item) state.codex.item = {};
   if (!state.codex.maps) state.codex.maps = {};
+  if (!state.codex.box) state.codex.box = {};   // 隱藏圖鑑：神秘箱開出過的道具
   return state.codex;
 }
 function codexRecordSeen(defId) {
@@ -7357,6 +7358,20 @@ function codexRecordItem(itemId, qty) {
   if (!state || !itemId) return;
   const c = ensureCodex();
   c.item[itemId] = (c.item[itemId] || 0) + (qty || 1);
+}
+/* 隱藏圖鑑：只有「從神秘箱開出來」才算收集（挑戰用，買商店的不算）。 */
+function codexRecordBox(itemId) {
+  if (!state || !itemId) return;
+  ensureCodex().box[itemId] = 1;
+}
+/* 隱藏圖鑑清單：神秘箱子／神秘紫箱的道具池（兩者同一池）。
+   排序按筆畫外的名稱，讓分頁列表穩定。 */
+let _boxCodexIds = null;
+function getBoxCodexPool() {
+  if (_boxCodexIds) return _boxCodexIds;
+  _boxCodexIds = Object.keys(ITEMS).filter(boxEligible)
+    .sort((a, b) => (ITEMS[a].name || '').localeCompare(ITEMS[b].name || '', 'zh-Hant'));
+  return _boxCodexIds;
 }
 
 // 可收集清單是靜態資料算出來的，只算一次後快取
@@ -8692,6 +8707,41 @@ function gmAddRelicTickets(n) {
   saveGame();
   if (typeof renderAll === 'function') renderAll();
   return getItemQty(RELIC_TICKET_ID);
+}
+/* 隱藏圖鑑（神秘箱挑戰）測試用：
+   ① gmBoxCodexBatch(n) —— 把「還沒開出過」的池子道具**真的取得**進背包並記到隱藏圖鑑，
+      一次一批（預設 100、上限 500），避免上萬件一次灌進來把瀏覽器弄掛。
+      回傳剩餘件數；跑到回傳 0 就是全收集。
+   ② gmUnlockHiddenCodex() —— 只把三大收集的圖鑑**記錄**灌滿（不發任何道具），
+      純粹為了解鎖隱藏分頁來查看。 */
+function gmBoxCodexBatch(n) {
+  const batch = Math.min(Math.max(1, n || 100), 500);
+  const c = ensureCodex();
+  const missing = getBoxCodexPool().filter(id => !c.box[id]);
+  if (!missing.length) {
+    logMsg('🛠️ GM：隱藏圖鑑（神秘箱挑戰）已全收集，沒有剩餘。');
+    saveGame();
+    return 0;
+  }
+  const take = missing.slice(0, batch);
+  take.forEach(id => { addItem(id, 1); codexRecordBox(id); });
+  const remain = missing.length - take.length;
+  logMsg(`🛠️ GM：隱藏圖鑑批次取得 ${take.length} 件（剩餘 ${remain}／總池 ${getBoxCodexPool().length}）。`);
+  saveGame();
+  if (typeof renderAll === 'function') renderAll();
+  return remain;
+}
+function gmUnlockHiddenCodex() {
+  const pool = getCodexPool();
+  const c = ensureCodex();
+  pool.monsters.forEach(id => { c.seen[id] = 1; c.mon[id] = (c.mon[id] || 0) + 1; });
+  pool.cards.forEach(id => { if (ITEMS[id]) c.item[id] = (c.item[id] || 0) + 1; });
+  pool.items.forEach(id => { c.item[id] = (c.item[id] || 0) + 1; });
+  const prog = getCodexProgress();
+  logMsg(`🛠️ GM：三大收集記錄已灌滿（怪 ${prog.monsters.total}／卡 ${prog.cards.total}／道 ${prog.items.total}），隱藏圖鑑解鎖。`);
+  saveGame();
+  if (typeof renderAll === 'function') renderAll();
+  return true;
 }
 
 /* ---------------- 屬性加點 ----------------
@@ -11433,7 +11483,11 @@ function openAllBoxes(itemId) {
   if (!opened) return 0;
   removeItem(itemId, opened);
   let worth = 0;
-  Object.entries(got).forEach(([id, q]) => { addItem(id, q); worth += (ITEMS[id].sell || 0) * q; });
+  Object.entries(got).forEach(([id, q]) => {
+    addItem(id, q);
+    if (def.boxOpen === 'any' || def.boxOpen === 'violet') codexRecordBox(id);
+    worth += (ITEMS[id].sell || 0) * q;
+  });
 
   logMsg(`📦 一次開啟 ${opened} 個${def.name}，開出 ${Object.keys(got).length} 種道具（總售價 ${worth.toLocaleString()}z）。`);
   rare.slice(0, 10).forEach(txt => logMsg(txt));
@@ -11465,6 +11519,7 @@ function useItem(itemId) {
       if (!got) { logMsg(`⚠️ ${def.name} 打不開（道具池是空的）。`); return false; }
       removeItem(itemId, 1);
       addItem(got, 1);
+      if (def.boxOpen === 'any' || def.boxOpen === 'violet') codexRecordBox(got);
       const g = ITEMS[got];
       // 卡片跟高價道具各自有自己的「中大獎」提示
       const kind = CARDS[got] ? bossCardKind(got) : null;
