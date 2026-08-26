@@ -12402,12 +12402,26 @@ function effectiveGearBonuses() {
       }
       (card.condBonus || []).forEach((cb, ci) => {
         if (!condMet(cb.when, host, lo)) return;
-        mergeBonus(total, cb.bonus);
+        /* 卡片版「宿主精煉每+N」：bonus 鍵名 perNRefine_<目標>
+           （天堂鳥卡：魔法師系列 精煉每+3 INT+1 → {per3Refine_int:1}）。
+           值 × floor(宿主精煉/N) 併入總表；原始鍵本身不進表。 */
+        const effBonus = {};
+        let hasPerRefine = false;
+        for (const [bk, bv] of Object.entries(cb.bonus || {})) {
+          const pm = /^per(\d+)Refine_(.+)$/.exec(bk);
+          if (pm) {
+            const tgt = {};
+            tgt[pm[2]] = bv * Math.floor(((host && host.refine) || 0) / +pm[1]);
+            mergeBonus(total, tgt);
+            hasPerRefine = true;
+          } else effBonus[bk] = bv;
+        }
+        if (Object.keys(effBonus).length || !hasPerRefine) mergeBonus(total, cb.bonus ? effBonus : cb.bonus);
         /* 卡片套裝（#134）。官方的「五張一組」沒有獨立的資料表——整組的效果就寫在
-           其中一張主卡的說明欄裡，所以本作也是掛在那張卡的 condBonus 上。
-           標了 setName 的讓它跟 EQUIP_SETS 一樣進「生效中的套裝」那一排：
-           玩家回報「烏龜套卡沒有實裝」時，加成其實只是**看不到**，畫面上沒有任何
-           回饋能證明它生效了。同一張卡插在兩件裝備上時 id 會重複，所以要去重。 */
+            其中一張主卡的說明欄裡，所以本作也是掛在那張卡的 condBonus 上。
+            標了 setName 的讓它跟 EQUIP_SETS 一樣進「生效中的套裝」那一排：
+            玩家回報「烏龜套卡沒有實裝」時，加成其實只是**看不到**，畫面上沒有任何
+            回饋能證明它生效了。同一張卡插在兩件裝備上時 id 會重複，所以要去重。 */
         if (!cb.setName) return;
         const sid = 'cardset_' + cardId + '_' + ci;
         if (!sets.some(s => s.id === sid)) sets.push({ id: sid, name: cb.setName, bonus: cb.bonus });
