@@ -23818,7 +23818,7 @@ const CARDS = {
   chepet_card: {"id":"chepet_card","monsterId":"chepet","name":"魔靈娃娃卡片","icon":"⚔️","slot":"weapon","bonus":{},"desc":"物理攻擊時有一定的機率自動念咒，對敵人施展治癒術5技能。","autoSpell":[{"on":"attack","skill":"heal","lv":5,"chance":5}]},
   karakasa_card: {"id":"karakasa_card","monsterId":"karakasa","name":"傘妖卡片","icon":"🛡️","slot":"armor","bonus":{},"desc":"受到物理傷害時，有一定的機率讓敵人得到混亂。，STR77以上時，有更高的機率得到混亂。","ailment":[{"on":"hit","type":"confusion","chance":5},{"on":"hit","type":"confusion","chance":5,"when":{"statMin":{"str":77}}}]},
   kapha_card: {"id":"kapha_card","monsterId":"kapha","name":"釣魚河童卡片","icon":"🧣","slot":"garment","bonus":{},"desc":"精煉5以下時，MDEF+8。","condBonus":[{"when":{"refineMax":5},"bonus":{"mdef":8}}]},
-  carat_card: {"id":'carat_card',"monsterId":'carat',"name":'卡拉特小丑卡片',"icon":'👑',"slot":'headgear',"bonus":{"int":2},"desc":'INT+2，精煉9以上時+MAXSP+150'},
+  carat_card: {"id":'carat_card',"monsterId":'carat',"name":'卡拉特小丑卡片',"icon":'👑',"slot":'headgear',"bonus":{"int":2},"condBonus":[{"when":{"refineMin":9},"bonus":{"sp":150}}],"desc":'INT+2，精煉9以上時+MAXSP+150'},
   cat_o_nine_tail_card: {"id":"cat_o_nine_tail_card","monsterId":"cat_o_nine_tail","name":"狂暴月夜貓卡片","icon":"👢","slot":"footgear","bonus":{"mdef":3},"desc":"當魔法反射100%時，反射的機率是5%。，MDEF+3","condBonus":[{"when":{"withCards":["maya_card"]},"bonus":{"magicReflectChance":5}}]},
   kobold_leader_card: {"id":"kobold_leader_card","monsterId":"kobold_leader","name":"犬妖首領卡片","icon":"⚔️","slot":"weapon","bonus":{"familyDmg_kobold":30},"desc":"對犬妖，30%的傷害"},
   kobold_archer_card: {"id":"kobold_archer_card","monsterId":"kobold_archer","name":"犬妖弓箭手卡片","icon":"⚔️","slot":"weapon","bonus":{"critDmgPct":10,"raceCrit_plant":7},"desc":"普通攻擊暴擊時，傷害增加10%，對植物系魔物CRI+7"},
