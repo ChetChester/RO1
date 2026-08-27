@@ -60,12 +60,21 @@ function acvMaxStat() {
   return Math.max(s.str || 0, s.agi || 0, s.vit || 0, s.int || 0, s.dex || 0, s.luk || 0);
 }
 function acvMaxRefine() {
-  const r = state.refinement || {};
   let m = 0;
+  const r = state.refinement || {};
   for (const k in r) if (r[k] > m) m = r[k];
+  const insts = state.instances || {};
+  for (const k in insts) {
+    const v = insts[k] && insts[k].refine;
+    if (typeof v === 'number' && v > m) m = v;
+  }
+  // 未個體化的裝備精煉為 0，不影響最大值
   return m;
 }
 function acvCardsEquipped() {
+  if (typeof allEquippedCards === 'function') {
+    try { return allEquippedCards().length; } catch (e) {}
+  }
   return Object.values(state.equippedCards || {}).filter(Boolean).length;
 }
 function acvEquipSlotsFilled() {

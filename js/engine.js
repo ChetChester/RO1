@@ -12345,11 +12345,8 @@ function effectiveGearBonuses() {
     /* 平鋪的特殊鍵（perBaseLv10_atk 等）也要進總表——getCardBonus() 會按前綴解析。
        只挑底線開頭的鍵，避免把 atk/def 那些平鋪數值重複算一次。 */
     for (const [k, v] of Object.entries(def)) {
-      if (/^per(BaseLv1|BaseLv10|BaseLv15|JobLv10|Stat|Skill)_/.test(k) && typeof v === 'number') total[k] = (total[k] || 0) + v;
+      if (/^per(BaseLv1|BaseLv10|BaseLv15|BaseLv210|JobLv10|Stat|Skill)_/.test(k) && typeof v === 'number') total[k] = (total[k] || 0) + v;
       if (k.startsWith('spCost_') && typeof v === 'number') total[k] = (total[k] || 0) + v;
-    }
-    for (const k of BASE_STAT_KEYS) {
-      if (typeof def[k] === 'number') total[k] = (total[k] || 0) + def[k];
     }
     if (def.perRefine) {
       const r = def.perRefineCap != null ? Math.min(d.refine, def.perRefineCap) : d.refine;
@@ -12381,6 +12378,11 @@ function effectiveGearBonuses() {
     if (def.per4Refine) {
       const r = def.perRefineCap != null ? Math.min(d.refine, def.perRefineCap) : d.refine;
       mergeBonus(total, def.per4Refine, Math.floor(r / 4));
+    }
+    /* per5Refine：官方「精煉每+5時 ○○」（狸貓變身樹葉-LT）＝floor(精煉/5)。 */
+    if (def.per5Refine) {
+      const r = def.perRefineCap != null ? Math.min(d.refine, def.perRefineCap) : d.refine;
+      mergeBonus(total, def.per5Refine, Math.floor(r / 5));
     }
     /* 緋紅色的 MATK 版：全額與半額（(精煉*精煉)/2）兩種 */
     if (def.perRefineSquareMatk) {
@@ -12841,6 +12843,14 @@ function getCardBonus(stat) {
     const target = k.slice('perBaseLv1_'.length);
     if (target !== stat) continue;
     total += (state.baseLevel || 0) * all[k];
+  }
+  /* perBaseLv210_<目標>： BaseLv210以上時…（狸貓變身樹葉-LT） */
+  for (const k in all) {
+    if (!k.startsWith('perBaseLv210_')) continue;
+    const target = k.slice('perBaseLv210_'.length);
+    if (target !== stat) continue;
+    if ((state.baseLevel || 0) < 210) continue;
+    total += all[k];
   }
   /* perStat_<來源>_<每N點>_<目標>：官方「純粹XX每N時 ○○+M」。
       來源限六項素質（看**加點的基礎值**，不含裝備／卡片／技能——官方的「純粹」），
