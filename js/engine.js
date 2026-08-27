@@ -12181,8 +12181,9 @@ function skillSpCost(sk, lv) {
   // 卡片的增減與魔力減免（#64，一律是負值）相加後一起套用
   const pct = ((state && state.cardSpCostPct) || 0) + ((state && state.skillSpCostPct) || 0)
     + buffMult('spcost').flatBonus;   // 為您服務／臨機應變（#68）
-  if (!pct) return base;
-  return Math.max(0, Math.round(base * (1 + pct / 100)));
+  const flat = sk ? (getCardBonus('spCost_' + sk.id) || 0) : 0;
+  if (!pct && !flat) return base;
+  return Math.max(0, Math.round(base * (1 + pct / 100) + flat));
 }
 
 /* 治癒量倍率（#64）。
@@ -12344,7 +12345,11 @@ function effectiveGearBonuses() {
     /* 平鋪的特殊鍵（perBaseLv10_atk 等）也要進總表——getCardBonus() 會按前綴解析。
        只挑底線開頭的鍵，避免把 atk/def 那些平鋪數值重複算一次。 */
     for (const [k, v] of Object.entries(def)) {
-      if (/^per(BaseLv10|BaseLv15|JobLv10|Stat)_/.test(k) && typeof v === 'number') total[k] = (total[k] || 0) + v;
+      if (/^per(BaseLv1|BaseLv10|BaseLv15|JobLv10|Stat|Skill)_/.test(k) && typeof v === 'number') total[k] = (total[k] || 0) + v;
+      if (k.startsWith('spCost_') && typeof v === 'number') total[k] = (total[k] || 0) + v;
+    }
+    for (const k of BASE_STAT_KEYS) {
+      if (typeof def[k] === 'number') total[k] = (total[k] || 0) + def[k];
     }
     if (def.perRefine) {
       const r = def.perRefineCap != null ? Math.min(d.refine, def.perRefineCap) : d.refine;
@@ -12830,10 +12835,17 @@ function getCardBonus(stat) {
     if (target !== stat) continue;
     total += Math.floor(Math.min(state.baseLevel || 0, 195) / 15) * all[k];
   }
+  /* perBaseLv1_<目標>： BaseLv每+1時…（翡翠戒指） */
+  for (const k in all) {
+    if (!k.startsWith('perBaseLv1_')) continue;
+    const target = k.slice('perBaseLv1_'.length);
+    if (target !== stat) continue;
+    total += (state.baseLevel || 0) * all[k];
+  }
   /* perStat_<來源>_<每N點>_<目標>：官方「純粹XX每N時 ○○+M」。
-     來源限六項素質（看**加點的基礎值**，不含裝備／卡片／技能——官方的「純粹」），
-     目標可以是任何加成鍵（atk/matk/critRate/critDmgPct/hit/aspdPct/eleReduce_none…）。
-     原本只支援目標＝六項素質，賭徒之印那批（CRI/ATK/MATK 隨 LUK 成長）補齊時放寬。 */
+      來源限六項素質（看**加點的基礎值**，不含裝備／卡片／技能——官方的「純粹」），
+      目標可以是任何加成鍵（atk/matk/critRate/critDmgPct/hit/aspdPct/eleReduce_none…）。
+      原本只支援目標＝六項素質，賭徒之印那批（CRI/ATK/MATK 隨 LUK 成長）補齊時放寬。 */
   for (const k in all) {
     if (!k.startsWith('perStat_')) continue;
     const parts = k.split('_');            // perStat, from, per, to(可含底線)
@@ -12842,6 +12854,19 @@ function getCardBonus(stat) {
     if (to !== stat) continue;
     const base = (state.stats && state.stats[parts[1]]) || 0;
     total += Math.floor(base / (+parts[2] || 1)) * all[k];
+  }
+  /* perSkill_<技能ID>_<每N級>_<目標>： 習得等級每+N時…（翡翠戒指） */
+  for (const k in all) {
+    if (!k.startsWith('perSkill_')) continue;
+    const rest = k.slice('perSkill_'.length);
+    const parts = rest.split('_');
+    if (parts.length < 3) continue;
+    const to = parts.pop();
+    const per = parts.pop();
+    const skillId = parts.join('_');
+    if (to !== stat) continue;
+    const lv = (state.learnedSkills && state.learnedSkills[skillId]) || 0;
+    total += Math.floor(lv / (+per || 1)) * all[k];
   }
   if (!BASE_STAT_KEYS.includes(stat)) return total;
   // All State+N（古埃及王卡片）：六項素質一起加
