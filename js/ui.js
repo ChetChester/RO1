@@ -3052,6 +3052,55 @@ function codexCatFilter(ids) {
   const c = (CODEX_CATS[codexView] || []).find(x => x.k === cur);
   return (!c || !c.test) ? ids : ids.filter(c.test);
 }
+// ── 武器/防具 細分勾選 ──
+const WEAPON_SUBS = [
+  {k:'sword', label:'單手劍'}, {k:'tsword', label:'雙手劍'}, {k:'dagger', label:'短劍'},
+  {k:'katar', label:'拳刃'}, {k:'axe1', label:'單手斧'}, {k:'axe2', label:'雙手斧'},
+  {k:'mace', label:'鈍器'}, {k:'spear', label:'長矛'}, {k:'bow', label:'弓'},
+  {k:'book', label:'書'}, {k:'rod', label:'法杖'}, {k:'knuckle', label:'拳套'},
+  {k:'whip', label:'鞭'}, {k:'instrument', label:'樂器'},
+  {k:'pistol', label:'手槍'}, {k:'rifle', label:'步槍'}, {k:'shotgun', label:'霰彈槍'},
+  {k:'gatling', label:'機關槍'}, {k:'grenade', label:'榴彈砲'},
+];
+const ARMOR_SUBS = [
+  {k:'headgear', label:'頭飾'}, {k:'garment', label:'披肩'}, {k:'footgear', label:'鞋子'},
+  {k:'shield', label:'盾牌'}, {k:'leather', label:'鎧甲'},
+];
+let codexWeaponSubs = new Set();
+let codexArmorSubs = new Set();
+function toggleCodexWeaponSub(k){ if(codexWeaponSubs.has(k)) codexWeaponSubs.delete(k); else codexWeaponSubs.add(k); codexPage=0; renderCodexTab(); }
+function toggleCodexArmorSub(k){ if(codexArmorSubs.has(k)) codexArmorSubs.delete(k); else codexArmorSubs.add(k); codexPage=0; renderCodexTab(); }
+function clearCodexSubFilter(){ codexWeaponSubs.clear(); codexArmorSubs.clear(); codexPage=0; renderCodexTab(); }
+function codexSubBar(ids){
+  const curCat = codexCat[codexView] || 'all';
+  if(curCat==='weapon'){
+    return '<div class="codex-cats codex-sub">'
+      + WEAPON_SUBS.map(s=>{
+        const n = ids.filter(id=> (ITEMS[id].weaponCat||ITEMS[id].weaponType)===s.k).length;
+        const ck = codexWeaponSubs.has(s.k);
+        return `<label class="codex-sub-check ${n?'':'empty'}" title="${n} 件"><input type="checkbox" ${ck?'checked':''} onchange="toggleCodexWeaponSub('${s.k}')"> ${s.label} <span class="codex-cat-n">${n}</span></label>`;
+      }).join('') + (codexWeaponSubs.size? `<button class="btn-small ghost" onclick="clearCodexSubFilter()">清除</button>`:'') + '</div>';
+  }
+  if(curCat==='armor'){
+    return '<div class="codex-cats codex-sub">'
+      + ARMOR_SUBS.map(s=>{
+        const n = ids.filter(id=> ITEMS[id].armorType===s.k).length;
+        const ck = codexArmorSubs.has(s.k);
+        return `<label class="codex-sub-check ${n?'':'empty'}" title="${n} 件"><input type="checkbox" ${ck?'checked':''} onchange="toggleCodexArmorSub('${s.k}')"> ${s.label} <span class="codex-cat-n">${n}</span></label>`;
+      }).join('') + (codexArmorSubs.size? `<button class="btn-small ghost" onclick="clearCodexSubFilter()">清除</button>`:'') + '</div>';
+  }
+  return '';
+}
+function codexSubFilter(ids){
+  const curCat = codexCat[codexView] || 'all';
+  if(curCat==='weapon' && codexWeaponSubs.size){
+    return ids.filter(id=> codexWeaponSubs.has(ITEMS[id].weaponCat||ITEMS[id].weaponType));
+  }
+  if(curCat==='armor' && codexArmorSubs.size){
+    return ids.filter(id=> codexArmorSubs.has(ITEMS[id].armorType));
+  }
+  return ids;
+}
 function setCodexPage(p) { codexPage = p; renderCodexTab(); }
 /* ---------------- 搜尋框與注音輸入 ----------------
 
@@ -3128,7 +3177,9 @@ function renderCodexTab() {
     : codexView === 'hidden' ? getAlbumOnlyCards().concat(getBoxCodexPool())
     : pool.items;
   const catBar = codexCatBar(allIds);
-  const ids = codexCatFilter(allIds);
+  let ids = codexCatFilter(allIds);
+  const subBar = codexSubBar(ids);
+  ids = codexSubFilter(ids);
   if (codexView === 'mon') {
     rows = ids.map(id => ({ id, name: MONSTERS[id].name, found: !!book.seen[id] }));
   } else if (codexView === 'card') {
@@ -3187,7 +3238,7 @@ function renderCodexTab() {
         <button class="btn-small ${codexFilter === 'missing' ? 'active' : ''}" onclick="setCodexFilter('missing')">未發現</button>
       </div>
     </div>
-    ${catBar}`;
+    ${catBar}${subBar}`;
 
   if (codexOpenId) html += renderCodexDetail(codexOpenId);
 
@@ -5710,6 +5761,23 @@ function vdRemove(itemId) {
   renderVendingWindow();
   renderInventoryTab();
 }
+function vdAddAll() {
+  const picked = vendingList();
+  const canAdd = VENDING_MAX - picked.length;
+  if (canAdd <= 0) { showToast(`已滿 ${VENDING_MAX} 樣`); return; }
+  const all = state.inventory.filter(r => !r.instanceId && ITEMS[r.item] && (ITEMS[r.item].sell || 0) > 0);
+  let left = all.filter(r => !picked.includes(r.item) && !isItemLocked(r.item));
+  if (vdCategory !== 'all') left = left.filter(r => invCategoryOf(r.item) === vdCategory);
+  if (vdSearch) left = left.filter(r => (ITEMS[r.item].name || '').toLowerCase().includes(vdSearch));
+  left = sortRowsWithRecent(left, 'left');
+  const toAdd = left.slice(0, canAdd).map(r => r.item);
+  if (!toAdd.length) { showToast('沒有可上架的道具'); return; }
+  setVendingItems(picked.concat(toAdd));
+  toAdd.forEach(id => markListRecent('right', id));
+  renderVendingWindow();
+  renderInventoryTab();
+  showToast(`已上架 ${toAdd.length} 樣`);
+}
 
 function showVendingWindow() {
   let win = document.getElementById('vending-window');
@@ -5805,7 +5873,7 @@ function renderVendingWindowInner() {
 
     <div class="wh-cols">
       <div class="wh-col">
-        <div class="wh-col-head">背包（點一下上架 ▶）　${left.length}</div>
+        <div class="wh-col-head">背包（點一下上架 ▶）　${left.length} ${apply(left,'left').length && picked.length < VENDING_MAX ? `<button class="btn-small ghost" style="float:right" onclick="vdAddAll()">一鍵上架</button>` : ''}</div>
         <div class="wh-list">${listHtml(apply(left, 'left'), 'left')}</div>
       </div>
       <div class="wh-col">
@@ -6369,6 +6437,20 @@ function asClearAll() {
   saveGame();
   renderAutoSellWindow();
 }
+// 一鍵全加入：把當前篩選的左邊全部移去右邊
+function asAddAll() {
+  if (!state.autoSellConfig) state.autoSellConfig = { enabled: false, items: [] };
+  const cfg = state.autoSellConfig;
+  const all = state.inventory.filter(r => !r.instanceId && ITEMS[r.item] && (ITEMS[r.item].sell || 0) > 0);
+  let left = all.filter(r => !cfg.items.includes(r.item) && !isItemLocked(r.item));
+  if (asCategory !== 'all') left = left.filter(r => invCategoryOf(r.item) === asCategory);
+  if (asSearch) left = left.filter(r => (ITEMS[r.item].name || '').toLowerCase().includes(asSearch));
+  if (!left.length) { showToast('沒有可加入的道具'); return; }
+  left.forEach(r => { if (!cfg.items.includes(r.item)) cfg.items.push(r.item); });
+  saveGame();
+  renderAutoSellWindow();
+  showToast(`已加入 ${left.length} 樣到自動販賣`);
+}
 
 function showAutoSellWindow() {
   let win = document.getElementById('autosell-window');
@@ -6533,7 +6615,7 @@ function renderAutoSellWindowInner() {
 
     <div class="wh-cols">
       <div class="wh-col">
-        <div class="wh-col-head">不會自動賣（點一下移右邊 ▶）　${left.length}</div>
+        <div class="wh-col-head">不會自動賣（點一下移右邊 ▶）　${left.length} ${apply(left,'left').length ? `<button class="btn-small ghost" style="float:right" onclick="asAddAll()">一鍵全加入</button>` : ''}</div>
         <div class="wh-list">${listHtml(apply(left, 'left'), 'left')}</div>
       </div>
       <div class="wh-col">
