@@ -264,7 +264,7 @@ const JOB_TREE = {
     skills: [
       'autoguard', 'cr_shieldcharge', 'cr_shieldboomerang', 'cr_defender',
       'cr_reflectshield', 'cr_trust', 'cr_holycross', 'grandcross',
-      'cr_providence', 'cr_spearquicken', 'cr_shrink',
+      'cr_providence', 'cr_spearquicken', 'cr_shrink', 'cr_devotion',
       // 官方借用：服事的治癒術／天使之護／天使之擊／治療術
       'heal', 'divineprotection', 'angelic', 'holywater',
       // 官方借用：騎士的長矛熟練度／騎乘術／騎兵修練

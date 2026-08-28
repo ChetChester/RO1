@@ -27,7 +27,9 @@ const CR = { path: ['swordsman', 'crusader'] };
     borrowed.filter(id => !have.has(id)).join(','));
 
   // 犧牲擱置（等隊友模式）；退縮改成轉職自動獲得的被動
-  t.eq('犧牲沒有實作（之後開隊友模式再說）', !!g.SKILLS.cr_devotion, false);
+  t.eq('犧牲已實作', !!g.SKILLS.cr_devotion, true);
+  t.eq('犧牲類型 buff_devotion', g.SKILLS.cr_devotion.type, 'buff_devotion');
+  t.eq('犧牲最大等級 5', g.SKILLS.cr_devotion.maxLv, 5);
   t.ok('退縮掛在職業上', have.has('cr_shrink'));
 
   // 劍士現在有兩條分支

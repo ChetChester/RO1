@@ -8464,11 +8464,23 @@ function tryAutoBuyAllyArrow() {
 function setAutoBuyAllyArrow(v) { state.autoBuyAllyArrow = !!v; saveGame(); }
 
 /* 隊友承傷。倒地的不列入分配，那 20% 要退回玩家——
-   不然隊友一死怪的攻擊就憑空少掉，變成「死光反而安全」。 */
+   不然隊友一死怪的攻擊就憑空少掉，變成「死光反而安全」。
+   十字軍犧牲：有該 buff 的隊友優先被攻擊（65%~80%）。 */
 function pickMonsterTarget() {
   const alive = allyAliveList();
   if (!alive.length) return null;
-  if (Math.random() * 100 < relicPlayerTargetPct()) return null;   // 牧師遺物 3 件會拉高這個數字（#113）
+  // 找有犧牲 buff 的隊友
+  const devotionAlly = alive.find(a => {
+    const b = (a.buffs || []).find(x => x.type === 'devotion' && (x.msRemaining || 0) > 0);
+    return b ? b.targetPlayerPct : 0;
+  });
+  if (devotionAlly) {
+    const b = devotionAlly.buffs.find(x => x.type === 'devotion');
+    const pct = b ? b.targetPlayerPct : 75;
+    if (Math.random() * 100 < pct) return devotionAlly;
+  }
+  // 基礎機率：打玩家 60%，其餘平分給隊友（含牧師遺物加成）
+  if (Math.random() * 100 < relicPlayerTargetPct()) return null;
   return alive[Math.floor(Math.random() * alive.length)];
 }
 
@@ -10050,6 +10062,16 @@ function castSkillInner(skillId, opts) {
       state.buffs = state.buffs.filter(b => b.skillId !== sk.id);
       state.buffs.push({ type: 'doublecast', mult: 1, flatBonus: mult, msRemaining: dur * 1000, skillId: sk.id });
       logMsg(`🔁 「${sk.name}」Lv${lv} 發動：三系箭術有 ${mult + (state.doubleCastBonusPct || 0)}% 機率連放兩次，持續 ${dur} 秒。`);
+      break;
+    }
+    /* 犧牲 Devotion (CR_DEVOTION)：提高怪物攻擊自身的機率。
+       存 targetPlayerPct 到 buff，怪物選目標時讀取。 */
+    case 'buff_devotion': {
+      const dur = Array.isArray(sk.duration) ? sk.duration[lv - 1] : sk.duration;
+      const pct = Array.isArray(sk.targetPlayerPct) ? sk.targetPlayerPct[lv - 1] : sk.targetPlayerPct;
+      state.buffs = state.buffs.filter(b => b.skillId !== sk.id);
+      state.buffs.push({ type: 'devotion', mult: 1, skillId: sk.id, msRemaining: dur * 1000, targetPlayerPct: pct });
+      logMsg(`🛡️ 「${sk.name}」Lv${lv} 發動：怪物攻擊自身機率 ${pct}%，持續 ${dur} 秒。`);
       break;
     }
     /* HP轉換（#76）：固定消耗 10% 最大HP，換到「消耗量 × 轉換率」的 SP。
@@ -11705,8 +11727,9 @@ function resolveEquipSlotFor(itemId) {
 function equipBlockReason(itemId) {
   const d = ITEMS[itemId];
   if (!d) return '道具不存在。';
-  if (d.reqLevel && state.baseLevel < d.reqLevel) {
-    return `需要基本等級 ${d.reqLevel}（目前 ${state.baseLevel}）。`;
+  const reqLv = d.reqLevel ? Math.min(d.reqLevel, 200) : 0;
+  if (reqLv && state.baseLevel < reqLv) {
+    return `需要基本等級 ${reqLv}（目前 ${state.baseLevel}）。`;
   }
   if (d.reqJob && d.reqJob.length) {
     const chain = getAllLearnedJobs();
@@ -12793,10 +12816,14 @@ function resetRelicRevive() {
   state.relicReviveUsed = 0;
   state.relicReviveReadyAt = 0;
 }
-/* 3 件：從隊友身上多接 10% 的攻擊。回傳「怪打玩家」的機率 */
+function getDevotionTargetPct() {
+  const b = state.buffs.find(x => x.type === 'devotion' && (x.msRemaining || 0) > 0);
+  return b ? b.targetPlayerPct : 0;
+}
+/* 回傳「怪打玩家」的基礎機率：60% + 牧師遺物（隊友的犧牲在 pickMonsterTarget 處理） */
 function relicPlayerTargetPct() {
-  const extra = (state.relicProcs && state.relicProcs.priest_taunt) ? RELIC_PROC_PRIEST.takeDamagePct : 0;
-  return Math.min(100, ALLY_MONSTER_TARGET_PLAYER_PCT + extra);
+  const extraRelic = (state.relicProcs && state.relicProcs.priest_taunt) ? RELIC_PROC_PRIEST.takeDamagePct : 0;
+  return Math.min(100, ALLY_MONSTER_TARGET_PLAYER_PCT + extraRelic);
 }
 
 /* 遺物商人：1 張券換「指定套裝」的隨機一件。指定套裝是這張券唯一的價值——

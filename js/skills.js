@@ -713,6 +713,18 @@ const SKILLS = {
     mult: [50], stunSec: [1],
     desc: '被動技能，轉職時自動獲得。以自動防禦擋下攻擊時，有 50% 機率使對方暈眩 1 秒。'
   },
+  /* 犧牲 Devotion (CR_DEVOTION) —— 官方是把隊友受到的傷害轉到自己身上。
+     本作無隊友機制 → 改成**輔助型嘲諷**：提高怪物攻擊自身的機率。
+     基礎 60% 打玩家 / 40% 打隊友；Lv1~5 依序 65%/70%/75%/80%/80%。SP 25。 */
+  cr_devotion: {
+    id: 'cr_devotion', name: '犧牲 Devotion', maxLv: 5,
+    type: 'buff_devotion',
+    spCost: [25, 25, 25, 25, 25],
+    cooldown: [30, 30, 30, 30, 30],
+    targetPlayerPct: [65, 70, 75, 80, 80],
+    duration: [60, 60, 60, 60, 60],
+    desc: '輔助技能，引導敵人攻擊自身。怪物攻擊自身機率：65%~80%（基礎 60%），持續 60 秒。'
+  },
   cr_reflectshield: {
     id: 'cr_reflectshield', name: '反射盾 Reflect Shield', maxLv: 10,
     type: 'buff_reflect', requiresEquip: 'shield',
@@ -2008,8 +2020,8 @@ const SKILLS = {
     id: 'pa_sacrifice', name: '捨命攻擊 Sacrifice', maxLv: 5,
     type: 'buff_sacrifice', element: 'neutral',
     spCost: [100, 100, 100, 100, 100],
-    cooldown: [60, 68, 75, 83, 90],          // 跟持續時間一樣長，同時只會有一份
-    requires: { skillId: 'endure', level: 1 },
+    cooldown: [60, 68, 75, 83, 90],
+    requires: { skillId: 'cr_devotion', level: 3 },
     charges: 5, hpCostPct: 9,
     mult: [1.0, 1.1, 1.2, 1.3, 1.4],
     duration: [60, 68, 75, 83, 90],

@@ -186,7 +186,7 @@ const mk = (opts) => {
 /* ---------------- 5. 捨命攻擊 ---------------- */
 {
   const g = mk();
-  H.learn(g, 'endure', 1);
+  H.learn(g, 'cr_devotion', 3);
   t.eq('捨命攻擊點得到 Lv5', H.learn(g, 'pa_sacrifice', 5), 5);
   const sk = g.SKILLS.pa_sacrifice;
   t.eq('SP 100', sk.spCost[0], 100);
@@ -196,9 +196,10 @@ const mk = (opts) => {
   t.eq('Lv5 倍率 140%', sk.mult[4], 1.4);
   t.eq('持續 60 秒起', sk.duration[0], 60);
   t.eq('Lv5 持續 90 秒', sk.duration[4], 90);
-  // 官方前置是「犧牲 Lv3」，但犧牲在本作沒實作（等隊伍系統），所以改掛霸體
-  t.eq('前置改成霸體', sk.requires.skillId, 'endure');
-  t.ok('沒有掛在沒實作的犧牲上', !g.SKILLS.cr_devotion);
+  // 官方前置是「犧牲 Lv3」，現在犧牲已實作
+  t.eq('前置現在是犧牲 Lv3', sk.requires.skillId, 'cr_devotion');
+  t.eq('前置等級 3', sk.requires.level, 3);
+  t.ok('犧牲已實作', !!g.SKILLS.cr_devotion);
 
   H.wield(g, 'sword1');
   g.state.hp = g.state.maxHp;
@@ -227,7 +228,7 @@ const mk = (opts) => {
      發勁那次是靠 HP 下限 + 10 秒冷卻才壓住的；這招官方只有 5 次沒有冷卻，
      所以規則簡化成「付不起就跳過」——玩家補完血還有那一次可以用。 */
   const g = mk();
-  H.learn(g, 'endure', 1); H.learn(g, 'pa_sacrifice', 5);
+  H.learn(g, 'cr_devotion', 3); H.learn(g, 'pa_sacrifice', 5);
   H.wield(g, 'sword1');
   g.state.hp = g.state.maxHp; g.state.sp = g.state.maxSp;
   H.mon(g, { defId: Object.keys(g.MONSTERS)[0] });
